@@ -734,10 +734,10 @@ internal static class Verbs
 
     public static int WaitForElement(Dictionary<string, string> opts)
     {
-        if (!opts.TryGetValue("strategy", out var strategyText)
-            || !Enum.TryParse<SelectorStrategy>(strategyText, ignoreCase: true, out var strategy))
+        opts.TryGetValue("strategy", out var strategyText);
+        if (!UiaHelper.TryParseImplementedSelectorStrategy(strategyText, out var strategy, out var strategyError))
         {
-            JsonOutput.WriteError("invalid-argument", "--strategy is required and must be one of: Name, AutomationId.");
+            JsonOutput.WriteError("invalid-argument", $"--strategy is required and {strategyError}");
             return 1;
         }
 
@@ -1316,10 +1316,10 @@ internal static class Verbs
     private static (SelectorStrategy strategy, string? value, string? errorCode, string? error) ParseSelectorArgs(
         Dictionary<string, string> opts)
     {
-        if (!opts.TryGetValue("strategy", out var strategyText)
-            || !Enum.TryParse<SelectorStrategy>(strategyText, ignoreCase: true, out var strategy))
+        opts.TryGetValue("strategy", out var strategyText);
+        if (!UiaHelper.TryParseImplementedSelectorStrategy(strategyText, out var strategy, out var strategyError))
         {
-            return (default, null, "invalid-argument", "--strategy is required and must be one of: Name, AutomationId.");
+            return (default, null, "invalid-argument", $"--strategy is required and {strategyError}");
         }
 
         if (!opts.TryGetValue("value", out var value))
@@ -1368,9 +1368,9 @@ internal static class Verbs
             return (null, "invalid-argument", "--scopeStrategy and --scopeValue must both be supplied, or neither.");
         }
 
-        if (!Enum.TryParse<SelectorStrategy>(scopeStrategyText, ignoreCase: true, out var scopeStrategy))
+        if (!UiaHelper.TryParseImplementedSelectorStrategy(scopeStrategyText, out var scopeStrategy, out var scopeStrategyError))
         {
-            return (null, "invalid-argument", "--scopeStrategy must be one of: Name, AutomationId.");
+            return (null, "invalid-argument", $"--scopeStrategy {scopeStrategyError}");
         }
 
         var scopeElement = UiaHelper.ResolveSelector(window, new Selector { Strategy = scopeStrategy, Value = scopeValue! });
@@ -1417,11 +1417,11 @@ internal static class Verbs
     private static (AutomationElement? element, string? errorCode, string? error) ResolveElement(
         AutomationElement scope, Dictionary<string, string> opts)
     {
-        if (!opts.TryGetValue("strategy", out var strategyText)
-            || !Enum.TryParse<SelectorStrategy>(strategyText, ignoreCase: true, out var strategy))
+        opts.TryGetValue("strategy", out var strategyText);
+        if (!UiaHelper.TryParseImplementedSelectorStrategy(strategyText, out var strategy, out var strategyError))
         {
             return (null, "invalid-argument",
-                "--strategy is required and must be one of: Name, AutomationId.");
+                $"--strategy is required and {strategyError}");
         }
 
         if (!opts.TryGetValue("value", out var value))

@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using System.Windows.Automation;
 using AgentDebugToolkit.Core.Models;
 
@@ -123,6 +124,43 @@ internal static class UiaHelper
             text = text[2..];
         }
         return new IntPtr(Convert.ToInt64(text, 16));
+    }
+
+    // Phase 16: SelectorStrategy already declares NameRegex/ControlTypeIndex/Coordinates
+    // (reserved for Phase 3), so a bare Enum.TryParse<SelectorStrategy> accepts them as valid
+    // --strategy/--scopeStrategy values even though ResolveSelector/ResolveSelectorAll below
+    // throw NotSupportedException for all three -- previously that propagated uncaught to
+    // Program.cs's top-level handler as "unhandled-exception" instead of a clean
+    // "invalid-argument". This is the single, central place every selector-consuming verb
+    // parses --strategy/--scopeStrategy through, so the "currently implemented" set only needs
+    // to be maintained here.
+    private static readonly SelectorStrategy[] ImplementedSelectorStrategies =
+    {
+        SelectorStrategy.Name,
+        SelectorStrategy.AutomationId,
+    };
+
+    /// <summary>
+    /// Parses a --strategy/--scopeStrategy value, accepting only selector strategies that
+    /// <see cref="ResolveSelector"/>/<see cref="ResolveSelectorAll"/> actually implement today
+    /// (Name, AutomationId). Rejects NameRegex/ControlTypeIndex/Coordinates -- reserved for
+    /// Phase 3 -- as a clean, callable-time validation failure instead of letting them reach
+    /// ResolveSelector's NotSupportedException. See docs/KNOWN_OPEN_FINDINGS.md (Phase 16).
+    /// </summary>
+    public static bool TryParseImplementedSelectorStrategy(
+        string? text, out SelectorStrategy strategy, out string error)
+    {
+        if (text is not null
+            && Enum.TryParse(text, ignoreCase: true, out strategy)
+            && ImplementedSelectorStrategies.Contains(strategy))
+        {
+            error = string.Empty;
+            return true;
+        }
+
+        strategy = default;
+        error = "must be one of the implemented values: Name, AutomationId.";
+        return false;
     }
 
     public static AutomationElement? ResolveSelector(AutomationElement scope, Selector selector)

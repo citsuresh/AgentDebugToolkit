@@ -16,15 +16,19 @@ verbs are added in later phases — do not silently diverge from what's document
 - `Name`: exact match against `AutomationElement.Current.Name`.
 - `AutomationId`: exact match against `AutomationId` property (works for some target apps, not
   reliably for the FDM app family — see VALIDATION_FINDINGS.md).
-- `NameRegex`: value is a regex tested against `Name`. **Not yet implemented** —
-  `Enum.TryParse<SelectorStrategy>` accepts it as a valid `--strategy` value, but
-  `UiaHelper.ResolveSelector`/`ResolveSelectorAll` throw `NotSupportedException` for it (see
-  `docs/KNOWN_OPEN_FINDINGS.md`).
+- `NameRegex`: value is a regex tested against `Name`. **Not yet implemented** — reserved for
+  Phase 3. **Fixed 2026-09-15 (Phase 16):** `--strategy`/`--scopeStrategy` parsing across every
+  selector-consuming verb now goes through a central helper
+  (`UiaHelper.TryParseImplementedSelectorStrategy`) that rejects `NameRegex` at argument-parsing
+  time with a clean `invalid-argument` error, instead of it reaching
+  `UiaHelper.ResolveSelector`/`ResolveSelectorAll`'s `NotSupportedException` uncaught (previously
+  surfaced as a generic `unhandled-exception`). See `docs/KNOWN_OPEN_FINDINGS.md`.
 - `ControlTypeIndex`: value format `"<ControlType>:<index>"`, e.g. `"Button:2"` — the nth matching
   control (0-based) among descendants of the scope. **Not yet implemented** (same as `NameRegex`
-  above).
+  above; rejected the same way at argument-parsing time since Phase 16).
 - `Coordinates`: value format `"x,y"`, **client-area-relative** to the scope window. **Not yet
-  implemented** (same as `NameRegex` above).
+  implemented** (same as `NameRegex` above; rejected the same way at argument-parsing time since
+  Phase 16).
 
 ### WindowInfo
 ```json

@@ -60,11 +60,12 @@ distinguishable from "field absent," use the existing `preserveNullFields: true`
 call, or revisit whether `JsonOutput`'s default should change globally once more than one verb
 depends on it.
 
-## Unimplemented selector strategies throw an uncaught NotSupportedException
+## Unimplemented selector strategies throw an uncaught NotSupportedException — RESOLVED
 
 - **First seen:** 2026-09-14
 - **Last seen:** 2026-09-14
 - **Occurrences:** 1
+- **Resolved:** 2026-09-15 (Phase 16)
 
 **Description:** `SelectorStrategy` enum already includes `NameRegex`, `ControlTypeIndex`, and
 `Coordinates` (reserved for Phase 3), so `Enum.TryParse<SelectorStrategy>` accepts them as valid
@@ -78,6 +79,21 @@ selector-consuming verb, not something introduced by that change.
 **Why deferred:** Phase 3 is where these strategies get real implementations; until then, a
 clear one-line fix is to reject them at argument-parsing time in each verb (or centrally), but
 that's cheap enough to fold into Phase 3's own selector-strategy work rather than doing it twice.
+
+**Fix applied (Phase 16):** Added a central helper,
+`UiaHelper.TryParseImplementedSelectorStrategy(text, out strategy, out error)`, that parses
+`--strategy`/`--scopeStrategy` via `Enum.TryParse` and additionally checks membership in a
+private `ImplementedSelectorStrategies` allow-list (currently `Name`, `AutomationId` — the exact
+set `ResolveSelector`/`ResolveSelectorAll` implement). All four call sites that previously called
+`Enum.TryParse<SelectorStrategy>` directly (`WaitForElement`; `ParseSelectorArgs`, shared by
+`find-first`/`find-all`; `ResolveFindScope`'s `--scopeStrategy` check; `ResolveElement`, shared by
+`click`/`type`/`get-text`/`send-keys`/`submit-chat-message`) now go through this helper, rejecting
+`NameRegex`/`ControlTypeIndex`/`Coordinates` with a clean `invalid-argument` instead of reaching
+`ResolveSelector`'s `NotSupportedException`. `docs/CLI_CONTRACT.md`'s `Selector` section updated
+accordingly. Regression-audited (one pass, no in-scope issues found — a pre-existing
+missing-vs-invalid message-wording ambiguity was flagged but classified out-of-scope for this
+phase, since it predates this change and Phase 16's goal was only to prevent the uncaught
+exception, not redesign the error text).
 
 **Suggested fix (not yet applied):** When Phase 3 implements `NameRegex`/`ControlTypeIndex`/
 `Coordinates`, either implement them (removing the throw) or, if any are implemented later than
