@@ -73,18 +73,23 @@ implemented, committed, and pushed -- see git history (`ae45478`, `380079d`, `41
 
 ## Open Tasks / Known Issues
 
-**Currently open (active work item):**
-
-- **Radio-button prompt detection path not independently re-validated since the Phase 13
-  redesign.** The old `has-pending-prompt`'s `RadioFieldLabel`/`RadioButton` extraction logic was
-  never independently live-validated against an actual radio-button-style confirmation card before
-  it was removed in Phase 13 (only a freeform text-field card appeared during Phase 11's live
-  testing); no safe/disposable real radio-button-style confirmation card has appeared in any
-  session since, so this remains open pending one appearing opportunistically. Validate via
-  caller-side `find-first`/`find-all` composition (see `CLI_CONTRACT.md`'s migration note) once a
-  real radio-button card is available to trigger.
+**Currently open:** none from this session's active work list. Only the intentionally-deferred
+items in `docs/KNOWN_OPEN_FINDINGS.md` remain (see below) -- untouched at the user's explicit
+direction.
 
 **Resolved (kept for history):**
+
+- **Radio-button prompt detection path -- independently live-validated (2026-09-15)** against a
+  real `ChoicePrompt` radio-button card that appeared in this session (hwnd `0xCA18B2`, question
+  "What should the next task be?" with 3 options). `find-first --strategy Name --value "<option
+  text>"` correctly located a specific option as `ControlType.RadioButton`. `find-first`/`find-all
+  --strategy AutomationId --value RadioFieldLabel` correctly located the single question-label
+  element (`ControlType.Text`, `count: 1`), reproducing the old `has-pending-prompt`'s "is a prompt
+  pending" signal via the generic caller-side composition documented in `CLI_CONTRACT.md`'s
+  migration note. Confirms the one known remaining gap: enumerating *all* radio options generically
+  still requires knowing each option's `Name` ahead of time, since `find-all` has no
+  `ControlType`-based match yet (`Name`/`AutomationId` only) -- not a regression, matches the
+  already-documented limitation. No code change needed; this closes the validation gap only.
 
 - `find-first`/`find-all`'s `--scopeStrategy`/`--scopeValue` narrowing -- **independently
   live-validated (2026-09-15)** against the real VS Insiders window (hwnd `0xCA18B2`): scoping
