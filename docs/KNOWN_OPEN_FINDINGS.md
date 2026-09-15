@@ -3,11 +3,12 @@
 User-curated list of open, unresolved findings intentionally deferred rather than fixed
 immediately. Entries are only added, edited, or removed at the user's explicit request.
 
-## SessionContext.Save() File.Move can intermittently throw UnauthorizedAccessException
+## SessionContext.Save() File.Move can intermittently throw UnauthorizedAccessException — RESOLVED
 
 - **First seen:** 2026-09-14
 - **Last seen:** 2026-09-14
 - **Occurrences:** 1
+- **Resolved:** 2026-09-15 (commit `d9f1a15`, Phase 15)
 
 **Description:** During the Phase 2 Part 1 regression audit of the `attach`/session-context
 concurrency fix, a Regression Auditor subagent reproduced (in an isolated stress-test harness,
@@ -24,11 +25,15 @@ specific, actionable error.
 surfaces as a catchable (if unhelpful) error rather than data corruption or a hang, so it is not
 blocking current Phase 2 work.
 
-**Suggested fix (not yet applied):** Wrap the `File.Move` call in `Save()` with a small
-retry-with-backoff loop (e.g., a handful of attempts with short delays) before letting the
-exception propagate, and/or catch `UnauthorizedAccessException` specifically to report a
-dedicated error code (e.g., `"session-context-write-failed"`) instead of the generic
-`"unhandled-exception"`.
+**Fix applied (commit `d9f1a15`):** `SessionContext.Save()`'s `File.Move` now goes through a
+`MoveWithRetry` helper that retries up to 5 times with exponential backoff (20/40/80/160/320ms,
+~630ms worst case) specifically on `UnauthorizedAccessException`. If all retries are exhausted, a
+new `SessionContextWriteException` is thrown instead of letting the raw exception propagate. Both
+`SessionContext.Save` call sites (`attach`, `set-context`) catch this specifically and report the
+dedicated `session-context-write-failed` error code instead of the generic `unhandled-exception`.
+`docs/CLI_CONTRACT.md` updated with the new error code under both verbs. Regression-audited (one
+pass, narrowing the retry filter from the broader `IOException` hierarchy down to
+`UnauthorizedAccessException` only, since that was the actual observed failure mode).
 
 ## JsonOutput.WriteSuccess omits null fields by default instead of emitting JSON `null`
 
