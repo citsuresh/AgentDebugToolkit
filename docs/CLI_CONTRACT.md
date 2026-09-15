@@ -57,7 +57,7 @@ throwing. `inspect` remains successful in this case; only the affected element(s
 ```json
 { "success": false, "error": "element-not-found" | "stale-context" | "ambiguous-process" |
   "ambiguous-window" | "timeout" | "process-not-responding" | "window-not-responding" |
-  "invalid-argument", "message": "human readable detail" }
+  "invalid-argument" | "session-context-write-failed", "message": "human readable detail" }
 ```
 
 ---
@@ -74,6 +74,12 @@ flexibly). Persists session context.
 - Success: `{ "success": true, "pid": 145376, "processName": "Fdm", "windows": [WindowInfo, ...] }`
 - Failure: `ambiguous-process` (include `"candidates": [{pid, title}, ...]`) or
   `"process-not-found"`.
+- **Fixed 2026-09-15 (Phase 15):** persisting session context (`SessionContext.Save`) retries a
+  transient `UnauthorizedAccessException` from the underlying `File.Move` (observed intermittently
+  even with a single writer thread) with a short exponential backoff (5 attempts, 20/40/80/160/320ms)
+  before giving up. If all retries are exhausted, `attach` now reports the dedicated
+  `session-context-write-failed` error instead of the generic `unhandled-exception`. See
+  docs/KNOWN_OPEN_FINDINGS.md for the original finding.
 
 ### `list-windows [--pid <n>]`
 Uses context pid if `--pid` omitted.
@@ -327,7 +333,8 @@ Manual session-context override: persists `--pid` as the current process the sam
 does, without a by-name lookup — useful when the caller already knows the pid.
 - Success: `{ "success": true, "pid": 145376 }`
 - Failure: `invalid-argument` for a missing/non-integer `--pid`; `stale-context` if the pid is not a
-  running process.
+  running process; `session-context-write-failed` if persisting the session context still fails
+  after the retry-with-backoff described under `attach` (Phase 15).
 
 ---
 

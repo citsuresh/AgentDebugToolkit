@@ -142,7 +142,16 @@ internal static class Verbs
         }
 
         var proc = candidates[0];
-        SessionContext.Save(proc.Id, proc.ProcessName, proc.StartTime.ToUniversalTime());
+        try
+        {
+            SessionContext.Save(proc.Id, proc.ProcessName, proc.StartTime.ToUniversalTime());
+        }
+        catch (SessionContextWriteException ex)
+        {
+            JsonOutput.WriteError("session-context-write-failed", ex.Message);
+            return 1;
+        }
+
         var windows = UiaHelper.ListTopLevelWindows(proc.Id);
         JsonOutput.WriteSuccess(new { pid = proc.Id, processName = proc.ProcessName, windows });
         return 0;
@@ -354,7 +363,16 @@ internal static class Verbs
             return 1;
         }
 
-        SessionContext.Save(process.Id, process.ProcessName, process.StartTime.ToUniversalTime());
+        try
+        {
+            SessionContext.Save(process.Id, process.ProcessName, process.StartTime.ToUniversalTime());
+        }
+        catch (SessionContextWriteException ex)
+        {
+            JsonOutput.WriteError("session-context-write-failed", ex.Message);
+            return 1;
+        }
+
         JsonOutput.WriteSuccess(new { pid = process.Id });
         return 0;
     }
