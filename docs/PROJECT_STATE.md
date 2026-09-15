@@ -4,116 +4,105 @@
 
 ## Current Focus
 
-Phase 11 (`has-pending-prompt --hwnd <h>` verb) is implemented, committed (`41bf2de`), and
-pushed to `origin/main`. A lightweight alternative to a costly `inspect --maxDepth 20` poll for
-detecting whether the Copilot Chat agent is blocked on a confirmation/prompt card: anchor-based
-detection via `ResolveSelector` on `Name=="Waiting..."`; when found, scoped `FindAll` lookups
-extract the question (`AutomationId=RadioFieldLabel`) and options (`ControlType.RadioButton`,
-excluding `"Other"`). Output: `{ success, pending: false }` (cheap path) or `{ success,
-pending: true, question, options }`. Benchmarked ~4x faster than `inspect --maxDepth 20`
-(~1.2-1.9s vs ~5.8-12.5s). An independent Regression Auditor found one Medium finding (the two
-`FindAll` calls were unguarded by try/catch, unlike every other `FindAll` site in the codebase)
-— fixed and re-verified by a follow-up audit pass before commit.
+Phase 13 (generic `find-first`/`find-all` verbs, replacing `has-pending-prompt`) is implemented,
+committed (`ae45478`), and pushed to `origin/main`. Design concern raised after Phase 11 shipped:
+`has-pending-prompt` hardcoded Copilot-Chat-specific detection patterns (`Name=="Waiting..."`,
+`AutomationId=="RadioFieldLabel"`, `ControlType.RadioButton`) directly into the CLI, which should
+stay a generic UIA interface with app-specific patterns living in caller-side scripts/config.
+Pre-Build Decomposition compared two options (parameterize `has-pending-prompt`'s three selectors
+vs. deprecate it for fully generic `find-first`/`find-all` primitives); the user chose the latter.
+`has-pending-prompt` removed entirely; `find-first --hwnd <h> --strategy <S> --value <V>
+[--scopeStrategy <S> --scopeValue <V>]` (single `FindFirst`, optional narrower scope) and
+`find-all` (same args plus `--excludeValue`, uses `FindAll`) added instead, reusing the existing
+`Selector`/`SelectorStrategy` abstraction. Confirmed no existing caller depended on
+`has-pending-prompt`'s shape: `tools/Watch-CopilotChat.ps1` never called it — it already does its
+own client-side Name/AutomationId/ControlType filtering over a full `inspect` dump, so app-specific
+logic already lived in the caller script, not the CLI. `docs/CLI_CONTRACT.md` updated: new
+`find-first`/`find-all` sections (with a migration example reproducing the old `has-pending-prompt`
+check), `has-pending-prompt` section removed, and `NameRegex`/`ControlTypeIndex`/`Coordinates` now
+correctly documented as "not yet implemented" instead of a stale "(Phase 3)" tag. Build clean (0
+warnings/errors). Live-validated `find-first`/`find-all` against the real VS Insiders window (hwnd
+`0xCA18B2`): not-found, found, and scope-argument-validation cases. Independent Regression Audit
+run; one finding (this file and `docs/full-graph.json` still referencing the removed verb) — user
+explicitly chose to defer that to this End Session rather than a manual mid-task patch (now
+addressed by this update/refresh).
 
-This session also independently live-validated `send-keys` (previously only informally
-exercised during an earlier audit) against a disposable, isolated Notepad instance (not this VS
-window) — sent literal text, verified via `get-text`, then sent `^a{DEL}` and verified the field
-was cleared. Both the literal-text and key-combo paths behaved as expected; no bug found, no
-code changes made. Test instance closed after validation.
+Phase 12 (clipboard-paste fallback, `--paste` flag on `type`/`submit-chat-message`) is implemented,
+committed (`380079d`), and pushed to `origin/main`. Adds `--paste` to both verbs: sets clipboard
+text (via `System.Windows.Forms.Clipboard`) and sends `Ctrl+V` instead of slow per-character
+synthetic keystrokes, for elements without `ValuePattern` support (notably the VS Copilot Chat
+composer). No-op (falls back to `"pattern"`) when `ValuePattern` is available. Registers Clipboard
+History / Cloud Clipboard opt-out marker formats on the pasted text only (never on restored
+content), per the documented Windows opt-out mechanism. Full-fidelity clipboard snapshot/restore
+via `IDataObject` (not text-only) preserves non-text formats that may have coexisted with text;
+`clipboardRestored` is tri-state (`null` = nothing to restore, `true` = restored, `false` = restore
+attempted and failed). Two real bugs were found and fixed during live validation (not just
+code-review): (1) top-level statements do not imply `[STAThread]` — `System.Windows.Forms.Clipboard`
+requires STA and threw `InvalidOperationException` until the entry point was wrapped to run on an
+explicit STA thread when needed; (2) `Clipboard.GetDataObject()` returns a live COM wrapper tied to
+the clipboard owner that goes stale once the clipboard is overwritten, silently no-opping the
+restore despite reporting `clipboardRestored: true` — fixed by eagerly copying every format's data
+into an owned `DataObject` before pasting. Live-validated against the real VS Copilot Chat composer
+(paste, verify with line-ending normalization for RichEdit's `\n`→`\r` behavior, and a genuine
+clipboard-restore round-trip using a known marker value) without ever submitting a message.
+Independent Regression Audit run twice (once on the initial implementation, once on the two
+audit-driven fixes); all in-scope findings addressed.
 
-Phase 9 (reliable interaction primitives) is implemented, committed (`4178912`), and pushed to
-`origin/main`. New verbs: `activate --hwnd <h>` (SetForegroundWindow wrapper), `send-keys --hwnd
-<h> --strategy <s> --value <v> --keys <SendKeys syntax>` (raw key-combo pass-through, companion to
-`type`), `type --verify` (opt-in read-back verification, scoped to `ValuePattern`-backed controls
-only to avoid false positives on synthetic-keyboard controls), and `submit-chat-message --hwnd <h>
---inputAutomationId <id> --sendAutomationId <id> --text <input>` (composite click/type/verify/Send
-verb for the Copilot Chat input pattern). `type` (and `submit-chat-message`) now reject embedded
-newlines in `--text` with `invalid-argument` (a real behavior change) since a raw newline via
-`SendKeys` previously triggered unintended UI navigation. All items followed the Pre-Build
-Decomposition + Regression Auditor discipline; each part was audited and any findings fixed before
-proceeding.
+Phase 11 (`has-pending-prompt --hwnd <h>` verb) was implemented and committed (`41bf2de`) in an
+earlier session, then **removed in Phase 13** (see above) after a design concern that it baked
+app-specific detection patterns into the CLI. No functional capability was lost: the same check
+can be reproduced by callers via `find-first`/`find-all` (documented in `CLI_CONTRACT.md`'s
+migration note).
 
-Phase 10 (chat composer selector gap fix) is implemented, committed (`94c5f15`), and pushed to
-`origin/main`, addressing the known Phase 9 limitation that the real Visual Studio Copilot Chat
-composer/Send button expose no usable `AutomationId`. `submit-chat-message` now accepts either
-`--inputAutomationId <id>` (original, preserved for compatibility) or `--inputStrategy Name
---inputValue <value>` (new — matches the composer's `Name="Ask Copilot"` while empty) for input
-selection, and either `--sendAutomationId <id>` (original, preserved) or `--submitKeys <SendKeys
-syntax>` (new, defaults to `{ENTER}` — sends keyboard input to the input element instead of
-clicking a Send button) for submission. The two modes in each pair are mutually exclusive,
-enforced with `invalid-argument`. An independent Regression Auditor subagent confirmed the
-original `--inputAutomationId`/`--sendAutomationId` compatibility path is behaviorally unchanged
-(same validation order, error codes, success shape) and found no other issues. `docs/CLI_CONTRACT.md`
-updated accordingly. Live end-to-end validation of the new Name+submitKeys path was explicitly
-deferred by user choice (code-review/build-only, consistent with how Phase 9 documented this same
-gap) — see Open Tasks. **Update (2026-09-15): live-validated end-to-end** against this session's
-own VS Insiders window (hwnd `0xCA18B2`) — see Open Tasks entry for the exact command/result.
+`send-keys` was independently live-validated (an earlier session) against a disposable, isolated
+Notepad instance (not the live VS window) — sent literal text, verified via `get-text`, then sent
+`^a{DEL}` and verified the field was cleared. No bug found.
+
+Phase 9/10 (reliable interaction primitives; chat composer selector gap fix) remain implemented,
+committed, and pushed — see git history (`4178912`, `94c5f15`) for details; unchanged this session.
 
 ## Open Tasks / Known Issues
 
-- `submit-chat-message`'s new `--inputStrategy Name --inputValue <value>` / `--submitKeys` path
-  (Phase 10) was live-validated end-to-end (2026-09-15) against this session's own VS Insiders
-  window (hwnd `0xCA18B2`): `submit-chat-message --hwnd 0xCA18B2 --inputStrategy Name
-  --inputValue "Ask Copilot" --text "ping-test-phase10"` resolved the composer by `Name`, typed
-  the text (`method: "synthetic-keyboard"`), and submitted it via the default `--submitKeys
-  {ENTER}` with no Send-button `AutomationId` needed — `{"method":"synthetic-keyboard","success":true}`.
-  This closes the Phase 9 gap below.
-  - Phase 11 (`has-pending-prompt --hwnd <h>` verb) is implemented, committed (`41bf2de`), and
-    pushed. Anchor-based detection via a single `FindFirst`-equivalent (`ResolveSelector` with
-    `Strategy=Name, Value="Waiting..."`); when found, two scoped `FindAll` lookups extract the
-    question (`AutomationId=RadioFieldLabel` nodes) and options (`ControlType.RadioButton` nodes,
-    excluding literal `"Other"`). Output: `{ success, pending: false }` (cheap path, no
-    `FindAll` performed) or `{ success, pending: true, question, options }`. No `--maxDepth`
-    option — detection is anchor-based, not depth-bounded. Live-validated: `pending: false`
-    (idle) multiple times, and `pending: true` against a real freeform (non-radio) confirmation
-    card (`question`/`options` legitimately empty in that case — no RadioFieldLabel/RadioButton
-    nodes exist for a freeform prompt). Benchmarked ~4x faster than `inspect --maxDepth 20`
-    (~1.2-1.9s vs ~5.8-12.5s via direct .exe). An independent Regression Auditor found one
-    Medium finding — the two `FindAll` calls were unguarded by try/catch, inconsistent with
-    every other `FindAll` site in the codebase (`UiaHelper.ListTopLevelWindows`/`ToElementInfo`/
-    `CollectVisibleText`), a real risk since this verb polls an actively-changing chat panel. Fix
-    applied (both wrapped in try/catch, degrading to empty question/options on a transient UIA
-    exception) and re-verified by a follow-up Regression Auditor pass before commit.
-  - **Remaining gap:** the radio-button `question`/`options` extraction path has NOT been
-    independently live-validated against an actual radio-button-style confirmation card (no such
-    card appeared during this session's live testing — only a freeform text-field card was
-    available). Worth validating opportunistically if/when a radio-button card next appears.
-  - `send-keys` was independently live-validated this session against a disposable, isolated
-    Notepad instance (hwnd separate from this VS window): sent literal text via `send-keys`,
-    verified with `get-text`, then sent `^a{DEL}` and verified the field was cleared. Both the
-    literal-text and key-combo paths behaved as expected — no bug found, no code changes made.
-- (Phase 9 finding, now addressed by the above) The real Copilot Chat panel in the test VS
-  Insiders instance (hwnd `0xCA18B2`, pid `141556`) exposes no discoverable `AutomationId` for its
-  input or Send button (confirmed via full tree inspection) — `submit-chat-message`'s original
-  `AutomationId`-only design didn't match this specific chat UI. See `docs/CLI_CONTRACT.md` for
-  details.
+- **Radio-button prompt detection path not independently re-validated since the Phase 13
+  redesign.** The old `has-pending-prompt`'s `RadioFieldLabel`/`RadioButton` extraction logic was
+  never independently live-validated against an actual radio-button-style confirmation card (only
+  a freeform text-field card appeared during Phase 11's live testing) — and that logic no longer
+  exists in the CLI at all post-Phase-13; a caller wanting it now composes `find-first`/`find-all`
+  themselves. Worth validating opportunistically if/when a radio-button card next appears, using
+  the caller-side approach documented in `CLI_CONTRACT.md`.
+- `find-first`/`find-all`'s `--scopeStrategy`/`--scopeValue` narrowing was validated only for the
+  argument-mismatch error case and the "no scope supplied" default-to-window-root case; the actual
+  narrowed-scope-resolves-and-narrows-search path was not independently live-tested this session
+  (code-reviewed only, matching the existing `ResolveSelector` pattern it reuses).
+  - Enumerating radio-button *options* via `find-all` still needs a control-type-based match,
+    which is not yet a supported `Selector` strategy (`Name`/`AutomationId` only today) — documented
+    as a known gap in `CLI_CONTRACT.md`'s migration note, with `inspect` as the fallback.
 - `type`'s embedded-newline rejection is unconditional across both its `ValuePattern` and
-  synthetic-keyboard paths, even though the underlying bug (SendKeys-driven UI navigation) only
-  affects the synthetic-keyboard path — a deliberate simplicity/uniformity tradeoff, not a fix
-  pending. Multi-line `ValuePattern`-backed controls currently cannot receive newline text via
-  `type` at all.
+  synthetic-keyboard paths (skipped only when `--paste` is active) — a deliberate
+  simplicity/uniformity tradeoff, not a fix pending.
 - `screenshot`'s `PrintWindow`/`PW_RENDERFULLCONTENT` capture (Phase 8) can return an incomplete or
-  incorrectly scaled frame for a non-foreground/non-visible window — proposed as a
-  known-limitation doc item during Phase 9 breakdown but not yet written up.
+  incorrectly scaled frame for a non-foreground/non-visible window — proposed as a known-limitation
+  doc item during Phase 9 breakdown but not yet written up.
 - Validate Phase 7 exit criteria against `CAMFWDownloadConsole.exe`; current validation uses
   `cmd.exe` smoke targets only.
 - Phase 2 UI Automation gaps remain: `wait-for-window-change`, `wait-for-process-responding`,
   `delay`, and `set-context` are documented but not dispatched; `--scopeHwnd` is ignored by
   `click`/`type`; and `attach --process <name>.exe` does not normalize the suffix. Explicitly out
   of scope unless directed otherwise.
+- See `docs/KNOWN_OPEN_FINDINGS.md` for user-curated deferred findings (clipboard-unrelated:
+  `SessionContext.Save()` file-move race, `JsonOutput` null-field omission, unimplemented selector
+  strategies throwing uncaught exceptions, `DteLocator` COM object leaks, `nuget.config` scope).
 
 ## Recently Changed Files
 
-- `src/AgentDebugToolkit.UiAutomation.Cli/Program.cs` (Phase 9: added `Verbs.Activate`,
-  `Verbs.SendKeys`, `Verbs.SubmitChatMessage`; extended `Verbs.Type` with `--verify` and newline
-  rejection; new dispatch cases. Phase 10: extended `Verbs.SubmitChatMessage` with
-  `--inputStrategy`/`--inputValue` and `--submitKeys` argument modes, mutually exclusive with the
-  original `--inputAutomationId`/`--sendAutomationId` modes. Phase 11 [uncommitted]: added
-  `Verbs.HasPendingPrompt` and its `has-pending-prompt` dispatch case)
-- `src/AgentDebugToolkit.UiAutomation.Cli/UiaHelper.cs` (added `SendKeys(element, keys)`, Phase 9)
-- `src/AgentDebugToolkit.UiAutomation.Cli/NativeMethods.cs` (added `SendKeysRaw`, Phase 9)
-- `docs/CLI_CONTRACT.md`, `docs/IMPLEMENTATION_PLAN.md` (Phase 9 verb contracts, audit findings,
-  live-validation notes, known limitations; `docs/CLI_CONTRACT.md` updated again for Phase 10's
-  `submit-chat-message` argument modes, and for Phase 11's `has-pending-prompt` contract
-  [uncommitted])
-
+- `src/AgentDebugToolkit.UiAutomation.Cli/Program.cs` (Phase 12: STA-thread entry-point wrapper;
+  `--paste` support in `Verbs.Type`/`Verbs.SubmitChatMessage`; `NormalizeLineEndings`,
+  `ElementSupportsValuePattern` helpers. Phase 13: removed `Verbs.HasPendingPrompt` and its
+  dispatch case; added `Verbs.FindFirst`/`Verbs.FindAll`, `ResolveFindScope`, `ParseSelectorArgs`,
+  `ToElementSummary`, and their dispatch cases)
+- `src/AgentDebugToolkit.UiAutomation.Cli/UiaHelper.cs` (Phase 12: `ClipboardUnavailableException`,
+  `TypeViaPaste`, `SetClipboardTextWithRetry`/`SetClipboardDataWithRetry`,
+  `GetTextForPasteVerification`. Phase 13: added `ResolveSelectorAll`)
+- `docs/CLI_CONTRACT.md` (Phase 12: `--paste` design/contract, STA-fix and stale-COM-wrapper-fix
+  notes, tri-state `clipboardRestored`. Phase 13: `find-first`/`find-all` contract, `has-pending-prompt`
+  section removed with migration note, `NameRegex`/`ControlTypeIndex`/`Coordinates` phase-tag fix)
