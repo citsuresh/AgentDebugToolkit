@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.0",
-  "generatedAt": "2026-09-15T12:42:44.5912399Z",
+  "generatedAt": "2026-09-15T12:45:25.0216831Z",
   "solutionPath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\AgentDebugToolkit.slnx",
   "mode": "incremental",
-  "commitSha": "a3debf674530d38c2c9bfb614497ad08d8d79c2d",
+  "commitSha": "fe7632c6cbbed95096afe321698a75c1d97217b2",
   "nodes": [
     {
       "id": "AgentDebugToolkit.Core.Models.SelectorStrategy",
