@@ -100,11 +100,12 @@ exception, not redesign the error text).
 others, explicitly reject the not-yet-implemented ones with `invalid-argument` at the same
 validation point where `--strategy` is currently parsed in each verb.
 
-## DteLocator ROT/moniker COM objects are not explicitly released
+## DteLocator ROT/moniker COM objects are not explicitly released — RESOLVED
 
 - **First seen:** 2026-09-14
 - **Last seen:** 2026-09-14
 - **Occurrences:** 1
+- **Resolved:** Phase 17, commit `49f27db`
 
 **Description:** In `DteLocator.FindDte`, the `IRunningObjectTable`, `IEnumMoniker`, `IBindCtx`,
 and each per-iteration `IMoniker` RCW are never released via `Marshal.ReleaseComObject`/
@@ -116,9 +117,12 @@ returns, so the OS/CLR reclaims these on process exit; there is no observable le
 usage. It would only matter if this code were reused in-process/repeatedly (e.g. hosted as a
 library called many times without a process restart).
 
-**Suggested fix (not yet applied):** Wrap `rot`/`enumMoniker`/`bindCtx`/`moniker` releases in a
-`finally` block using `Marshal.ReleaseComObject`, or explicitly document that cleanup currently
-relies on process-exit teardown.
+**Fix applied (Phase 17):** `FindDte` now nests `try/finally` blocks around `rot`, `enumMoniker`,
+`bindCtx`, and each per-iteration `moniker`, releasing each via `Marshal.ReleaseComObject` on
+every exit path (including the early `rot-unavailable`/`devenv-not-found` returns). The returned
+`DTE` object itself is intentionally left unreleased, since it is used by the caller after
+`FindDte` returns. A Regression Auditor review found no in-scope issues; build succeeded with 0
+warnings/errors; no test project exists for this code.
 
 ## Root nuget.config's `<clear/>` is solution-wide, not scoped to the new project
 
