@@ -296,6 +296,41 @@ with or changing the target UI.
 - OCR/template-image fallback for fully non-UIA-exposed custom controls, if Phase 3's C1FlexGrid
   spot-check or other findings show a real need.
 
+## Phase 20 — Breakpoint verbs & wait-for-break (proposed, not yet implemented)
+
+**Motivation:** driving a "UI Debug Map" skill (click a UI element in a target app, correlate the
+resulting code path back to source) requires programmatically setting/clearing breakpoints and
+waiting for a break event, neither of which `AgentDebugToolkit.Debugger.VisualStudio` (`agentdebug-vs`)
+currently exposes. Phase 6 only added *passive* reads of debugger state
+(`debugger-status`/`get-callstack`/`get-locals`/`get-exception-info`) plus session control
+(`continue`/`step-*`/`start-debugging`/`stop-debugging`) — there is no verb to place a breakpoint,
+and no event-driven wait primitive for a break (only manual `debugger-status` polling).
+
+**Proposed scope:**
+- `set-breakpoint --file <path> --line <n> [--solution <name>]` — add a breakpoint via
+  `DTE.Debugger.Breakpoints.Add(File:=..., Line:=...)`. Returns an identifier (e.g. file+line, or
+  an internal index) the caller can use to remove it later.
+- `remove-breakpoint --file <path> --line <n> [--solution <name>]` and/or
+  `remove-breakpoint --all [--solution <name>]` — clear a specific breakpoint or all of them.
+- `list-breakpoints [--solution <name>]` — enumerate currently set breakpoints (file, line,
+  enabled state) for the attached VS instance.
+- `wait-for-break --timeoutMs <n> [--pollMs <n>] [--solution <name>]` — analogous to the UI
+  automation CLI's `wait-for-element`; polls `debugger-status` internally so the skill/caller
+  doesn't need to hand-roll a polling loop, and returns the same `debugger-status` payload
+  (mode/activeDocument/activeLine) once break mode is entered, or a `timeout` error.
+
+**JSON contract:** consistent in style with existing Phase 6 verbs and `CLI_CONTRACT.md` overall
+(error envelope, `--solution` filtering via the Running Object Table, `ComRetry` wrapping on all
+new EnvDTE/COM call sites per the Phase 6 precedent).
+
+**Not yet scoped in detail:** conditional breakpoints, hit-count breakpoints, tracepoints —
+out of scope unless a concrete future need arises.
+
+**Planned execution:** to be implemented via the Agent Orchestrator skill (see FDM repo
+`.copilot/skills/agent-orchestrator/`) once that skill exists, following the same
+Pre-Build Decomposition → implement → Regression Audit → review → commit discipline used for
+Phases 15-19.
+
 ## Phase 9 — Reliable interaction primitives (proposed scope, not yet implemented)
 
 **Status:** proposed for review only (2026-09-15) — items below are documented as candidate scope
