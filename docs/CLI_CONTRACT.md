@@ -130,23 +130,31 @@ keyboard input.
   failing. The `verify-mismatch` failure path itself (for `ValuePattern`-backed controls) was
   validated by code review and build only, not live, per user direction (no safe
   `ValuePattern`-backed control was available to deliberately mistype into in this session).
-- **Known limitation — embedded newlines are rejected, even for `ValuePattern`-backed controls
-  (added 2026-09-15).** `--text` containing an embedded `\n`/`\r` is rejected up front with
-  `invalid-argument`, before window/element resolution: `{ "success": false, "error":
-  "invalid-argument", "message": "--text must not contain embedded newline characters..." }`. This
-  is a real behavior change (not just a doc note) — previously a raw newline was passed through
-  uninterpreted-as-literal to the underlying `SendKeys.SendWait` call on the synthetic-keyboard
-  fallback path, which was observed live to trigger unintended UI navigation (unexpectedly
-  focusing a different control) rather than being typed as literal text. The rejection is
-  unconditional across **both** of `type`'s paths, including `ValuePattern.SetValue` (the
-  `"pattern"` method), even though that path does not go through `SendKeys` and could not exhibit
-  the observed navigation bug — a multi-line `ValuePattern`-backed control therefore cannot
-  currently receive newline text via `type` at all. This was a deliberate simplicity/uniformity
-  tradeoff (one consistent rule across both paths) rather than an oversight — flagged during
-  Regression Audit and confirmed as the intended tradeoff rather than fixed to be path-aware.
-  Validated live (2026-09-15): `type --text "line1\nline2"` (containing an embedded newline)
-  against the Copilot Chat input returned a clean `invalid-argument` with no unhandled exception
-  and no attempt to send the text.
+- **Known limitation — embedded newlines are rejected on the synthetic-keyboard path only
+  (added 2026-09-15; narrowed 2026-09-15).** `--text` containing an embedded `\n`/`\r` is rejected
+  with `invalid-argument` — but only when the resolved element has no usable `ValuePattern` (i.e.
+  `type` would otherwise fall back to the synthetic-keyboard path) and `--paste` is not given: `{
+  "success": false, "error": "invalid-argument", "message": "--text must not contain embedded
+  newline characters..." }`. The check now runs after window/element resolution rather than up
+  front, since it needs to know which path the resolved element will take. This is a real behavior
+  change (not just a doc note) — previously a raw newline was passed through uninterpreted-as-
+  literal to the underlying `SendKeys.SendWait` call on the synthetic-keyboard fallback path, which
+  was observed live to trigger unintended UI navigation (unexpectedly focusing a different control)
+  rather than being typed as literal text.
+  `ValuePattern`-backed controls (the `"pattern"` method, via `ValuePattern.SetValue`) are now
+  **exempt** from this rejection and may receive embedded newlines directly: `SetValue` never goes
+  through `SendKeys`, so the observed navigation bug does not apply there. This was originally a
+  deliberate simplicity/uniformity tradeoff (one consistent rule across both paths, flagged during
+  Regression Audit and confirmed as intended at the time) but was revisited once `--paste` existed
+  as a proven safe multi-line path, and the unconditional rejection was judged an unnecessary
+  restriction for `ValuePattern`-backed controls specifically — reconsidered and narrowed to be
+  path-aware.
+  Validated live (2026-09-15, before narrowing): `type --text "line1\nline2"` (containing an
+  embedded newline) against the Copilot Chat input (synthetic-keyboard path) returned a clean
+  `invalid-argument` with no unhandled exception and no attempt to send the text. The narrowed,
+  path-aware behavior (`ValuePattern`-backed controls now accepting newlines via `"pattern"`) was
+  validated by code review and build only, not live, pending a suitable multi-line
+  `ValuePattern`-backed control to test against.
 - **`--paste` (optional, Phase 12, added 2026-09-15):** boolean-style flag (same convention as
   `--verify`) that, when the target element has no usable `ValuePattern` (the case `--paste` is
   actually for), pastes `--text` via the clipboard (`Clipboard.SetDataObject` + `Ctrl+V`) instead
@@ -332,6 +340,19 @@ content). Does not activate/focus the window.
   obscured on-screen by another application window: the `PrintWindow` path correctly captured the
   target window's own content (menu bar, editor, Chat panel with correct text), confirming the
   fix for the `CopyFromScreen`-only fallback's obscured-window limitation.
+- **Known limitation — `PrintWindow`/`PW_RENDERFULLCONTENT` capture can be incomplete or
+  incorrectly scaled for a non-foreground/non-visible window (flagged during Phase 9, documented
+  2026-09-15).** The obscured-but-still-visible-on-a-monitor case above was validated live and
+  works correctly, but `PrintWindow` with `PW_RENDERFULLCONTENT` is not guaranteed to fully or
+  correctly render a window that is minimized, on a different virtual desktop, or otherwise not
+  currently part of the visible desktop composition — some applications (particularly
+  DirectComposition/hardware-accelerated-rendering windows) can return a partially-rendered,
+  stale, or incorrectly-scaled bitmap in that situation rather than failing outright, which would
+  not be caught by the existing failure-triggered fallback to `CopyFromScreen` (since `PrintWindow`
+  reports success even though the content is wrong). This was flagged as a concern during Phase 9
+  but never live-validated against an actually-minimized or off-desktop window, and no code change
+  has been made for it. Callers needing a guaranteed-correct capture should ensure the target
+  window is not minimized and is on the current virtual desktop before calling `screenshot`.
 
 ## Phase 9 verbs (reliable interaction primitives)
 
@@ -450,8 +471,10 @@ an `AutomationId`-based Send-button click or keyboard input to the input element
   `Type`/paste call proceeded; the Send click/keyboard submission's own internal mechanism is not
   reported — a known simplification, see below).
 - Failure: `invalid-argument` (with `"step": "validate-arguments"`) for a missing/empty `--text`;
-  an embedded newline in `--text` (same rejection as `type`, duplicated here since this verb calls
-  `UiaHelper.Type` directly rather than going through `Verbs.Type`); a missing, empty, or
+  an embedded newline in `--text` when the resolved input has no usable `ValuePattern` and
+  `--paste` is not given (same conditional rejection as `type`, duplicated here since this verb
+  calls `UiaHelper.Type` directly rather than going through `Verbs.Type` — see that section above
+  for the full rationale); a missing, empty, or
   conflicting input-selection mode (`--inputAutomationId` together with
   `--inputStrategy`/`--inputValue`, or neither a valid `--inputAutomationId` nor a valid
   `--inputStrategy Name --inputValue <value>` pair); an empty `--sendAutomationId` or

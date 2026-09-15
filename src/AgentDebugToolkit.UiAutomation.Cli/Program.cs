@@ -215,23 +215,6 @@ internal static class Verbs
 
         var usePaste = opts.TryGetValue("paste", out var pasteText) && pasteText != "false";
 
-        // Reject embedded newlines: a raw '\n'/'\r' passed through to SendKeys.SendWait is not
-        // treated as literal text — it can trigger unintended UI navigation (e.g. moving focus to
-        // a different control), which was observed directly during Phase 9 validation rather than
-        // being a theoretical concern. Rejecting up front is safer than silently mangling input or
-        // producing surprising side effects. This rejection does NOT apply to --paste: pasted text
-        // never passes through SendKeys.SendWait character-by-character, so embedded newlines are
-        // safe there.
-        if (!usePaste && (text.Contains('\n') || text.Contains('\r')))
-        {
-            JsonOutput.WriteError(
-                "invalid-argument",
-                "--text must not contain embedded newline characters ('\\n'/'\\r'); these are not " +
-                "treated as literal text by the underlying SendKeys mechanism and can trigger " +
-                "unintended UI navigation instead. Use --paste to send text containing newlines.");
-            return 1;
-        }
-
         var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
         if (errorCode is not null)
         {
@@ -249,6 +232,24 @@ internal static class Verbs
         if (element is null)
         {
             JsonOutput.WriteError(elementErrorCode!, elementError!);
+            return 1;
+        }
+
+        // Reject embedded newlines only for the synthetic-keyboard path: a raw '\n'/'\r' passed
+        // through to SendKeys.SendWait is not treated as literal text -- it can trigger unintended
+        // UI navigation (e.g. moving focus to a different control), which was observed directly
+        // during Phase 9 validation rather than being a theoretical concern. This rejection does
+        // NOT apply to --paste (pasted text never passes through SendKeys.SendWait
+        // character-by-character) or to ValuePattern-backed elements (SetValue bypasses SendKeys
+        // entirely, so the underlying bug does not apply there either -- this is why the check now
+        // happens after element resolution instead of unconditionally up front).
+        if (!usePaste && !ElementSupportsValuePattern(element) && (text.Contains('\n') || text.Contains('\r')))
+        {
+            JsonOutput.WriteError(
+                "invalid-argument",
+                "--text must not contain embedded newline characters ('\\n'/'\\r'); these are not " +
+                "treated as literal text by the underlying SendKeys mechanism and can trigger " +
+                "unintended UI navigation instead. Use --paste to send text containing newlines.");
             return 1;
         }
 
@@ -665,20 +666,7 @@ internal static class Verbs
             return 1;
         }
 
-        // Same embedded-newline guard as the standalone type verb (this composite verb calls
-        // UiaHelper.Type directly rather than Verbs.Type, so the check is duplicated here rather
-        // than inherited). Does not apply to --paste — see Verbs.Type's matching comment.
         var usePaste = opts.TryGetValue("paste", out var pasteText) && pasteText != "false";
-        if (!usePaste && (text.Contains('\n') || text.Contains('\r')))
-        {
-            JsonOutput.WriteError(
-                "invalid-argument",
-                "--text must not contain embedded newline characters ('\\n'/'\\r'); these are not " +
-                "treated as literal text by the underlying SendKeys mechanism and can trigger " +
-                "unintended UI navigation instead. Use --paste to send text containing newlines.",
-                new { step = "validate-arguments" });
-            return 1;
-        }
 
         var hasInputAutomationId = opts.TryGetValue("inputAutomationId", out var inputAutomationId);
         var hasInputStrategy = opts.TryGetValue("inputStrategy", out var inputStrategy);
@@ -772,6 +760,22 @@ internal static class Verbs
             JsonOutput.WriteError(
                 "element-not-found", $"No input element found for {inputDescription}.",
                 new { step = "resolve-input" });
+            return 1;
+        }
+
+        // Reject embedded newlines only for the synthetic-keyboard path -- same guard as the
+        // standalone type verb (this composite verb calls UiaHelper.Type directly rather than
+        // Verbs.Type, so the check is duplicated here rather than inherited; see that verb's
+        // matching comment for the full rationale). Does not apply to --paste or to
+        // ValuePattern-backed elements (SetValue bypasses SendKeys entirely).
+        if (!usePaste && !ElementSupportsValuePattern(inputElement) && (text.Contains('\n') || text.Contains('\r')))
+        {
+            JsonOutput.WriteError(
+                "invalid-argument",
+                "--text must not contain embedded newline characters ('\\n'/'\\r'); these are not " +
+                "treated as literal text by the underlying SendKeys mechanism and can trigger " +
+                "unintended UI navigation instead. Use --paste to send text containing newlines.",
+                new { step = "validate-arguments" });
             return 1;
         }
 
