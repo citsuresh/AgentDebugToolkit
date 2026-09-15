@@ -41,6 +41,8 @@ try
             return Verbs.SendKeys(opts);
         case "submit-chat-message":
             return Verbs.SubmitChatMessage(opts);
+        case "has-pending-prompt":
+            return Verbs.HasPendingPrompt(opts);
         default:
             JsonOutput.WriteError("invalid-argument", $"Unknown verb '{verb}'.");
             return 1;
@@ -752,6 +754,104 @@ internal static class Verbs
         }
 
         JsonOutput.WriteSuccess(new { method });
+        return 0;
+    }
+
+    /// <summary>
+    /// Lightweight, shallow-cost check for whether a Copilot Chat-style confirmation prompt is
+    /// currently blocking on user input (e.g. a tool-approval card with Submit/Cancel and
+    /// optionally radio-button options), without walking/serializing the entire accessibility
+    /// tree the way <c>inspect --maxDepth N</c> does. Intended for repeated polling while waiting
+    /// for an agent turn to either finish or need input, where the deep-inspect approach is too
+    /// costly to call on every poll.
+    /// </summary>
+    /// <remarks>
+    /// Detection is based on patterns validated live against this session's own Copilot Chat
+    /// panel (see <c>tools/Watch-CopilotChat.ps1</c>, which this verb supersedes for the
+    /// "is something pending" check specifically): a pending confirmation card is uniquely
+    /// identified by a descendant element with <c>Name == "Waiting..."</c>. When present, the
+    /// question text is read from descendant(s) with <c>AutomationId == "RadioFieldLabel"</c>,
+    /// and its options from <c>ControlType.RadioButton</c> descendants (excluding the literal
+    /// "Other" label, a generic fallback option rather than real content). No fixed-depth
+    /// traversal is used: <c>FindFirst</c> stops at the first match and never serializes visited
+    /// nodes, which is why this is meaningfully cheaper than a depth-bounded <c>inspect</c> (a
+    /// depth-bounded <c>inspect</c> still walks and serializes every node up to that depth,
+    /// whereas <c>FindFirst</c> only walks until it finds a match or exhausts the tree). No
+    /// shallower/cheaper anchor than the "Waiting..." Name match has been identified for this UI.
+    /// </remarks>
+    public static int HasPendingPrompt(Dictionary<string, string> opts)
+    {
+        var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
+        if (errorCode is not null)
+        {
+            JsonOutput.WriteError(errorCode, error!);
+            return 1;
+        }
+
+        if (!NativeMethods.IsResponding(windowHwnd, timeoutMs: 250))
+        {
+            JsonOutput.WriteError("window-not-responding", "The target window is not responding.");
+            return 1;
+        }
+
+        var scope = UiaHelper.FindWindowByHwnd($"0x{windowHwnd.ToInt64():X}");
+        if (scope is null)
+        {
+            JsonOutput.WriteError("element-not-found", $"No window found for hwnd '0x{windowHwnd.ToInt64():X}'.");
+            return 1;
+        }
+
+        var waiting = UiaHelper.ResolveSelector(scope, new Selector { Strategy = SelectorStrategy.Name, Value = "Waiting..." });
+        if (waiting is null)
+        {
+            JsonOutput.WriteSuccess(new { pending = false });
+            return 0;
+        }
+
+        var questionParts = new List<string>();
+        try
+        {
+            var labels = scope.FindAll(
+                TreeScope.Descendants,
+                new PropertyCondition(AutomationElement.AutomationIdProperty, "RadioFieldLabel"));
+            foreach (AutomationElement label in labels)
+            {
+                var name = label.Current.Name;
+                if (!string.IsNullOrWhiteSpace(name))
+                {
+                    questionParts.Add(name);
+                }
+            }
+        }
+        catch
+        {
+            // The tree can mutate between the "Waiting..." match above and this lookup (e.g. the
+            // confirmation card is dismissed/replaced mid-poll) — degrade to an empty question
+            // rather than surfacing a transient UIA exception as unhandled-exception, consistent
+            // with how the freeform (non-radio) prompt case is already a non-error empty result.
+        }
+
+        var options = new List<string>();
+        try
+        {
+            var radioButtons = scope.FindAll(
+                TreeScope.Descendants,
+                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.RadioButton));
+            foreach (AutomationElement radio in radioButtons)
+            {
+                var name = radio.Current.Name;
+                if (!string.IsNullOrWhiteSpace(name) && name != "Other")
+                {
+                    options.Add(name);
+                }
+            }
+        }
+        catch
+        {
+            // Same rationale as the labels lookup above.
+        }
+
+        JsonOutput.WriteSuccess(new { pending = true, question = string.Join(" | ", questionParts), options });
         return 0;
     }
 

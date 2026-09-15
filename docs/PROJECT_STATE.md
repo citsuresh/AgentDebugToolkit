@@ -41,6 +41,28 @@ own VS Insiders window (hwnd `0xCA18B2`) — see Open Tasks entry for the exact 
   the text (`method: "synthetic-keyboard"`), and submitted it via the default `--submitKeys
   {ENTER}` with no Send-button `AutomationId` needed — `{"method":"synthetic-keyboard","success":true}`.
   This closes the Phase 9 gap below.
+  - Phase 11 (`has-pending-prompt --hwnd <h>` verb, NOT YET COMMITTED — awaiting explicit
+    user go-ahead) is implemented: a lightweight alternative to a costly `inspect --maxDepth 20`
+    poll for detecting whether the Copilot Chat agent is blocked on a confirmation/prompt card.
+    Anchor-based detection via a single `FindFirst`-equivalent (`ResolveSelector` with
+    `Strategy=Name, Value="Waiting..."`); when found, two scoped `FindAll` lookups extract the
+    question (`AutomationId=RadioFieldLabel` nodes) and options (`ControlType.RadioButton` nodes,
+    excluding literal `"Other"`). Output: `{ success, pending: false }` (cheap path, no
+    `FindAll` performed) or `{ success, pending: true, question, options }`. No `--maxDepth`
+    option — detection is anchor-based, not depth-bounded. Live-validated: `pending: false`
+    (idle) multiple times, and `pending: true` against a real freeform (non-radio) confirmation
+    card (`question`/`options` legitimately empty in that case — no RadioFieldLabel/RadioButton
+    nodes exist for a freeform prompt). The radio-button `question`/`options` extraction path was
+    NOT independently live-validated against an actual radio-button card this session (no such
+    card appeared). Benchmarked ~4x faster than `inspect --maxDepth 20` (~1.2-1.9s vs ~5.8-12.5s
+    via direct .exe). An independent Regression Auditor found one Medium finding — the two
+    `FindAll` calls were unguarded by try/catch, inconsistent with every other `FindAll` site in
+    the codebase (`UiaHelper.ListTopLevelWindows`/`ToElementInfo`/`CollectVisibleText`), a real
+    risk since this verb polls an actively-changing chat panel. Fix applied (both wrapped in
+    try/catch, degrading to empty question/options on a transient UIA exception) and re-verified
+    by a follow-up Regression Auditor pass — build clean, no new issues, `docs/CLI_CONTRACT.md`
+    updated to document the graceful-degradation behavior. **Not yet committed/pushed** — pending
+    explicit user confirmation per this project's no-auto-commit rule.
 - (Phase 9 finding, now addressed by the above) The real Copilot Chat panel in the test VS
   Insiders instance (hwnd `0xCA18B2`, pid `141556`) exposes no discoverable `AutomationId` for its
   input or Send button (confirmed via full tree inspection) — `submit-chat-message`'s original
@@ -67,10 +89,12 @@ own VS Insiders window (hwnd `0xCA18B2`) — see Open Tasks entry for the exact 
   `Verbs.SendKeys`, `Verbs.SubmitChatMessage`; extended `Verbs.Type` with `--verify` and newline
   rejection; new dispatch cases. Phase 10: extended `Verbs.SubmitChatMessage` with
   `--inputStrategy`/`--inputValue` and `--submitKeys` argument modes, mutually exclusive with the
-  original `--inputAutomationId`/`--sendAutomationId` modes)
+  original `--inputAutomationId`/`--sendAutomationId` modes. Phase 11 [uncommitted]: added
+  `Verbs.HasPendingPrompt` and its `has-pending-prompt` dispatch case)
 - `src/AgentDebugToolkit.UiAutomation.Cli/UiaHelper.cs` (added `SendKeys(element, keys)`, Phase 9)
 - `src/AgentDebugToolkit.UiAutomation.Cli/NativeMethods.cs` (added `SendKeysRaw`, Phase 9)
 - `docs/CLI_CONTRACT.md`, `docs/IMPLEMENTATION_PLAN.md` (Phase 9 verb contracts, audit findings,
   live-validation notes, known limitations; `docs/CLI_CONTRACT.md` updated again for Phase 10's
-  `submit-chat-message` argument modes)
+  `submit-chat-message` argument modes, and for Phase 11's `has-pending-prompt` contract
+  [uncommitted])
 

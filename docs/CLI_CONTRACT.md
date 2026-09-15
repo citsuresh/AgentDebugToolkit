@@ -413,6 +413,55 @@ an `AutomationId`-based Send-button click or keyboard input to the input element
   landing in and being processed by the live chat session. No `--sendAutomationId`/Send-button
   resolution was needed for this path.
 
+### `has-pending-prompt --hwnd <h>` (Phase 11, 2026-09-15)
+Lightweight, shallow-cost check for whether a Copilot Chat-style confirmation prompt (a tool
+approval/question card with Submit/Cancel and optionally radio-button options, or a freeform
+question with a text field) is currently blocking on user input — without walking/serializing the
+entire accessibility tree the way `inspect --maxDepth N` does. Intended for repeated polling while
+waiting for an agent turn to either finish or need input, where a deep `inspect` call is too
+costly to run on every poll.
+- **Detection anchor.** A pending confirmation is identified by the existence of a descendant
+  element with `Name == "Waiting..."` anywhere under the resolved window — the only anchor
+  validated so far for this UI (see `tools/Watch-CopilotChat.ps1`, the PowerShell polling script
+  this verb supersedes for the "is something pending" check specifically). Resolution uses a
+  single `FindFirst` (via the existing `Name` `Selector` strategy), which stops at the first match
+  and never serializes visited nodes — this is why it is meaningfully cheaper than a
+  depth-bounded `inspect`, which still walks and serializes every node up to that depth regardless
+  of whether anything relevant is found. No shallower/cheaper anchor has been identified.
+- When a pending prompt is found, the question text is read from descendant(s) with
+  `AutomationId == "RadioFieldLabel"` (joined with `" | "` if more than one), and its options from
+  `ControlType.RadioButton` descendants, excluding the literal `"Other"` label (a generic fallback
+  option, not real content). A freeform (non-radio) prompt — e.g. a text-field confirmation — has
+  no such nodes, so `question` and `options` are simply empty in that case; this is not an error.
+- Success (not pending): `{ "success": true, "pending": false }`. This is the cheap/fast path —
+  no `RadioFieldLabel`/`RadioButton` lookups are attempted when `"Waiting..."` is not found.
+- Success (pending): `{ "success": true, "pending": true, "question": "<joined text>", "options": [...] }`.
+- Failure: same window-resolution error codes as `inspect` (`element-not-found`/
+  `ambiguous-window`/`stale-context`/etc.), and `window-not-responding` (checked up front, matching
+  `click`/`type`/`send-keys`/`submit-chat-message`).
+- Unlike `inspect`, this verb has no `--maxDepth` option — it is intentionally not
+  depth-configurable, since its detection is anchor-based (`FindFirst`) rather than a bounded tree
+  walk.
+- **Regression Audit finding — degrade gracefully on tree mutation mid-poll.** The
+  `RadioFieldLabel`/`RadioButton` `FindAll` lookups are wrapped in try/catch: since this verb is
+  intended for repeated polling against a live, actively-changing chat panel, the confirmation
+  card can be dismissed/replaced between the initial `"Waiting..."` match and these follow-up
+  lookups. A transient UIA exception here degrades to an empty `question`/`options` (same as the
+  freeform-prompt case) rather than surfacing as `unhandled-exception`.
+- **Live validation (2026-09-15):** benchmarked directly against this session's own VS Insiders
+  window (hwnd `0xCA18B2`, `DOTNET_ROOT` cleared to avoid the VS-inherited-runtime launch issue):
+  `has-pending-prompt` returned in ~1.4s in the not-pending state versus ~5.8s for
+  `inspect --hwnd 0xCA18B2 --maxDepth 20` (~4.2x faster). Both branches were validated against
+  real UI state: `{"pending":false,"success":true}` while idle, and
+  `{"pending":true,"question":"","options":[],"success":true}` while a real (freeform,
+  non-radio-button) confirmation card was live on screen — the empty `question`/`options` in that
+  result is expected per the freeform-prompt case documented above, not a detection failure (the
+  `"Waiting..."` anchor itself was still found correctly, which is what `pending: true` reflects).
+  The radio-button `question`/`options` population path (`RadioFieldLabel`/`RadioButton` lookups)
+  reuses the same `PropertyCondition` patterns already validated by `tools/Watch-CopilotChat.ps1`
+  in earlier sessions, but was not independently re-validated live against a radio-button-style
+  card in this session — no such card happened to appear during validation.
+
 ## Conventions for future phases
 
 - New verbs must follow the same JSON envelope style (`success`, verb-specific fields on success,
