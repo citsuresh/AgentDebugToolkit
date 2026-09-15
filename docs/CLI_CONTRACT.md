@@ -29,7 +29,13 @@ verbs are added in later phases — do not silently diverge from what's document
 ```
 (`ownerHwnd`/`isModal` fields added in Phase 4; omit or default false/null before then.)
 
-### ElementInfo (used by `inspect`)
+`boundingRect` is omitted entirely (not emitted as JSON `null`, per `JsonOutput`'s default
+null-field-omission behavior) when UIA reports a non-finite (`NaN`/`Infinity`) bounding rectangle
+for the window — this can legitimately occur for offscreen, virtualized, or not-yet-realized
+elements. Callers must treat a missing `boundingRect` key as "bounds unavailable", not as an
+error.
+
+### ElementInfo (used by `inspect`, `read-visible-text`)
 ```json
 { "name": "OK", "controlType": "ControlType.Pane", "className": "WindowsForms10...",
   "automationId": "18750130", "isEnabled": true, "isOffscreen": false,
@@ -37,6 +43,10 @@ verbs are added in later phases — do not silently diverge from what's document
   "supportedPatterns": ["InvokePatternIdentifiers.Pattern"],
   "children": [ /* ElementInfo[] */ ] }
 ```
+`boundingRect` is omitted entirely (same rule as `WindowInfo` above) when the element's
+`BoundingRectangle` contains non-finite values, instead of serializing invalid numeric data or
+throwing. `inspect` remains successful in this case; only the affected element(s) lack
+`boundingRect`.
 
 ### Error envelope (on failure, any verb)
 ```json
@@ -137,6 +147,54 @@ Manual session-context override.
 
 - `list-windows` output gains accurate `ownerHwnd`/`isModal`/`isForeground` (may be stubbed
   false/null in Phase 1-3).
+
+## Phase 8 verbs (read-only IDE chat observation)
+
+These verbs never activate/focus the target window, invoke a UIA pattern, click, type, or
+otherwise alter target process/window state. They are strictly read-only observation helpers,
+added to let the agent inspect visible text and capture screenshots from an existing window
+(e.g. a Visual Studio Copilot Chat panel) without interacting with it.
+
+### `read-visible-text --hwnd <h> [--maxDepth <n>]`
+Traverses the UIA subtree rooted at the given window handle (bounded depth/breadth/node-count,
+mirroring `inspect`'s traversal caps) and returns de-duplicated, ordered visible text extracted
+opportunistically from `TextPattern`, `ValuePattern`, and element `Name`. `--maxDepth` defaults
+to `8` (same default as `inspect`) and must be a non-negative integer if given. Internally capped
+at 200 children per element, 5000 total visited nodes, and 2000 characters per extracted text
+value; `truncated` is `true` if any of these caps were hit, so callers can distinguish a
+genuinely exhaustive result from a capped one.
+- Success: `{ "success": true, "lines": ["...", "..."], "truncated": false }`
+- Failure: `invalid-argument`, `stale-context`, `ambiguous-window`, `element-not-found` (same
+  window-resolution errors as `inspect`), or `window-not-responding` (checked up front, since
+  UIA calls against a hung target's message pump can otherwise block).
+- Validated live (2026-09-15) against a real Visual Studio Insiders window's Copilot Chat panel:
+  successfully returned the actual chat transcript text (prompt, responses, UI chrome), including
+  a `truncated: true` result on that window given its large accessibility tree. Confirms Copilot
+  Chat content is UIA-exposed in this environment; the `screenshot` fallback below is not required
+  for that specific content, but remains available for chat/webview UIs where it is not.
+
+### `screenshot --hwnd <h>`
+Captures a bitmap of the given window and returns the saved PNG path — a fallback observation
+method for content not meaningfully exposed via UIA (e.g. custom controls or webview-hosted
+content). Does not activate/focus the window.
+- Capture method: attempts `PrintWindow` with `PW_RENDERFULLCONTENT` first, which renders the
+  target window's own content directly (needed for modern DirectComposition/WPF-rendered windows,
+  e.g. Visual Studio's own UI) regardless of z-order or whether the window is obscured by other
+  windows on screen. Falls back to a `CopyFromScreen` capture of the window's screen rect (via
+  `GetWindowRect`) only if `PrintWindow` reports failure; that fallback captures whatever is
+  currently visible at those screen coordinates, so it only reflects the target window's true
+  content when the window is topmost/unobscured at capture time — a caller relying on the
+  fallback path specifically should ensure the window is not covered by another window first.
+- Success: `{ "success": true, "screenshotPath": "C:\\...\\shot_20260915...png" }`
+- Failure: `invalid-argument`, `stale-context` (the resolved window closed before/during capture),
+  `ambiguous-window`, `element-not-found` (same window-resolution errors as `inspect`), or
+  `window-not-responding` (checked up front, matching `read-visible-text`).
+- Screenshots save to the same folder as `inspect`'s screenshots:
+  `%LOCALAPPDATA%\AgentDebugToolkit\screenshots\`.
+- Validated live (2026-09-15) against the same Visual Studio Insiders window while it was fully
+  obscured on-screen by another application window: the `PrintWindow` path correctly captured the
+  target window's own content (menu bar, editor, Chat panel with correct text), confirming the
+  fix for the `CopyFromScreen`-only fallback's obscured-window limitation.
 
 ## Conventions for future phases
 

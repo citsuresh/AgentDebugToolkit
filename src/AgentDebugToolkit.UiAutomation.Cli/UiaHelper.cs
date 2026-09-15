@@ -48,9 +48,27 @@ internal static class UiaHelper
             OwnerHwnd = ownerHwnd != IntPtr.Zero ? $"0x{ownerHwnd.ToInt64():X}" : null,
             IsModal = ownerHwnd != IntPtr.Zero,
             IsForeground = hwnd == foreground,
-            BoundingRect = new Rect { X = r.X, Y = r.Y, Width = r.Width, Height = r.Height }
+            BoundingRect = SafeRect(r)
         };
     }
+
+    /// <summary>
+    /// Converts a UIA BoundingRectangle to a Rect, returning null instead of throwing/serializing
+    /// invalid data when the rectangle contains non-finite values (NaN/Infinity) — which UIA can
+    /// legitimately report for offscreen, virtualized, or not-yet-realized elements, and which
+    /// System.Text.Json cannot serialize as a JSON number.
+    /// </summary>
+    private static Rect? SafeRect(System.Windows.Rect r)
+    {
+        if (!IsFinite(r.X) || !IsFinite(r.Y) || !IsFinite(r.Width) || !IsFinite(r.Height))
+        {
+            return null;
+        }
+
+        return new Rect { X = r.X, Y = r.Y, Width = r.Width, Height = r.Height };
+    }
+
+    private static bool IsFinite(double value) => !double.IsNaN(value) && !double.IsInfinity(value);
 
     public static AutomationElement? FindWindowByHwnd(string hwndText)
     {
@@ -123,7 +141,7 @@ internal static class UiaHelper
             AutomationId = el.Current.AutomationId ?? string.Empty,
             IsEnabled = el.Current.IsEnabled,
             IsOffscreen = el.Current.IsOffscreen,
-            BoundingRect = new Rect { X = r.X, Y = r.Y, Width = r.Width, Height = r.Height },
+            BoundingRect = SafeRect(r),
             SupportedPatterns = el.GetSupportedPatterns()
                 .Select(p => p.ProgrammaticName)
                 .ToList()
@@ -210,5 +228,151 @@ internal static class UiaHelper
         }
 
         return element.Current.Name;
+    }
+
+    // Bounds for read-visible-text traversal: mirrors inspect's existing default maxDepth (8) and
+    // adds a breadth cap and a total-node cap so a large/complex accessibility tree (e.g. an IDE
+    // window) cannot produce unbounded JSON output or run away traversing thousands of elements.
+    private const int DefaultTextMaxDepth = 8;
+    private const int MaxChildrenPerElement = 200;
+    private const int MaxVisitedNodes = 5000;
+    private const int MaxTextValueLength = 2000;
+
+    /// <summary>
+    /// Read-only traversal that collects de-duplicated, ordered visible text from an element's
+    /// subtree, opportunistically pulling from TextPattern, ValuePattern, and Name. Never invokes
+    /// a pattern that could change state (no Invoke/Toggle/SetValue/Focus) and never clicks or
+    /// types — this is strictly an observation helper for read-visible-text. Returns whether any
+    /// traversal cap (depth/breadth/node count) or per-value length cap was hit, so callers can
+    /// tell incomplete output from a genuinely exhaustive result.
+    /// </summary>
+    public static (List<string> Lines, bool Truncated) CollectVisibleText(AutomationElement root, int? maxDepth = null)
+    {
+        var depthLimit = maxDepth ?? DefaultTextMaxDepth;
+        var seen = new HashSet<string>();
+        var ordered = new List<string>();
+        var visited = 0;
+        var truncated = false;
+
+        void Visit(AutomationElement el, int depth)
+        {
+            if (visited >= MaxVisitedNodes)
+            {
+                truncated = true;
+                return;
+            }
+            visited++;
+
+            foreach (var text in ExtractText(el))
+            {
+                var trimmed = text;
+                if (trimmed.Length > MaxTextValueLength)
+                {
+                    trimmed = trimmed[..MaxTextValueLength];
+                    truncated = true;
+                }
+                if (trimmed.Length > 0 && seen.Add(trimmed))
+                {
+                    ordered.Add(trimmed);
+                }
+            }
+
+            if (depth >= depthLimit)
+            {
+                return;
+            }
+            if (visited >= MaxVisitedNodes)
+            {
+                truncated = true;
+                return;
+            }
+
+            AutomationElementCollection children;
+            try
+            {
+                children = el.FindAll(TreeScope.Children, Condition.TrueCondition);
+            }
+            catch
+            {
+                return;
+            }
+
+            var count = 0;
+            foreach (AutomationElement child in children)
+            {
+                if (count >= MaxChildrenPerElement)
+                {
+                    truncated = true;
+                    break;
+                }
+                if (visited >= MaxVisitedNodes)
+                {
+                    truncated = true;
+                    break;
+                }
+                count++;
+                Visit(child, depth + 1);
+            }
+        }
+
+        Visit(root, 0);
+        return (ordered, truncated);
+    }
+
+    private static IEnumerable<string> ExtractText(AutomationElement el)
+    {
+        // IsOffscreen elements are still read here (best-effort transcript capture); this method
+        // never interacts with the element, only reads already-published UIA properties/patterns.
+        string? name;
+        try
+        {
+            name = el.Current.Name;
+        }
+        catch
+        {
+            name = null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            yield return name;
+        }
+
+        if (el.TryGetCurrentPattern(TextPattern.Pattern, out var textObj) && textObj is TextPattern textPattern)
+        {
+            string? bulk = null;
+            try
+            {
+                bulk = textPattern.DocumentRange?.GetText(MaxTextValueLength);
+            }
+            catch
+            {
+                // Some TextPattern implementations throw for unsupported ranges; ignore and fall
+                // back to ValuePattern/Name below.
+            }
+
+            if (!string.IsNullOrWhiteSpace(bulk))
+            {
+                yield return bulk;
+            }
+        }
+
+        if (el.TryGetCurrentPattern(ValuePattern.Pattern, out var valueObj) && valueObj is ValuePattern valuePattern)
+        {
+            string? value;
+            try
+            {
+                value = valuePattern.Current.Value;
+            }
+            catch
+            {
+                value = null;
+            }
+
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                yield return value;
+            }
+        }
     }
 }

@@ -31,6 +31,10 @@ try
             return Verbs.GetText(opts);
         case "wait-for-element":
             return Verbs.WaitForElement(opts);
+        case "read-visible-text":
+            return Verbs.ReadVisibleText(opts);
+        case "screenshot":
+            return Verbs.Screenshot(opts);
         default:
             JsonOutput.WriteError("invalid-argument", $"Unknown verb '{verb}'.");
             return 1;
@@ -325,6 +329,86 @@ internal static class Verbs
 
             Thread.Sleep(pollMs);
         }
+    }
+
+    public static int ReadVisibleText(Dictionary<string, string> opts)
+    {
+        var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
+        if (errorCode is not null)
+        {
+            JsonOutput.WriteError(errorCode, error!);
+            return 1;
+        }
+
+        // Read-only, but a hung target's UIA calls (FindAll/pattern property reads) can still
+        // block on its message pump, so fail fast the same way click/type do rather than hanging
+        // indefinitely on an unresponsive window.
+        if (!NativeMethods.IsResponding(windowHwnd, timeoutMs: 250))
+        {
+            JsonOutput.WriteError("window-not-responding", "The target window is not responding.");
+            return 1;
+        }
+
+        var element = UiaHelper.FindWindowByHwnd($"0x{windowHwnd.ToInt64():X}");
+        if (element is null)
+        {
+            JsonOutput.WriteError("element-not-found", $"No window found for hwnd '0x{windowHwnd.ToInt64():X}'.");
+            return 1;
+        }
+
+        int? maxDepth = null;
+        if (opts.TryGetValue("maxDepth", out var mdText))
+        {
+            if (!int.TryParse(mdText, out var md) || md < 0)
+            {
+                JsonOutput.WriteError("invalid-argument", "--maxDepth must be a non-negative integer.");
+                return 1;
+            }
+            maxDepth = md;
+        }
+
+        var (lines, truncated) = UiaHelper.CollectVisibleText(element, maxDepth);
+        JsonOutput.WriteSuccess(new { lines, truncated });
+        return 0;
+    }
+
+    public static int Screenshot(Dictionary<string, string> opts)
+    {
+        var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
+        if (errorCode is not null)
+        {
+            JsonOutput.WriteError(errorCode, error!);
+            return 1;
+        }
+
+        // GetWindowRect itself is a cheap, direct query of cached window-manager state (not a
+        // cross-process SendMessage), so it won't hang on a hung target. The IsResponding check
+        // here instead guards CopyFromScreen's pixel data quality: a hung/non-repainting window
+        // can be stale or show a "not responding" ghost overlay, which would silently produce a
+        // misleading screenshot rather than a clear error. Kept consistent with read-visible-text.
+        if (!NativeMethods.IsResponding(windowHwnd, timeoutMs: 250))
+        {
+            JsonOutput.WriteError("window-not-responding", "The target window is not responding.");
+            return 1;
+        }
+
+        string screenshotPath;
+        try
+        {
+            screenshotPath = ScreenshotHelper.CaptureWindow(windowHwnd);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // The hwnd resolved successfully above, but GetWindowRect failed at capture time —
+            // most plausibly because the window closed in the gap between resolution and
+            // capture. This is a "the target went away" condition, not a "selector picked the
+            // wrong thing" condition, so it uses stale-context rather than element-not-found.
+            JsonOutput.WriteError("stale-context", ex.Message);
+            return 1;
+        }
+
+        JsonOutput.WriteSuccess(new { screenshotPath });
+        return 0;
     }
 
     private static (AutomationElement? element, string? errorCode, string? error) ResolveElement(

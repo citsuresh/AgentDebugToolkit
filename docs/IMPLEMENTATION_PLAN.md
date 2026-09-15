@@ -253,14 +253,42 @@ with or changing the target UI.
 - Document the JSON contracts and limitations in `docs/CLI_CONTRACT.md`. `read-visible-text` is
   best-effort; screenshot remains the fallback when UIA does not expose the actual chat content.
 
+**Implementation notes (2026-09-15):**
+- `UiaHelper.ToElementInfo`/`ToWindowInfo` now convert `BoundingRectangle` via a `SafeRect` helper
+  that returns `null` instead of a non-finite (`NaN`/`Infinity`) `Rect`, since `System.Text.Json`
+  cannot serialize non-finite doubles; `boundingRect` is omitted (not emitted as JSON `null`, per
+  `JsonOutput`'s existing null-field-omission default) when this occurs.
+- `read-visible-text` reuses `inspect`'s window-resolution helpers plus the same
+  `NativeMethods.IsResponding` pre-check `click`/`type` use, so it fails fast with
+  `window-not-responding` rather than risking a block on a hung target's UIA calls.
+  `UiaHelper.CollectVisibleText` bounds traversal (200 children/element, 5000 total visited nodes,
+  2000 characters/value, default depth 8) and reports a `truncated` flag when any cap is hit.
+- `screenshot` captures via `PrintWindow` with `PW_RENDERFULLCONTENT` first (works correctly for
+  DirectComposition/WPF-rendered windows like Visual Studio's own UI, and captures the target
+  window's own content regardless of z-order/obscurity), falling back to a `CopyFromScreen`
+  capture of the window's screen rect only if `PrintWindow` reports failure.
+
 **Exit criteria:**
-- `inspect --hwnd <Visual Studio hwnd> --maxDepth 4` succeeds with valid JSON even when some
-  descendants have invalid or unavailable bounds.
-- `read-visible-text --hwnd <Visual Studio hwnd>` succeeds without changing focus or UI state and
-  reports whether actual Copilot Chat transcript text is available through UIA.
-- `screenshot --hwnd <Visual Studio hwnd>` returns an existing PNG path without changing focus or
-  UI state.
-- Existing UI Automation CLI commands retain their behavior.
+- [x] `inspect --hwnd <Visual Studio hwnd> --maxDepth 4` succeeds with valid JSON even when some
+  descendants have invalid or unavailable bounds. Verified via code review and build; `SafeRect`
+  guards every `BoundingRect` assignment in `ToWindowInfo`/`ToElementInfo`.
+- [x] `read-visible-text --hwnd <Visual Studio hwnd>` succeeds without changing focus or UI state
+  and reports whether actual Copilot Chat transcript text is available through UIA. Verified live
+  (2026-09-15) against a real running Visual Studio Insiders instance (hwnd rediscovered via
+  `list-windows --pid <devenv pid>`): returned the actual Copilot Chat transcript text (prompt
+  content, chat responses, panel chrome), with `truncated: true` given the window's large
+  accessibility tree. Confirms Copilot Chat text is UIA-exposed in this environment.
+- [x] `screenshot --hwnd <Visual Studio hwnd>` returns an existing PNG path without changing focus
+  or UI state. Verified live (2026-09-15): first validated the `PrintWindow` fallback risk by
+  capturing while the Visual Studio window was fully obscured on-screen by another application
+  window — the initial `CopyFromScreen`-only implementation captured the wrong (obscuring)
+  window's pixels, which was then fixed by adding `PrintWindow`/`PW_RENDERFULLCONTENT` as the
+  primary capture method; re-validated afterward and confirmed the PNG correctly showed the
+  target Visual Studio window's own content (menu bar, editor, Chat panel with correct text) even
+  while obscured.
+- [x] Existing UI Automation CLI commands retain their behavior. Verified via full solution build
+  and code review; `attach`/`list-windows`/`inspect`/`click`/`type`/`get-text`/`wait-for-element`
+  are unchanged apart from the shared `SafeRect` bounding-rect fix.
 
 ## Phase 9+ (future, not yet scoped in detail)
 
