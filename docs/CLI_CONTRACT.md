@@ -404,8 +404,14 @@ an `AutomationId`-based Send-button click or keyboard input to the input element
   `AutomationId` resembling a Send button anywhere in the tree, and the only `AutomationId`
   matching `WpfTextView` resolves to the code editor pane, not the chat input — consistent with
   `send-keys`'s finding that the chat input required a `Name`-based selector instead. This gap is
-  what Phase 10's `--inputStrategy Name`/`--submitKeys` modes above were added to close; live
-  end-to-end validation of those new modes against this same window is still needed.
+  what Phase 10's `--inputStrategy Name`/`--submitKeys` modes above were added to close.
+- **Live validation status (2026-09-15, Phase 10): completed end-to-end.** Against this session's
+  own VS Insiders window (hwnd `0xCA18B2`), `submit-chat-message --hwnd 0xCA18B2 --inputStrategy
+  Name --inputValue "Ask Copilot" --text "ping-test-phase10"` resolved the composer by `Name`,
+  typed the text (`method: "synthetic-keyboard"`), and submitted it via the default `--submitKeys
+  {ENTER}` — result `{"method":"synthetic-keyboard","success":true}`, with the message actually
+  landing in and being processed by the live chat session. No `--sendAutomationId`/Send-button
+  resolution was needed for this path.
 
 ## Conventions for future phases
 

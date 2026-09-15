@@ -29,15 +29,18 @@ original `--inputAutomationId`/`--sendAutomationId` compatibility path is behavi
 (same validation order, error codes, success shape) and found no other issues. `docs/CLI_CONTRACT.md`
 updated accordingly. Live end-to-end validation of the new Name+submitKeys path was explicitly
 deferred by user choice (code-review/build-only, consistent with how Phase 9 documented this same
-gap) — see Open Tasks.
+gap) — see Open Tasks. **Update (2026-09-15): live-validated end-to-end** against this session's
+own VS Insiders window (hwnd `0xCA18B2`) — see Open Tasks entry for the exact command/result.
 
 ## Open Tasks / Known Issues
 
 - `submit-chat-message`'s new `--inputStrategy Name --inputValue <value>` / `--submitKeys` path
-  (Phase 10, added to fix the `AutomationId` gap below) has not been live-validated end-to-end —
-  only code-review/build validation was done, by explicit user choice, to avoid submitting a real
-  test message into the live chat session being used for this work. A caller adopting this path
-  should validate it live against their own Copilot Chat window before relying on it.
+  (Phase 10) was live-validated end-to-end (2026-09-15) against this session's own VS Insiders
+  window (hwnd `0xCA18B2`): `submit-chat-message --hwnd 0xCA18B2 --inputStrategy Name
+  --inputValue "Ask Copilot" --text "ping-test-phase10"` resolved the composer by `Name`, typed
+  the text (`method: "synthetic-keyboard"`), and submitted it via the default `--submitKeys
+  {ENTER}` with no Send-button `AutomationId` needed — `{"method":"synthetic-keyboard","success":true}`.
+  This closes the Phase 9 gap below.
 - (Phase 9 finding, now addressed by the above) The real Copilot Chat panel in the test VS
   Insiders instance (hwnd `0xCA18B2`, pid `141556`) exposes no discoverable `AutomationId` for its
   input or Send button (confirmed via full tree inspection) — `submit-chat-message`'s original
