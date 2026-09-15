@@ -73,11 +73,20 @@ implemented, committed, and pushed -- see git history (`ae45478`, `380079d`, `41
 
 ## Open Tasks / Known Issues
 
-- **Radio-button prompt detection path still not independently re-validated since the Phase 13
-  redesign.** No safe/disposable real radio-button-style confirmation card was available to trigger
-  during this session either; still worth validating opportunistically via `find-first`/`find-all`
-  next time one appears (see `CLI_CONTRACT.md`'s migration note for the caller-side approach).
-- **`find-first`/`find-all`'s `--scopeStrategy`/`--scopeValue` narrowing -- now independently
+**Currently open (active work item):**
+
+- **Radio-button prompt detection path not independently re-validated since the Phase 13
+  redesign.** The old `has-pending-prompt`'s `RadioFieldLabel`/`RadioButton` extraction logic was
+  never independently live-validated against an actual radio-button-style confirmation card before
+  it was removed in Phase 13 (only a freeform text-field card appeared during Phase 11's live
+  testing); no safe/disposable real radio-button-style confirmation card has appeared in any
+  session since, so this remains open pending one appearing opportunistically. Validate via
+  caller-side `find-first`/`find-all` composition (see `CLI_CONTRACT.md`'s migration note) once a
+  real radio-button card is available to trigger.
+
+**Resolved (kept for history):**
+
+- `find-first`/`find-all`'s `--scopeStrategy`/`--scopeValue` narrowing -- **independently
   live-validated (2026-09-15)** against the real VS Insiders window (hwnd `0xCA18B2`): scoping
   `find-first --strategy AutomationId --value SendButton` to `--scopeStrategy Name --scopeValue
   Chat` (the chat tool pane, a real ancestor of `SendButton`) correctly returned `found: true`,
@@ -86,17 +95,19 @@ implemented, committed, and pushed -- see git history (`ae45478`, `380079d`, `41
   genuinely restricts the search rather than silently searching the whole window regardless.
   `find-all` with the same scope-to-`Chat` case returned `count: 1` (the real match), scoping to
   `SccStatusBar` returned `count: 0`, and `--excludeValue Send` correctly filtered the one match
-  down to `count: 0`. This closes the previously-open gap (only the argument-mismatch and
-  default-to-window-root cases had been tested before).
+  down to `count: 0`. Committed `45eb0f3`. No longer open.
   - Enumerating radio-button *options* via `find-all` still needs a control-type-based match, not
     yet a supported `Selector` strategy (`Name`/`AutomationId` only today) -- documented as a known
     gap in `CLI_CONTRACT.md`'s migration note, with `inspect` as the fallback.
-- Validate Phase 7 exit criteria against `CAMFWDownloadConsole.exe` -- **resolved this project as
-  not actually outstanding**: `IMPLEMENTATION_PLAN.md` already shows all 4 exit criteria checked
-  off with real `CAMFWDownloadConsole.exe` output from an earlier session; no further action needed.
+- `screenshot`'s `PrintWindow`/`PW_RENDERFULLCONTENT` non-foreground/non-visible-window limitation
+  -- already documented in `CLI_CONTRACT.md` (added `dee237e`). Not open.
+- Validate Phase 7 exit criteria against `CAMFWDownloadConsole.exe` -- **not actually
+  outstanding**: `IMPLEMENTATION_PLAN.md` already shows all 4 exit criteria checked off with real
+  `CAMFWDownloadConsole.exe` output from an earlier session; no further action needed.
 - See `docs/KNOWN_OPEN_FINDINGS.md` for user-curated deferred findings (clipboard-unrelated:
   `SessionContext.Save()` file-move race, `JsonOutput` null-field omission, unimplemented selector
-  strategies throwing uncaught exceptions, `DteLocator` COM object leaks, `nuget.config` scope).
+  strategies throwing uncaught exceptions, `DteLocator` COM object leaks, `nuget.config` scope) --
+  these remain intentionally deferred, not touched.
 
 ## Recently Changed Files
 
