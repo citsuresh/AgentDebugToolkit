@@ -296,7 +296,7 @@ with or changing the target UI.
 - OCR/template-image fallback for fully non-UIA-exposed custom controls, if Phase 3's C1FlexGrid
   spot-check or other findings show a real need.
 
-## Phase 20 — Breakpoint verbs & wait-for-break (proposed, not yet implemented)
+## Phase 20 — Breakpoint verbs & wait-for-break (implemented, 2026-09-15)
 
 **Motivation:** driving a "UI Debug Map" skill (click a UI element in a target app, correlate the
 resulting code path back to source) requires programmatically setting/clearing breakpoints and
@@ -306,30 +306,36 @@ currently exposes. Phase 6 only added *passive* reads of debugger state
 (`continue`/`step-*`/`start-debugging`/`stop-debugging`) — there is no verb to place a breakpoint,
 and no event-driven wait primitive for a break (only manual `debugger-status` polling).
 
-**Proposed scope:**
-- `set-breakpoint --file <path> --line <n> [--solution <name>]` — add a breakpoint via
-  `DTE.Debugger.Breakpoints.Add(File:=..., Line:=...)`. Returns an identifier (e.g. file+line, or
-  an internal index) the caller can use to remove it later.
-- `remove-breakpoint --file <path> --line <n> [--solution <name>]` and/or
-  `remove-breakpoint --all [--solution <name>]` — clear a specific breakpoint or all of them.
-- `list-breakpoints [--solution <name>]` — enumerate currently set breakpoints (file, line,
-  enabled state) for the attached VS instance.
-- `wait-for-break --timeoutMs <n> [--pollMs <n>] [--solution <name>]` — analogous to the UI
-  automation CLI's `wait-for-element`; polls `debugger-status` internally so the skill/caller
-  doesn't need to hand-roll a polling loop, and returns the same `debugger-status` payload
-  (mode/activeDocument/activeLine) once break mode is entered, or a `timeout` error.
+**Implemented scope:**
+- `set-breakpoint --file <path> --line <n> [--solution <name>]` (Part A) — adds a breakpoint via
+  `DTE.Debugger.Breakpoints.Add(File:, Line:)`. Returns the actual `Breakpoint` state VS created
+  (`file`/`line`/`enabled`), not the caller's raw input, since VS can in principle adjust/reject
+  the request.
+- `list-breakpoints [--solution <name>]` (Part A) — enumerates currently set breakpoints (file,
+  line, enabled state) for the attached VS instance.
+- `remove-breakpoint [--file <path> --line <n>] [--all] [--solution <name>]` (Part B) — clears a
+  specific breakpoint (matched case-insensitively on file path) or all of them; new
+  `breakpoint-not-found` error code for a specific, non-matching `--file`/`--line`.
+- `wait-for-break --timeoutMs <n> [--pollMs <n>] [--solution <name>]` (Part C) — analogous to the
+  UI automation CLI's `wait-for-element`; polls the debugger's mode internally (via a helper
+  extracted from `debugger-status`) so the caller doesn't need to hand-roll a polling loop, and
+  returns the same `debugger-status` payload shape (mode/activeDocument/activeLine,
+  `preserveNullFields`) once break mode is entered, or a `timeout` error.
 
-**JSON contract:** consistent in style with existing Phase 6 verbs and `CLI_CONTRACT.md` overall
-(error envelope, `--solution` filtering via the Running Object Table, `ComRetry` wrapping on all
-new EnvDTE/COM call sites per the Phase 6 precedent).
+See `docs/CLI_CONTRACT.md`'s "Phase 20 verbs" section for the full JSON contract.
 
 **Not yet scoped in detail:** conditional breakpoints, hit-count breakpoints, tracepoints —
 out of scope unless a concrete future need arises.
 
-**Planned execution:** to be implemented via the Agent Orchestrator skill (see FDM repo
-`.copilot/skills/agent-orchestrator/`) once that skill exists, following the same
-Pre-Build Decomposition → implement → Regression Audit → review → commit discipline used for
-Phases 15-19.
+**Execution:** implemented following the Pre-Build Decomposition → implement → Regression Audit →
+review → commit discipline used for Phases 15-19, broken into 4 parts (A: `set-breakpoint`/
+`list-breakpoints`, B: `remove-breakpoint`, C: `wait-for-break`, D: this doc update). Regression
+Audit findings applied during implementation: `set-breakpoint` reads back the real `Breakpoint`
+state instead of echoing input (Part A); `remove-breakpoint`'s file-path match is
+case-insensitive, and `Breakpoint`/`Breakpoints` COM RCWs obtained in `list-breakpoints`/
+`remove-breakpoint` are explicitly released via `Marshal.ReleaseComObject`, consistent with the
+Phase 17 `DteLocator` COM-cleanup convention (Part B).
+
 
 ## Phase 9 — Reliable interaction primitives (proposed scope, not yet implemented)
 

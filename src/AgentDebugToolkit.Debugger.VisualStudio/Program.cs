@@ -1,4 +1,5 @@
 ﻿using EnvDTE;
+using System.Runtime.InteropServices;
 using AgentDebugToolkit.Debugger.VisualStudio;
 
 if (args.Length == 0)
@@ -34,6 +35,14 @@ try
             return Verbs.StartDebugging(opts);
         case "stop-debugging":
             return Verbs.StopDebugging(opts);
+        case "set-breakpoint":
+            return Verbs.SetBreakpoint(opts);
+        case "list-breakpoints":
+            return Verbs.ListBreakpoints(opts);
+        case "remove-breakpoint":
+            return Verbs.RemoveBreakpoint(opts);
+        case "wait-for-break":
+            return Verbs.WaitForBreak(opts);
         default:
             JsonOutput.WriteError("invalid-argument", $"Unknown verb '{verb}'.");
             return 1;
@@ -78,6 +87,13 @@ internal static class Verbs
             return 1;
         }
 
+        var (mode, activeDocument, activeLine) = GetStatusSnapshot(dte);
+        JsonOutput.WriteSuccess(new { mode, activeDocument, activeLine }, preserveNullFields: true);
+        return 0;
+    }
+
+    private static (string mode, string? activeDocument, int? activeLine) GetStatusSnapshot(DTE dte)
+    {
         var mode = ToModeString(ComRetry.Invoke(() => dte.Debugger.CurrentMode));
 
         string? activeDocument = null;
@@ -88,8 +104,7 @@ internal static class Verbs
             (activeDocument, activeLine) = TryGetLastHitLocation(dte.Debugger);
         }
 
-        JsonOutput.WriteSuccess(new { mode, activeDocument, activeLine }, preserveNullFields: true);
-        return 0;
+        return (mode, activeDocument, activeLine);
     }
 
     public static int GetCallStack(Dictionary<string, string> opts)
@@ -274,6 +289,213 @@ internal static class Verbs
         ComRetry.Invoke(() => dte.Debugger.Stop(WaitForDesignMode: true));
         JsonOutput.WriteSuccess(new { mode = ToModeString(ComRetry.Invoke(() => dte.Debugger.CurrentMode)) });
         return 0;
+    }
+
+    public static int SetBreakpoint(Dictionary<string, string> opts)
+    {
+        if (!opts.TryGetValue("file", out var file) || string.IsNullOrWhiteSpace(file))
+        {
+            JsonOutput.WriteError("invalid-argument", "--file is required.");
+            return 1;
+        }
+
+        if (!opts.TryGetValue("line", out var lineText) || !int.TryParse(lineText, out var line) || line <= 0)
+        {
+            JsonOutput.WriteError("invalid-argument", "--line is required and must be a positive integer.");
+            return 1;
+        }
+
+        var (dte, errorCode, error) = ResolveDte(opts);
+        if (dte is null)
+        {
+            JsonOutput.WriteError(errorCode!, error!);
+            return 1;
+        }
+
+        var added = ComRetry.Invoke(() => dte.Debugger.Breakpoints.Add(File: file, Line: line));
+        try
+        {
+            var breakpoint = added.Item(1);
+            try
+            {
+                JsonOutput.WriteSuccess(new { file = breakpoint.File, line = breakpoint.FileLine, enabled = breakpoint.Enabled });
+            }
+            finally
+            {
+                Marshal.ReleaseComObject(breakpoint);
+            }
+        }
+        finally
+        {
+            Marshal.ReleaseComObject(added);
+        }
+
+        return 0;
+    }
+
+    public static int ListBreakpoints(Dictionary<string, string> opts)
+    {
+        var (dte, errorCode, error) = ResolveDte(opts);
+        if (dte is null)
+        {
+            JsonOutput.WriteError(errorCode!, error!);
+            return 1;
+        }
+
+        var breakpoints = new List<object>();
+        var breakpointsCollection = ComRetry.Invoke(() => dte.Debugger.Breakpoints);
+        try
+        {
+            foreach (Breakpoint breakpoint in breakpointsCollection)
+            {
+                try
+                {
+                    breakpoints.Add(new { file = breakpoint.File, line = breakpoint.FileLine, enabled = breakpoint.Enabled });
+                }
+                finally
+                {
+                    Marshal.ReleaseComObject(breakpoint);
+                }
+            }
+        }
+        finally
+        {
+            Marshal.ReleaseComObject(breakpointsCollection);
+        }
+
+        JsonOutput.WriteSuccess(new { breakpoints });
+        return 0;
+    }
+
+    public static int RemoveBreakpoint(Dictionary<string, string> opts)
+    {
+        var all = opts.TryGetValue("all", out var allText) && allText == "true";
+        opts.TryGetValue("file", out var file);
+        opts.TryGetValue("line", out var lineText);
+
+        if (all && (file is not null || lineText is not null))
+        {
+            JsonOutput.WriteError("invalid-argument", "--all cannot be combined with --file/--line.");
+            return 1;
+        }
+
+        int? line = null;
+        if (!all)
+        {
+            if (string.IsNullOrWhiteSpace(file))
+            {
+                JsonOutput.WriteError("invalid-argument", "--file is required unless --all is specified.");
+                return 1;
+            }
+
+            if (lineText is null || !int.TryParse(lineText, out var parsedLine) || parsedLine <= 0)
+            {
+                JsonOutput.WriteError("invalid-argument", "--line is required and must be a positive integer unless --all is specified.");
+                return 1;
+            }
+
+            line = parsedLine;
+        }
+
+        var (dte, errorCode, error) = ResolveDte(opts);
+        if (dte is null)
+        {
+            JsonOutput.WriteError(errorCode!, error!);
+            return 1;
+        }
+
+        var removed = 0;
+        // Delete() while iterating: snapshot to a list first so removing an item doesn't disturb
+        // the live COM collection's enumeration (EnvDTE.Breakpoints has no documented guarantee
+        // that Delete() during foreach is safe).
+        var candidates = new List<Breakpoint>();
+        var breakpointsCollection = ComRetry.Invoke(() => dte.Debugger.Breakpoints);
+        try
+        {
+            foreach (Breakpoint breakpoint in breakpointsCollection)
+            {
+                candidates.Add(breakpoint);
+            }
+        }
+        finally
+        {
+            Marshal.ReleaseComObject(breakpointsCollection);
+        }
+
+        foreach (var breakpoint in candidates)
+        {
+            try
+            {
+                if (all || (string.Equals(breakpoint.File, file, StringComparison.OrdinalIgnoreCase) && breakpoint.FileLine == line))
+                {
+                    ComRetry.Invoke(() => breakpoint.Delete());
+                    removed++;
+                }
+            }
+            finally
+            {
+                Marshal.ReleaseComObject(breakpoint);
+            }
+        }
+
+        if (!all && removed == 0)
+        {
+            JsonOutput.WriteError("breakpoint-not-found", $"No breakpoint found at {file}:{line}.");
+            return 1;
+        }
+
+        JsonOutput.WriteSuccess(new { removed });
+        return 0;
+    }
+
+    public static int WaitForBreak(Dictionary<string, string> opts)
+    {
+        if (!opts.TryGetValue("timeoutMs", out var timeoutText) || !int.TryParse(timeoutText, out var timeoutMs) || timeoutMs < 0)
+        {
+            JsonOutput.WriteError("invalid-argument", "--timeoutMs is required and must be a non-negative integer.");
+            return 1;
+        }
+
+        var pollMs = 250;
+        if (opts.TryGetValue("pollMs", out var pollText))
+        {
+            if (!int.TryParse(pollText, out pollMs) || pollMs <= 0)
+            {
+                JsonOutput.WriteError("invalid-argument", "--pollMs must be a positive integer.");
+                return 1;
+            }
+        }
+
+        var (dte, errorCode, error) = ResolveDte(opts);
+        if (dte is null)
+        {
+            JsonOutput.WriteError(errorCode!, error!);
+            return 1;
+        }
+
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        // No local catch for ComBusyRetryExhaustedException here: this loop runs entirely inside
+        // the top-level try/catch in Main, so if GetStatusSnapshot's ComRetry.Invoke calls
+        // exhaust their retries mid-poll, that exception already propagates up to Main's
+        // existing handler and is reported as "com-busy-retry-exhausted" rather than
+        // "unhandled-exception".
+        while (true)
+        {
+            var (mode, activeDocument, activeLine) = GetStatusSnapshot(dte);
+            if (mode == "break")
+            {
+                JsonOutput.WriteSuccess(new { mode, activeDocument, activeLine }, preserveNullFields: true);
+                return 0;
+            }
+
+            if (stopwatch.ElapsedMilliseconds >= timeoutMs)
+            {
+                JsonOutput.WriteError("timeout", $"Break mode was not reached within {timeoutMs}ms.");
+                return 1;
+            }
+
+            System.Threading.Thread.Sleep(Math.Min(pollMs, (int)Math.Max(0, timeoutMs - stopwatch.ElapsedMilliseconds)));
+        }
     }
 
     private static (DTE? dte, string? errorCode, string? error) ResolveDte(Dictionary<string, string> opts)

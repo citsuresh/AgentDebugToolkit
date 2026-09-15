@@ -762,6 +762,46 @@ active session (run or break mode); rejects the call from design mode with the s
 - Failure: `{ "success": false, "error": "no-active-session", "message": "There is no active debugging session to stop." }`
 - Failure: `no-stack-frame` if the debugger has no current stack frame to step from (see above).
 
+## Phase 20 verbs (breakpoints and wait-for-break, 2026-09-15)
+
+### `set-breakpoint --file <path> --line <n> [--solution <name>]`
+Adds a breakpoint via `Debugger.Breakpoints.Add(File:, Line:)`. `--file` (non-empty) and `--line`
+(positive integer) are validated before resolving the target Visual Studio instance. The response
+reflects the actual `Breakpoint` object Visual Studio created (via the `Breakpoints` collection
+`Add` returns), not the caller's raw input — VS can in principle adjust/reject the request, so this
+avoids reporting success with an unconfirmed line.
+- Success: `{ "success": true, "file": "C:\\...\\Foo.cs", "line": 42, "enabled": true }`
+- Failure: `invalid-argument` for a missing/empty `--file` or a missing/non-positive `--line`;
+  `devenv-not-found` / `rot-unavailable` / `com-busy-retry-exhausted` as usual (see "Attaching to
+  Visual Studio" above).
+
+### `list-breakpoints [--solution <name>]`
+Enumerates all currently set breakpoints in the attached Visual Studio instance.
+- Success: `{ "success": true, "breakpoints": [ { "file", "line", "enabled" }, ... ] }`
+- Failure: same attach-resolution errors as other verbs.
+
+### `remove-breakpoint [--file <path> --line <n>] [--all] [--solution <name>]`
+Removes one specific breakpoint (`--file`/`--line`, matched case-insensitively against
+`Breakpoint.File`/`Breakpoint.FileLine`) or every breakpoint (`--all`). `--all` is mutually
+exclusive with `--file`/`--line`; without `--all`, both `--file` and `--line` are required.
+- Success: `{ "success": true, "removed": <count> }` (`--all` removing zero breakpoints is still
+  success, not an error).
+- Failure: `invalid-argument` for combining `--all` with `--file`/`--line`, or for a missing/invalid
+  `--file`/`--line` when `--all` is not given; `breakpoint-not-found` if `--file`/`--line` are
+  given but no matching breakpoint exists; same attach-resolution errors otherwise.
+
+### `wait-for-break --timeoutMs <n> [--pollMs <n>] [--solution <name>]`
+Analogous to `agentdebug-ui`'s `wait-for-element`: resolves the target Visual Studio instance once
+up front, then polls `debugger-status`'s underlying state every `--pollMs` (default `250`) until
+break mode is entered or `--timeoutMs` elapses. `--timeoutMs` (required, non-negative integer) and
+`--pollMs` (positive integer if given) are validated before resolving the instance or polling
+begins — a zero `--timeoutMs` still checks status once before timing out.
+- Success: `{ "success": true, "mode": "break", "activeDocument": "C:\\...\\Foo.cs" | null, "activeLine": 42 | null }`
+  — the same shape as `debugger-status`, including `preserveNullFields` (see above).
+- Failure: `{ "success": false, "error": "timeout", "message": "..." }` if break mode is never
+  reached in time; same attach-resolution errors as other verbs otherwise (including
+  `com-busy-retry-exhausted` if a poll iteration's COM call exhausts its retries mid-wait).
+
 ---
 
 # CLI Contract — AgentDebugToolkit.ConsoleAutomation.Cli (Phase 7)
