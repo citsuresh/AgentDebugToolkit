@@ -4,6 +4,27 @@ using AgentDebugToolkit.Core;
 using AgentDebugToolkit.Core.Models;
 using AgentDebugToolkit.UiAutomation.Cli;
 
+// Top-level statements do not automatically apply [STAThread]; the process defaults to MTA
+// unless explicitly marked. Clipboard access (System.Windows.Forms.Clipboard, used by --paste)
+// requires STA and throws InvalidOperationException otherwise — discovered via live validation
+// against the real Copilot Chat composer, not a theoretical concern. Existing UIA calls happen
+// to work under MTA, but explicitly requesting STA here is correct for this process regardless
+// (UIA itself works fine in STA too) and is the standard fix for this exact failure mode.
+if (Thread.CurrentThread.GetApartmentState() != ApartmentState.STA)
+{
+    var exitCode = 1;
+    var staThread = new Thread(() => exitCode = Run(args)) { };
+    staThread.SetApartmentState(ApartmentState.STA);
+    staThread.Start();
+    staThread.Join();
+    return exitCode;
+}
+
+return Run(args);
+
+int Run(string[] args)
+{
+
 if (args.Length == 0)
 {
     JsonOutput.WriteError("invalid-argument", "No verb specified. See docs/CLI_CONTRACT.md.");
@@ -70,6 +91,8 @@ static Dictionary<string, string> ParseOptions(string[] args)
     }
     return dict;
 }
+
+} // end Run
 
 internal static class Verbs
 {
@@ -188,18 +211,22 @@ internal static class Verbs
             return 1;
         }
 
+        var usePaste = opts.TryGetValue("paste", out var pasteText) && pasteText != "false";
+
         // Reject embedded newlines: a raw '\n'/'\r' passed through to SendKeys.SendWait is not
         // treated as literal text — it can trigger unintended UI navigation (e.g. moving focus to
         // a different control), which was observed directly during Phase 9 validation rather than
         // being a theoretical concern. Rejecting up front is safer than silently mangling input or
-        // producing surprising side effects.
-        if (text.Contains('\n') || text.Contains('\r'))
+        // producing surprising side effects. This rejection does NOT apply to --paste: pasted text
+        // never passes through SendKeys.SendWait character-by-character, so embedded newlines are
+        // safe there.
+        if (!usePaste && (text.Contains('\n') || text.Contains('\r')))
         {
             JsonOutput.WriteError(
                 "invalid-argument",
                 "--text must not contain embedded newline characters ('\\n'/'\\r'); these are not " +
                 "treated as literal text by the underlying SendKeys mechanism and can trigger " +
-                "unintended UI navigation instead.");
+                "unintended UI navigation instead. Use --paste to send text containing newlines.");
             return 1;
         }
 
@@ -223,7 +250,29 @@ internal static class Verbs
             return 1;
         }
 
-        var method = UiaHelper.Type(element, text);
+        string method;
+        bool? clipboardRestored = null;
+
+        // --paste is a no-op when ValuePattern is available: SetValue is already instant and
+        // non-interruptible, so there's nothing for clipboard paste to improve on. Report the
+        // actual method used ("pattern") rather than silently ignoring the flag.
+        if (usePaste && !ElementSupportsValuePattern(element))
+        {
+            try
+            {
+                (method, var restored) = UiaHelper.TypeViaPaste(element, text);
+                clipboardRestored = restored;
+            }
+            catch (ClipboardUnavailableException ex)
+            {
+                JsonOutput.WriteError("clipboard-unavailable", ex.Message);
+                return 1;
+            }
+        }
+        else
+        {
+            method = UiaHelper.Type(element, text);
+        }
 
         // Optional read-back verification: --verify (matching --screenshot's boolean-flag
         // convention: absent or "false" disables it, any other value enables it) re-reads the
@@ -231,17 +280,31 @@ internal static class Verbs
         // sent. This exists to catch silent typing failures (e.g. a control that ignored or
         // truncated the input) that the plain success response cannot detect on its own.
         //
-        // Verification is only meaningful when Type used ValuePattern.SetValue ("pattern"): in
-        // that case GetText also reads back via ValuePattern, so both sides reflect the control's
-        // actual value. When Type fell back to synthetic-keyboard input ("synthetic-keyboard",
-        // i.e. no ValuePattern support), GetText falls back to the element's accessibility Name
-        // (a static label), not its typed content — comparing that against the typed text would
-        // almost always report a false-positive mismatch, not a genuine typing failure. Skip
-        // verification for that case rather than produce an unreliable result.
-        if (opts.TryGetValue("verify", out var verifyText) && verifyText != "false" && method == "pattern")
+        // Verification is meaningful for "pattern" (ValuePattern.SetValue, read back the same way)
+        // and "clipboard-paste" (read back via GetTextForPasteVerification, which tries TextPattern
+        // before falling back to Name — paste specifically targets elements without ValuePattern,
+        // so a TextPattern attempt is needed for verification to reflect real content). When Type
+        // fell back to plain synthetic-keyboard input ("synthetic-keyboard", i.e. no ValuePattern
+        // support and no --paste), GetText falls back to the element's accessibility Name (a static
+        // label), not its typed content — comparing that against the typed text would almost always
+        // report a false-positive mismatch, not a genuine typing failure. Skip verification for
+        // that case rather than produce an unreliable result.
+        //
+        // For "clipboard-paste" specifically, compare with line endings normalized: --paste is the
+        // only path that allows embedded newlines through, and live validation against a real
+        // RichEdit-based control (Notepad) showed the control itself normalizes '\n' to '\r'
+        // on paste — a real editor behavior, not data loss. Comparing raw would report a false
+        // verify-mismatch for any multi-line paste into such a control.
+        if (opts.TryGetValue("verify", out var verifyText) && verifyText != "false"
+            && (method == "pattern" || method == "clipboard-paste"))
         {
-            var actual = UiaHelper.GetText(element);
-            if (actual != text)
+            var actual = method == "clipboard-paste"
+                ? UiaHelper.GetTextForPasteVerification(element)
+                : UiaHelper.GetText(element);
+            var matches = method == "clipboard-paste"
+                ? NormalizeLineEndings(actual) == NormalizeLineEndings(text)
+                : actual == text;
+            if (!matches)
             {
                 JsonOutput.WriteError(
                     "verify-mismatch",
@@ -251,8 +314,26 @@ internal static class Verbs
             }
         }
 
-        JsonOutput.WriteSuccess(new { method });
+        if (clipboardRestored is not null)
+        {
+            JsonOutput.WriteSuccess(new { method, clipboardRestored = clipboardRestored.Value });
+        }
+        else
+        {
+            JsonOutput.WriteSuccess(new { method });
+        }
         return 0;
+    }
+
+    private static bool ElementSupportsValuePattern(AutomationElement element)
+    {
+        return element.TryGetCurrentPattern(ValuePattern.Pattern, out _)
+            && !(bool)element.GetCurrentPropertyValue(ValuePattern.IsReadOnlyProperty);
+    }
+
+    private static string? NormalizeLineEndings(string? s)
+    {
+        return s?.Replace("\r\n", "\n").Replace('\r', '\n');
     }
 
     /// <summary>
@@ -584,14 +665,15 @@ internal static class Verbs
 
         // Same embedded-newline guard as the standalone type verb (this composite verb calls
         // UiaHelper.Type directly rather than Verbs.Type, so the check is duplicated here rather
-        // than inherited).
-        if (text.Contains('\n') || text.Contains('\r'))
+        // than inherited). Does not apply to --paste — see Verbs.Type's matching comment.
+        var usePaste = opts.TryGetValue("paste", out var pasteText) && pasteText != "false";
+        if (!usePaste && (text.Contains('\n') || text.Contains('\r')))
         {
             JsonOutput.WriteError(
                 "invalid-argument",
                 "--text must not contain embedded newline characters ('\\n'/'\\r'); these are not " +
                 "treated as literal text by the underlying SendKeys mechanism and can trigger " +
-                "unintended UI navigation instead.",
+                "unintended UI navigation instead. Use --paste to send text containing newlines.",
                 new { step = "validate-arguments" });
             return 1;
         }
@@ -703,18 +785,43 @@ internal static class Verbs
         NativeMethods.Click(
             (int)(inputRect.X + inputRect.Width / 2), (int)(inputRect.Y + inputRect.Height / 2));
 
-        var method = UiaHelper.Type(inputElement, text);
+        string method;
+        bool? clipboardRestored = null;
+        if (usePaste && !ElementSupportsValuePattern(inputElement))
+        {
+            try
+            {
+                (method, var restored) = UiaHelper.TypeViaPaste(inputElement, text);
+                clipboardRestored = restored;
+            }
+            catch (ClipboardUnavailableException ex)
+            {
+                JsonOutput.WriteError("clipboard-unavailable", ex.Message, new { step = "type" });
+                return 1;
+            }
+        }
+        else
+        {
+            method = UiaHelper.Type(inputElement, text);
+        }
 
         // Read-back verification is attempted whenever possible (unlike type --verify, which is
         // opt-in): this composite verb exists specifically to catch silent typing failures before
-        // committing to clicking Send, so verification is not optional here. Same
-        // pattern-vs-synthetic-keyboard caveat as type --verify applies: only meaningful when
-        // ValuePattern was used, since GetText's Name fallback would otherwise produce a
-        // false-positive mismatch for a control with no ValuePattern support.
-        if (method == "pattern")
+        // committing to clicking Send, so verification is not optional here. Verification applies
+        // to "pattern" and "clipboard-paste" (see Verbs.Type's matching comment for why paste needs
+        // GetTextForPasteVerification rather than GetText) but not plain "synthetic-keyboard",
+        // where GetText's Name fallback would produce a false-positive mismatch. Line-ending
+        // normalization for "clipboard-paste" mirrors Verbs.Type — see that comment for the
+        // live-validated rationale (RichEdit-based controls normalize '\n' to '\r' on paste).
+        if (method == "pattern" || method == "clipboard-paste")
         {
-            var actual = UiaHelper.GetText(inputElement);
-            if (actual != text)
+            var actual = method == "clipboard-paste"
+                ? UiaHelper.GetTextForPasteVerification(inputElement)
+                : UiaHelper.GetText(inputElement);
+            var matches = method == "clipboard-paste"
+                ? NormalizeLineEndings(actual) == NormalizeLineEndings(text)
+                : actual == text;
+            if (!matches)
             {
                 JsonOutput.WriteError(
                     "verify-mismatch", "The input element's text after typing did not match the input.",
@@ -753,7 +860,14 @@ internal static class Verbs
             }
         }
 
-        JsonOutput.WriteSuccess(new { method });
+        if (clipboardRestored is not null)
+        {
+            JsonOutput.WriteSuccess(new { method, clipboardRestored = clipboardRestored.Value });
+        }
+        else
+        {
+            JsonOutput.WriteSuccess(new { method });
+        }
         return 0;
     }
 

@@ -90,10 +90,12 @@ Resolves the element via selector (scoped to `--scopeHwnd` if given, else `--hwn
   this field.
 - Failure: `element-not-found` if selector resolves to nothing.
 
-### `type --hwnd <h> --strategy <s> --value <v> --text <input> [--scopeHwnd <h2>] [--verify]`
+### `type --hwnd <h> --strategy <s> --value <v> --text <input> [--scopeHwnd <h2>] [--verify] [--paste]`
 Resolves element, attempts `ValuePattern.SetValue`, falls back to click-to-focus + synthetic
 keyboard input.
-- Success: `{ "success": true, "method": "pattern" | "synthetic-keyboard" }`
+- Success: `{ "success": true, "method": "pattern" | "synthetic-keyboard" | "clipboard-paste" }`
+  (`clipboardRestored: true|false|null` is also included when `method == "clipboard-paste"` — see
+  the tri-state explanation under `--paste` below).
 - **`--verify` (optional, Phase 9, added 2026-09-15):** boolean-style flag matching `inspect`'s
   `--screenshot` convention — absent or `--verify false` disables it, any other value (including
   a bare `--verify`) enables it. After typing, re-reads the element's text (same mechanism as
@@ -140,6 +142,84 @@ keyboard input.
   Validated live (2026-09-15): `type --text "line1\nline2"` (containing an embedded newline)
   against the Copilot Chat input returned a clean `invalid-argument` with no unhandled exception
   and no attempt to send the text.
+- **`--paste` (optional, Phase 12, added 2026-09-15):** boolean-style flag (same convention as
+  `--verify`) that, when the target element has no usable `ValuePattern` (the case `--paste` is
+  actually for), pastes `--text` via the clipboard (`Clipboard.SetDataObject` + `Ctrl+V`) instead
+  of per-character synthetic keystrokes — faster and non-interruptible for long text, and unlike
+  the plain synthetic-keyboard path, does **not** reject embedded newlines (pasted text is never
+  typed character-by-character through `SendKeys.SendWait`, which is what made raw newlines
+  dangerous on that path). Reports `method: "clipboard-paste"`.
+  - **No-op when `ValuePattern` is available:** `--paste` is ignored and `method: "pattern"` is
+    used instead — `ValuePattern.SetValue` is already instant and non-interruptible, so clipboard
+    paste has nothing to improve there. The flag is not silently dropped from the response in this
+    case; the reported `method` simply reflects what was actually used.
+  - **Clipboard History / Cloud Clipboard opt-out:** the text written to the clipboard for a paste
+    is marked with the documented Windows opt-out formats (`ExcludeClipboardContentFromMonitorProcessing`
+    zero-byte marker, plus `CanIncludeInClipboardHistory`/`CanUploadToCloudClipboard` DWORD-0
+    formats) so this transient automation input does not appear in Windows Clipboard History or
+    sync via Cloud Clipboard. The restored original clipboard content (see below) is written
+    plainly, without these markers, since it is the user's own prior data being put back, not new
+    content from this operation.
+  - **Original clipboard preserved (full fidelity):** before pasting, the current clipboard
+    content is snapshotted via `Clipboard.GetDataObject()` (not text-only) and restored afterward
+    via `Clipboard.SetDataObject(originalData, copy: true)` on a best-effort basis — preserving
+    whatever formats were actually present (e.g. HTML/RTF/image/file-drop data alongside a text
+    representation), not just a plain-text approximation. **Fixed during Regression Audit**: an
+    earlier version snapshotted/restored via `GetText()`/`SetText()` only, which would have
+    silently discarded any non-text formats that coexisted with text on the clipboard (a common
+    case, e.g. copying a spreadsheet cell), permanently losing the user's actual prior clipboard
+    content while still reporting a successful restore — fixed before commit, not discovered live.
+
+    A second, related bug was found (and fixed) during live re-validation of the fix above:
+    `Clipboard.GetDataObject()` returns a live COM wrapper tied to the current clipboard owner,
+    not a deep copy of the data — once the clipboard is overwritten with the paste text, that
+    wrapper can go stale, so restoring it back silently no-ops despite reporting
+    `clipboardRestored: true`. Fixed by eagerly copying every format's actual data out of the
+    snapshot into a `DataObject` the code owns (via `GetFormats()`/`GetData(format)`) before
+    overwriting the clipboard, so the later restore writes real captured bytes rather than a
+    now-invalid live reference. Confirmed via a manual marker-text round-trip against the real
+    VS Copilot Chat composer (set a known clipboard marker, paste, confirm the marker was
+    genuinely back on the clipboard afterward — not just a truthy flag).    `clipboardRestored` in the response is **tri-state**, not boolean, reflecting this fix:
+    - `null` — there was nothing on the clipboard to restore (no prior content existed); not a
+      failure, simply a no-op.
+    - `true` — a prior clipboard snapshot existed and was successfully restored.
+    - `false` — a prior clipboard snapshot existed but restoring it failed (e.g. the clipboard
+      became locked by another process during the restore attempt); non-fatal — the paste itself
+      already succeeded by this point — reported for visibility only.
+  - **Clipboard busy/locked:** both the snapshot read and every clipboard write retry up to 3 times
+    with a short backoff on a transient `ExternalException` (the standard Windows
+    `CLIPBRD_E_CANT_OPEN` failure mode when another process holds the clipboard open). If writing
+    still fails after retrying, returns `{ "success": false, "error": "clipboard-unavailable",
+    "message": "..." }` rather than proceeding with a corrupted paste. A snapshot-read failure is
+    non-fatal and simply skips the restore (`clipboardRestored: null`, same as "nothing to
+    restore" — a read failure is treated the same as there having been no prior content to
+    restore) instead of failing the whole call.
+  - **Verification (`--verify` combined with `--paste`):** attempted for `method ==
+    "clipboard-paste"` using a dedicated read-back (`GetTextForPasteVerification`) that tries
+    `TextPattern` before falling back to `Name` — plain `GetText`'s `Name`-only fallback (used for
+    `"synthetic-keyboard"`, where verification is still skipped) would almost always report a
+    false-positive mismatch for a paste target, since `--paste` specifically targets elements
+    without `ValuePattern`. Comparison normalizes line endings (`\r\n`/`\r`/`\n` all treated as
+    equivalent) before comparing — live validation against a real `RichEdit`-based control showed
+    the control itself normalizes `\n` to `\r` on paste, a genuine editor behavior rather than data
+    loss, so a raw string comparison would report a false `verify-mismatch` for any multi-line
+    paste.
+  - **STA requirement — found live, not anticipated.** `System.Windows.Forms.Clipboard` requires
+    the calling thread to be STA (`InvalidOperationException` otherwise: "Current thread must be
+    set to single thread apartment (STA) mode..."). Top-level-statement `Main` does **not**
+    automatically apply `[STAThread]` (a wrong assumption made during design, corrected by live
+    testing) — the process now explicitly checks `Thread.CurrentThread.GetApartmentState()` at
+    startup and, if not already STA, re-runs on a new thread with `SetApartmentState(STA)`. This
+    is a startup-level fix (`Program.cs`'s entry point), not scoped to `--paste` alone, but was
+    only exercised/discovered by `--paste`'s live validation since no prior verb used
+    `System.Windows.Forms.Clipboard`.
+  - Validated live (2026-09-15) against the real Copilot Chat composer (`--strategy Name --value
+    "Ask Copilot"`, hwnd `0xCA18B2`, no submission — cleared via `send-keys --keys "^a{DEL}"`
+    afterward, never pressing Enter): `type --paste true --verify true` with a 3-line
+    `--text` containing embedded newlines returned `{"method":"clipboard-paste",
+    "clipboardRestored":true,"success":true}` with no `verify-mismatch`, confirming the paste,
+    verification, and clipboard-restore paths all worked correctly against the actual motivating
+    target (a control with no `ValuePattern`).
 
 ### `get-text --hwnd <h> --strategy <s> --value <v>`
 Reads current `Name` or `ValuePattern.Value` (whichever is more appropriate/available) of the
@@ -323,7 +403,7 @@ before sending the raw key sequence. There is no UIA-pattern fast path (unlike `
   follow-up screenshot showing the input back at its placeholder-empty state. Also validated that
   malformed syntax (`--keys "{"`) returns a clean `invalid-argument` rather than crashing.
 
-### `submit-chat-message --hwnd <h> (--inputAutomationId <id> | --inputStrategy Name --inputValue <value>) [--sendAutomationId <id> | --submitKeys <SendKeys syntax>] --text <input>`
+### `submit-chat-message --hwnd <h> (--inputAutomationId <id> | --inputStrategy Name --inputValue <value>) [--sendAutomationId <id> | --submitKeys <SendKeys syntax>] --text <input> [--paste]`
 Composite verb tailored to the Copilot Chat input pattern specifically: click the input, type the
 text, verify it landed via read-back, then submit it — as a single call instead of a caller
 scripting the equivalent `click` → `type --verify` → `click`/`send-keys` sequence themselves.
@@ -348,13 +428,22 @@ an `AutomationId`-based Send-button click or keyboard input to the input element
   - `--sendAutomationId` and `--submitKeys` are mutually exclusive.
 - Internal sequence: resolve window → resolve input element (by `AutomationId` or `Name`) →
   synthetic click at the input's bounding-rect center (see rationale below — deliberately NOT
-  `UiaHelper.Click`) → `UiaHelper.Type` → conditional read-back verification (only when `method ==
-  "pattern"`, same rationale as `type --verify`) → either resolve Send button by
-  `--sendAutomationId` and `UiaHelper.Click` it, or `UiaHelper.SendKeys` the input with
+  `UiaHelper.Click`) → `UiaHelper.Type` (or `UiaHelper.TypeViaPaste` if `--paste` is given and the
+  input has no usable `ValuePattern`) → conditional read-back verification (`method == "pattern"`
+  or `method == "clipboard-paste"`, same rationale as `type --verify`) → either resolve Send
+  button by `--sendAutomationId` and `UiaHelper.Click` it, or `UiaHelper.SendKeys` the input with
   `--submitKeys` (default `{ENTER}`).
-- Success: `{ "success": true, "method": "pattern" | "synthetic-keyboard" }` (the `method` reflects
-  how the input's `Type` call proceeded; the Send click/keyboard submission's own internal
-  mechanism is not reported — a known simplification, see below).
+- **`--paste` (optional, Phase 12, added 2026-09-15):** same flag, mechanics, STA fix,
+  Clipboard-History/Cloud-Clipboard opt-out, restore behavior, and line-ending-normalized
+  verification as `type --paste` (see that section above) — this verb reuses
+  `UiaHelper.TypeViaPaste` and `UiaHelper.GetTextForPasteVerification` directly rather than
+  duplicating the logic. Also lifts the embedded-newline rejection for this verb's `--text` when
+  `--paste` is used, for the same reason.
+- Success: `{ "success": true, "method": "pattern" | "synthetic-keyboard" | "clipboard-paste" }`
+  (`clipboardRestored: true|false|null` also included when `method == "clipboard-paste"` — see the
+  tri-state explanation under `type --paste` above; the `method` reflects how the input's
+  `Type`/paste call proceeded; the Send click/keyboard submission's own internal mechanism is not
+  reported — a known simplification, see below).
 - Failure: `invalid-argument` (with `"step": "validate-arguments"`) for a missing/empty `--text`;
   an embedded newline in `--text` (same rejection as `type`, duplicated here since this verb calls
   `UiaHelper.Type` directly rather than going through `Verbs.Type`); a missing, empty, or

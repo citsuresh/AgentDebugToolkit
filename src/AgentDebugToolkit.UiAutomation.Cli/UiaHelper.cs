@@ -1,7 +1,20 @@
+using System.IO;
 using System.Windows.Automation;
 using AgentDebugToolkit.Core.Models;
 
 namespace AgentDebugToolkit.UiAutomation.Cli;
+
+/// <summary>
+/// Thrown when the clipboard cannot be written to after retrying (e.g. locked by another
+/// process during a clipboard-paste type/submit-chat-message operation).
+/// </summary>
+internal sealed class ClipboardUnavailableException : Exception
+{
+    public ClipboardUnavailableException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
+}
 
 /// <summary>
 /// Wraps System.Windows.Automation calls used by the CLI verbs. Kept deliberately simple for
@@ -219,12 +232,201 @@ internal static class UiaHelper
         return "synthetic-keyboard";
     }
 
+    /// <summary>
+    /// Click-to-focus the element, then paste <paramref name="text"/> via the clipboard
+    /// (Clipboard.SetDataObject + Ctrl+V) instead of per-character synthetic keystrokes. Faster
+    /// and non-interruptible for long text compared to <see cref="Type"/>'s synthetic-keyboard
+    /// fallback, and unlike raw SendKeys, paste does not choke on embedded newlines since the
+    /// text is never typed character-by-character through SendKeys.SendWait.
+    ///
+    /// The text this method writes to the clipboard is marked to opt out of Windows Clipboard
+    /// History and Cloud Clipboard sync (per the documented opt-out mechanism: the
+    /// "ExcludeClipboardContentFromMonitorProcessing" marker format, plus the
+    /// "CanIncludeInClipboardHistory"/"CanUploadToCloudClipboard" DWORD formats set to 0), since
+    /// this is transient automation input, not something the user intentionally copied. The
+    /// restored original clipboard content (see below) is NOT marked this way — it is the user's
+    /// own prior data being put back, not new content from this operation.
+    ///
+    /// The original clipboard contents are snapshotted and restored via the full IDataObject
+    /// (Clipboard.GetDataObject()/SetDataObject(IDataObject, ...)) rather than plain text only:
+    /// an earlier version snapshotted/restored via GetText()/SetText() alone, which — per a
+    /// Regression Audit finding — would silently discard any other formats (e.g. HTML/RTF/image/
+    /// file-drop data) that coexisted with a text representation on the clipboard (a common case,
+    /// e.g. copying a spreadsheet cell), permanently losing the user's actual prior clipboard
+    /// content while still reporting a successful restore. Full-fidelity snapshot/restore avoids
+    /// this.
+    /// </summary>
+    /// <returns>
+    /// (method, clipboardRestored): method is always "clipboard-paste" on success.
+    /// clipboardRestored is null if there was nothing on the clipboard to restore (a no-op, not a
+    /// failure); true if a prior clipboard snapshot was successfully restored; false if a prior
+    /// snapshot existed but restoring it failed (best-effort only — a restore failure does not
+    /// fail the paste itself, which already succeeded by this point).
+    /// </returns>
+    /// <exception cref="ClipboardUnavailableException">
+    /// Thrown if the clipboard could not be written to after retrying (e.g. locked by another
+    /// process). Callers must translate this to a clean clipboard-unavailable response.
+    /// </exception>
+    public static (string method, bool? clipboardRestored) TypeViaPaste(AutomationElement element, string text)
+    {
+        System.Windows.Forms.IDataObject? originalData = null;
+        var hadOriginalContent = false;
+        try
+        {
+            var snapshot = System.Windows.Forms.Clipboard.GetDataObject();
+            if (snapshot is not null)
+            {
+                var formats = snapshot.GetFormats();
+                if (formats.Length > 0)
+                {
+                    // Clipboard.GetDataObject() returns a live COM wrapper tied to the current
+                    // clipboard owner, not a deep copy — once we overwrite the clipboard below,
+                    // that wrapper can go stale and silently yield no data on restore. Eagerly
+                    // pull each format's actual data into a DataObject we own, so the restore
+                    // later writes real captured bytes, not a now-invalid reference.
+                    var owned = new System.Windows.Forms.DataObject();
+                    foreach (var format in formats)
+                    {
+                        try
+                        {
+                            var value = snapshot.GetData(format);
+                            if (value is not null)
+                            {
+                                owned.SetData(format, value);
+                            }
+                        }
+                        catch (System.Runtime.InteropServices.ExternalException)
+                        {
+                            // Skip formats that fail to materialize; best-effort snapshot.
+                        }
+                    }
+
+                    if (owned.GetFormats().Length > 0)
+                    {
+                        originalData = owned;
+                        hadOriginalContent = true;
+                    }
+                }
+            }
+        }
+        catch (System.Runtime.InteropServices.ExternalException)
+        {
+            // Clipboard busy reading current contents — proceed without a snapshot; restore
+            // will simply be skipped (clipboardRestored: null) rather than failing the paste.
+        }
+
+        SetClipboardTextWithRetry(text, excludeFromHistoryAndSync: true);
+
+        var r = element.Current.BoundingRectangle;
+        var cx = (int)(r.X + r.Width / 2);
+        var cy = (int)(r.Y + r.Height / 2);
+        NativeMethods.Click(cx, cy);
+        Thread.Sleep(100);
+        NativeMethods.SendKeysRaw("^v");
+        Thread.Sleep(100);
+
+        bool? restored = null;
+        if (hadOriginalContent)
+        {
+            try
+            {
+                SetClipboardDataWithRetry(originalData!);
+                restored = true;
+            }
+            catch (ClipboardUnavailableException)
+            {
+                // Best-effort restore only — the paste itself already succeeded above.
+                restored = false;
+            }
+        }
+
+        return ("clipboard-paste", restored);
+    }
+
+    // Windows Clipboard History / Cloud Clipboard opt-out marker formats (documented at
+    // https://learn.microsoft.com/windows/win32/dataxchg/clipboard-history — "Exclude data from
+    // the clipboard history and cloud clipboard"). Presence of the first format (zero-byte data
+    // is sufficient) excludes from both; the latter two are DWORD formats set to 0 for
+    // finer-grained control. All three are registered together for the widest opt-out coverage.
+    private const string ExcludeFromMonitorProcessingFormat = "ExcludeClipboardContentFromMonitorProcessing";
+    private const string CanIncludeInClipboardHistoryFormat = "CanIncludeInClipboardHistory";
+    private const string CanUploadToCloudClipboardFormat = "CanUploadToCloudClipboard";
+
+    private static void SetClipboardTextWithRetry(string text, bool excludeFromHistoryAndSync)
+    {
+        var data = new System.Windows.Forms.DataObject();
+        data.SetData(System.Windows.Forms.DataFormats.UnicodeText, text);
+
+        if (excludeFromHistoryAndSync)
+        {
+            // Zero-byte marker: presence alone is the opt-out signal, per the documented
+            // mechanism — no meaningful payload is expected or read by the OS for this.
+            data.SetData(ExcludeFromMonitorProcessingFormat, new MemoryStream());
+
+            // DWORD 0 = excluded, per the documented format contract for these two.
+            data.SetData(CanIncludeInClipboardHistoryFormat, new MemoryStream(BitConverter.GetBytes(0)));
+            data.SetData(CanUploadToCloudClipboardFormat, new MemoryStream(BitConverter.GetBytes(0)));
+        }
+
+        SetClipboardDataWithRetry(data);
+    }
+
+    private static void SetClipboardDataWithRetry(System.Windows.Forms.IDataObject data)
+    {
+        const int maxAttempts = 3;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                System.Windows.Forms.Clipboard.SetDataObject(data, copy: true);
+                return;
+            }
+            catch (System.Runtime.InteropServices.ExternalException) when (attempt < maxAttempts)
+            {
+                Thread.Sleep(50);
+            }
+            catch (System.Runtime.InteropServices.ExternalException ex)
+            {
+                throw new ClipboardUnavailableException(
+                    "The clipboard could not be written to after retrying; it may be locked by another process.",
+                    ex);
+            }
+        }
+    }
+
     public static string? GetText(AutomationElement element)
     {
         if (element.TryGetCurrentPattern(ValuePattern.Pattern, out var valueObj)
             && valueObj is ValuePattern value)
         {
             return value.Current.Value;
+        }
+
+        return element.Current.Name;
+    }
+
+    /// <summary>
+    /// Read-back helper used only for verifying clipboard-paste results (method ==
+    /// "clipboard-paste"). Unlike <see cref="GetText"/> (used by the get-text verb and kept
+    /// unchanged for compatibility), this also tries TextPattern before falling back to Name:
+    /// paste targets elements without ValuePattern (that's the whole reason --paste exists), so
+    /// without a TextPattern attempt, verification would almost always compare against the
+    /// element's static Name label and produce a false-positive mismatch — the same reason
+    /// verification is skipped entirely for synthetic-keyboard typing. TextPattern lets real
+    /// paste content be verified instead of skipping verification for --paste too.
+    /// </summary>
+    public static string? GetTextForPasteVerification(AutomationElement element)
+    {
+        if (element.TryGetCurrentPattern(ValuePattern.Pattern, out var valueObj)
+            && valueObj is ValuePattern value)
+        {
+            return value.Current.Value;
+        }
+
+        if (element.TryGetCurrentPattern(TextPattern.Pattern, out var textObj)
+            && textObj is TextPattern text)
+        {
+            return text.DocumentRange.GetText(-1);
         }
 
         return element.Current.Name;
