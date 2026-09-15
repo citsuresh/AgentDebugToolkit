@@ -77,9 +77,17 @@ implemented, committed, and pushed -- see git history (`ae45478`, `380079d`, `41
   redesign.** No safe/disposable real radio-button-style confirmation card was available to trigger
   during this session either; still worth validating opportunistically via `find-first`/`find-all`
   next time one appears (see `CLI_CONTRACT.md`'s migration note for the caller-side approach).
-- `find-first`/`find-all`'s `--scopeStrategy`/`--scopeValue` narrowing was validated only for the
-  argument-mismatch and default-to-window-root cases; the actual narrowed-scope-resolves-and-narrows
-  path remains code-reviewed only, not independently live-tested.
+- **`find-first`/`find-all`'s `--scopeStrategy`/`--scopeValue` narrowing -- now independently
+  live-validated (2026-09-15)** against the real VS Insiders window (hwnd `0xCA18B2`): scoping
+  `find-first --strategy AutomationId --value SendButton` to `--scopeStrategy Name --scopeValue
+  Chat` (the chat tool pane, a real ancestor of `SendButton`) correctly returned `found: true`,
+  while scoping the identical search to an unrelated ancestor (`--scopeStrategy AutomationId
+  --scopeValue SccStatusBar` or `chatTitle`) correctly returned `found: false` -- proving the scope
+  genuinely restricts the search rather than silently searching the whole window regardless.
+  `find-all` with the same scope-to-`Chat` case returned `count: 1` (the real match), scoping to
+  `SccStatusBar` returned `count: 0`, and `--excludeValue Send` correctly filtered the one match
+  down to `count: 0`. This closes the previously-open gap (only the argument-mismatch and
+  default-to-window-root cases had been tested before).
   - Enumerating radio-button *options* via `find-all` still needs a control-type-based match, not
     yet a supported `Selector` strategy (`Name`/`AutomationId` only today) -- documented as a known
     gap in `CLI_CONTRACT.md`'s migration note, with `inspect` as the fallback.
