@@ -567,11 +567,10 @@ internal static class Verbs
 
     /// <summary>
     /// Composite verb tailored to the Copilot Chat input pattern: click the input, type the text,
-    /// verify it landed via read-back, then click Send — as a single call instead of the
-    /// click/type/click dance a caller would otherwise have to script themselves. Both the input
-    /// and Send button are resolved via AutomationId (the only selector strategy this verb
-    /// supports, since it targets a specific, known UI pattern rather than being a general-purpose
-    /// element-scoped verb like click/type/send-keys).
+    /// verify it landed via read-back, then submit it — as a single call instead of the
+    /// click/type/submit dance a caller would otherwise have to script themselves. It preserves
+    /// AutomationId selection for compatible chat UIs and also supports the Name exposed by the
+    /// real Visual Studio Copilot Chat composer while it is empty.
     /// </summary>
     public static int SubmitChatMessage(Dictionary<string, string> opts)
     {
@@ -595,7 +594,10 @@ internal static class Verbs
             return 1;
         }
 
-        if (!opts.TryGetValue("inputAutomationId", out var inputAutomationId) || inputAutomationId.Length == 0)
+        var hasInputAutomationId = opts.TryGetValue("inputAutomationId", out var inputAutomationId);
+        var hasInputStrategy = opts.TryGetValue("inputStrategy", out var inputStrategy);
+        var hasInputValue = opts.TryGetValue("inputValue", out var inputValue);
+        if (hasInputAutomationId && inputAutomationId!.Length == 0)
         {
             JsonOutput.WriteError(
                 "invalid-argument", "--inputAutomationId is required and must be non-empty.",
@@ -603,10 +605,48 @@ internal static class Verbs
             return 1;
         }
 
-        if (!opts.TryGetValue("sendAutomationId", out var sendAutomationId) || sendAutomationId.Length == 0)
+        if (hasInputAutomationId && (hasInputStrategy || hasInputValue))
         {
             JsonOutput.WriteError(
-                "invalid-argument", "--sendAutomationId is required and must be non-empty.",
+                "invalid-argument", "Specify either --inputAutomationId or --inputStrategy with --inputValue, not both.",
+                new { step = "validate-arguments" });
+            return 1;
+        }
+
+        if (!hasInputAutomationId
+            && (!hasInputStrategy || !hasInputValue
+                || !inputStrategy!.Equals("Name", StringComparison.OrdinalIgnoreCase)
+                || inputValue!.Length == 0))
+        {
+            JsonOutput.WriteError(
+                "invalid-argument",
+                "Specify --inputAutomationId, or --inputStrategy Name with a non-empty --inputValue.",
+                new { step = "validate-arguments" });
+            return 1;
+        }
+
+        var hasSendAutomationId = opts.TryGetValue("sendAutomationId", out var sendAutomationId);
+        var hasSubmitKeys = opts.TryGetValue("submitKeys", out var submitKeys);
+        if (hasSendAutomationId && sendAutomationId!.Length == 0)
+        {
+            JsonOutput.WriteError(
+                "invalid-argument", "--sendAutomationId must be non-empty.",
+                new { step = "validate-arguments" });
+            return 1;
+        }
+
+        if (hasSendAutomationId && hasSubmitKeys)
+        {
+            JsonOutput.WriteError(
+                "invalid-argument", "Specify either --sendAutomationId or --submitKeys, not both.",
+                new { step = "validate-arguments" });
+            return 1;
+        }
+
+        if (hasSubmitKeys && submitKeys!.Length == 0)
+        {
+            JsonOutput.WriteError(
+                "invalid-argument", "--submitKeys must be non-empty.",
                 new { step = "validate-arguments" });
             return 1;
         }
@@ -634,12 +674,17 @@ internal static class Verbs
             return 1;
         }
 
-        var inputElement = UiaHelper.ResolveSelector(
-            scope, new Selector { Strategy = SelectorStrategy.AutomationId, Value = inputAutomationId });
+        var inputSelector = hasInputAutomationId
+            ? new Selector { Strategy = SelectorStrategy.AutomationId, Value = inputAutomationId! }
+            : new Selector { Strategy = SelectorStrategy.Name, Value = inputValue! };
+        var inputElement = UiaHelper.ResolveSelector(scope, inputSelector);
         if (inputElement is null)
         {
+            var inputDescription = hasInputAutomationId
+                ? $"AutomationId '{inputAutomationId}'"
+                : $"Name '{inputValue}'";
             JsonOutput.WriteError(
-                "element-not-found", $"No input element found for AutomationId '{inputAutomationId}'.",
+                "element-not-found", $"No input element found for {inputDescription}.",
                 new { step = "resolve-input" });
             return 1;
         }
@@ -676,17 +721,36 @@ internal static class Verbs
             }
         }
 
-        var sendElement = UiaHelper.ResolveSelector(
-            scope, new Selector { Strategy = SelectorStrategy.AutomationId, Value = sendAutomationId });
-        if (sendElement is null)
+        if (hasSendAutomationId)
         {
-            JsonOutput.WriteError(
-                "element-not-found", $"No Send button element found for AutomationId '{sendAutomationId}'.",
-                new { step = "resolve-send" });
-            return 1;
+            var sendElement = UiaHelper.ResolveSelector(
+                scope, new Selector { Strategy = SelectorStrategy.AutomationId, Value = sendAutomationId! });
+            if (sendElement is null)
+            {
+                JsonOutput.WriteError(
+                    "element-not-found", $"No Send button element found for AutomationId '{sendAutomationId}'.",
+                    new { step = "resolve-send" });
+                return 1;
+            }
+
+            UiaHelper.Click(sendElement);
+        }
+        else
+        {
+            var keys = hasSubmitKeys ? submitKeys! : "{ENTER}";
+            try
+            {
+                UiaHelper.SendKeys(inputElement, keys);
+            }
+            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or FormatException)
+            {
+                JsonOutput.WriteError(
+                    "invalid-argument", $"Invalid --submitKeys syntax '{keys}': {ex.Message}",
+                    new { step = "submit" });
+                return 1;
+            }
         }
 
-        UiaHelper.Click(sendElement);
         JsonOutput.WriteSuccess(new { method });
         return 0;
     }

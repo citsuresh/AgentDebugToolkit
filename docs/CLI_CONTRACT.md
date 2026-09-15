@@ -323,39 +323,63 @@ before sending the raw key sequence. There is no UIA-pattern fast path (unlike `
   follow-up screenshot showing the input back at its placeholder-empty state. Also validated that
   malformed syntax (`--keys "{"`) returns a clean `invalid-argument` rather than crashing.
 
-### `submit-chat-message --hwnd <h> --inputAutomationId <id1> --sendAutomationId <id2> --text <input>`
+### `submit-chat-message --hwnd <h> (--inputAutomationId <id> | --inputStrategy Name --inputValue <value>) [--sendAutomationId <id> | --submitKeys <SendKeys syntax>] --text <input>`
 Composite verb tailored to the Copilot Chat input pattern specifically: click the input, type the
-text, verify it landed via read-back, then click Send — as a single call instead of a caller
-scripting the equivalent `click` → `type --verify` → `click` sequence themselves. Unlike
-`click`/`type`/`send-keys` (which accept any `Selector` strategy via `--strategy`/`--value`), this
-verb only supports `AutomationId` for both the input and Send button, since it targets one
-specific, known UI pattern rather than being a general-purpose element-scoped verb.
-- Internal sequence: resolve window → resolve input element by `--inputAutomationId` → synthetic
-  click at the input's bounding-rect center (see rationale below — deliberately NOT
+text, verify it landed via read-back, then submit it — as a single call instead of a caller
+scripting the equivalent `click` → `type --verify` → `click`/`send-keys` sequence themselves.
+Unlike `click`/`type`/`send-keys` (which accept any `Selector` strategy via `--strategy`/`--value`),
+this verb's input selection is limited to two explicit modes (see below), and submission is either
+an `AutomationId`-based Send-button click or keyboard input to the input element.
+- **Input selection (Phase 10, 2026-09-15):**
+  - `--inputAutomationId <id>` — original compatibility mode: resolve the input by `AutomationId`.
+  - `--inputStrategy Name --inputValue <value>` — resolve the input by its `Name` instead. Added
+    specifically for the real Visual Studio Copilot Chat composer, which exposes no
+    `AutomationId` distinguishing it from the code editor's `WpfTextView`/`AutomationId` but does
+    expose a unique `Name` ("Ask Copilot") while its text is empty.
+  - Exactly one of these two modes must be specified; specifying both, or neither in a valid form,
+    is `invalid-argument`.
+- **Submission (Phase 10, 2026-09-15):**
+  - `--sendAutomationId <id>` — original compatibility mode: resolve a Send button by
+    `AutomationId` and click it via `UiaHelper.Click`.
+  - `--submitKeys <SendKeys syntax>` — send raw/unescaped `SendKeys` syntax to the already-resolved
+    input element via `UiaHelper.SendKeys` (same mechanism as the standalone `send-keys` verb)
+    instead of resolving a separate Send button. If neither `--sendAutomationId` nor
+    `--submitKeys` is given, this is the default path, using `{ENTER}`.
+  - `--sendAutomationId` and `--submitKeys` are mutually exclusive.
+- Internal sequence: resolve window → resolve input element (by `AutomationId` or `Name`) →
+  synthetic click at the input's bounding-rect center (see rationale below — deliberately NOT
   `UiaHelper.Click`) → `UiaHelper.Type` → conditional read-back verification (only when `method ==
-  "pattern"`, same rationale as `type --verify`) → resolve Send button by `--sendAutomationId` →
-  `UiaHelper.Click` on the Send button.
+  "pattern"`, same rationale as `type --verify`) → either resolve Send button by
+  `--sendAutomationId` and `UiaHelper.Click` it, or `UiaHelper.SendKeys` the input with
+  `--submitKeys` (default `{ENTER}`).
 - Success: `{ "success": true, "method": "pattern" | "synthetic-keyboard" }` (the `method` reflects
-  how the input's `Type` call proceeded; the two `Click` calls' own internal methods are not
-  reported — a known simplification, see below).
-- Failure: `invalid-argument` (with `"step": "validate-arguments"`) if `--text`,
-  `--inputAutomationId`, or `--sendAutomationId` is missing/empty, or if `--text` contains an
-  embedded newline (same rejection as `type`, duplicated here since this verb calls
-  `UiaHelper.Type` directly rather than going through `Verbs.Type`).
+  how the input's `Type` call proceeded; the Send click/keyboard submission's own internal
+  mechanism is not reported — a known simplification, see below).
+- Failure: `invalid-argument` (with `"step": "validate-arguments"`) for a missing/empty `--text`;
+  an embedded newline in `--text` (same rejection as `type`, duplicated here since this verb calls
+  `UiaHelper.Type` directly rather than going through `Verbs.Type`); a missing, empty, or
+  conflicting input-selection mode (`--inputAutomationId` together with
+  `--inputStrategy`/`--inputValue`, or neither a valid `--inputAutomationId` nor a valid
+  `--inputStrategy Name --inputValue <value>` pair); an empty `--sendAutomationId` or
+  `--submitKeys`; or `--sendAutomationId` together with `--submitKeys`.
 - Failure: any window-resolution error code (with `"step": "resolve-window"`), or
   `window-not-responding` (with `"step": "resolve-window"`).
-- Failure: `element-not-found` (with `"step": "resolve-input"`) if the input `AutomationId` does
-  not resolve.
+- Failure: `element-not-found` (with `"step": "resolve-input"`) if the selected input
+  (`AutomationId` or `Name`) does not resolve.
 - Failure: `verify-mismatch` (with `"step": "type-verify"`, plus `expected`/`actual` fields) if the
   input element supports `ValuePattern` (`method == "pattern"`) and the read-back text after typing
   does not match `--text`. **Unlike `type --verify` (which is opt-in), this verb always attempts
   verification when possible** — it exists specifically to catch silent typing failures before
-  committing to clicking Send.
-- Failure: `element-not-found` (with `"step": "resolve-send"`) if the Send button `AutomationId`
-  does not resolve. **Note:** if this occurs after typing has already succeeded (and passed
-  verification, if attempted), the typed text remains in the input — it is not cleared or rolled
-  back. A caller retrying after a `resolve-send` failure should account for the input already
-  containing the previously-typed text.
+  committing to submitting.
+- Failure: `element-not-found` (with `"step": "resolve-send"`) if an explicitly requested Send
+  button `AutomationId` does not resolve. **Note:** if this occurs after typing has already
+  succeeded (and passed verification, if attempted), the typed text remains in the input — it is
+  not cleared or rolled back. A caller retrying after a `resolve-send` failure should account for
+  the input already containing the previously-typed text.
+- Failure: `invalid-argument` (with `"step": "submit"`) if `--submitKeys` (or the default
+  `{ENTER}`) is not valid `SendKeys` syntax — same translation as the standalone `send-keys` verb
+  (`ArgumentException`/`InvalidOperationException`/`FormatException` from `SendKeys.SendWait`).
+  Same partial-typed-state caveat as a `resolve-send` failure: the typed text remains in the input.
 - **Design note — synthetic click instead of `UiaHelper.Click` for the input.** The input-focus
   click (before typing) uses a plain `NativeMethods.Click(x, y)` synthetic mouse click at the
   element's bounding-rect center, not `UiaHelper.Click`. This was a fix applied during Regression
@@ -365,33 +389,23 @@ specific, known UI pattern rather than being a general-purpose element-scoped ve
   own click-to-focus fallback, which is always a plain physical click. The Send button click still
   uses `UiaHelper.Click` (an actual invoke/click of the button is the intended action there).
 - **Known limitation — partial-typed state on `verify-mismatch`.** If verification fails, the
-  mismatched/partial text remains in the input and Send is never clicked, leaving the input in a
-  different state than before the call. This is inherent to a composite verb that performs real,
+  mismatched/partial text remains in the input and submission never happens, leaving the input in
+  a different state than before the call. This is inherent to a composite verb that performs real,
   non-transactional side effects across multiple steps — there is no rollback.
-- **Known limitation — no ambiguity detection on `AutomationId` lookups.** Both `--inputAutomationId`
-  and `--sendAutomationId` resolve via the existing `ResolveSelector` helper, which returns the
-  first match (`FindFirst`) with no error if multiple elements share the same `AutomationId` within
-  the window — this is a pre-existing limitation of `ResolveSelector` shared with `click`/`type`,
-  not something new to this verb, but is worth calling out here since this verb chains two such
-  lookups back to back.
-- **Live validation status (2026-09-15): not completed end-to-end against a real Copilot Chat
-  panel.** A full tree inspection (`inspect --hwnd 0xCA18B2 --maxDepth 15`) of the real, running VS
-  Insiders window found no `AutomationId` resembling a Send button anywhere in the tree, and the
-  only `AutomationId` matching `WpfTextView` (initially assumed, based on `send-keys`'s earlier
-  discovery, to also work here) resolves to the code editor pane, not the chat input — consistent
-  with `send-keys`'s Part A finding that the chat input required a `Name`-based selector instead,
-  since `submit-chat-message` only supports `AutomationId`. This means, for the specific Copilot
-  Chat implementation available in this session, the input and Send button are not resolvable via
-  `AutomationId` at all (the chat panel is very likely a custom/webview-hosted control without
-  conventional `AutomationId`s exposed for these two elements) — `submit-chat-message`'s core
-  design assumption (both elements resolvable via `AutomationId`) does not hold for this
-  particular chat UI. Validation for this verb is therefore code-review/build-only: the
-  implementation builds successfully, and its individual pieces (window/element resolution,
-  synthetic click, `Type`, conditional verify, `Click`) reuse the same primitives already
-  live-validated independently by `click`, `type`, `type --verify`, and `send-keys`. A caller with
-  a chat UI that does expose these elements via `AutomationId` (or a future revision of
-  `submit-chat-message` supporting other selector strategies) would need to re-validate live
-  against that specific UI.
+- **Known limitation — no ambiguity detection on `AutomationId`/`Name` lookups.** Input and Send
+  button resolution use the existing `ResolveSelector` helper, which returns the first match
+  (`FindFirst`) with no error if multiple elements share the same `AutomationId`/`Name` within the
+  window — this is a pre-existing limitation of `ResolveSelector` shared with `click`/`type`, not
+  something new to this verb, but is worth calling out here since this verb can chain two such
+  lookups back to back (input + Send button, when `--sendAutomationId` is used).
+- **Live validation status (2026-09-15, Phase 9): not completed end-to-end against a real Copilot
+  Chat panel using the original `AutomationId`-only design.** A full tree inspection
+  (`inspect --hwnd 0xCA18B2 --maxDepth 15`) of the real, running VS Insiders window found no
+  `AutomationId` resembling a Send button anywhere in the tree, and the only `AutomationId`
+  matching `WpfTextView` resolves to the code editor pane, not the chat input — consistent with
+  `send-keys`'s finding that the chat input required a `Name`-based selector instead. This gap is
+  what Phase 10's `--inputStrategy Name`/`--submitKeys` modes above were added to close; live
+  end-to-end validation of those new modes against this same window is still needed.
 
 ## Conventions for future phases
 

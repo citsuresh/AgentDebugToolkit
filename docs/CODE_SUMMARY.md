@@ -28,10 +28,10 @@ graph LR
 | Symbol | File | Responsibility |
 |---|---|---|
 | `Program` / `Verbs` (top-level) | `Program.cs` | Entry point; parses `--key value` args and dispatches UI Automation verbs |
-| `UiaHelper` | `UiaHelper.cs` | Wraps `System.Windows.Automation` calls: enumerate windows, resolve selectors, build `ElementInfo` trees, perform click/type (pattern-based, falling back to synthetic input) |
+| `UiaHelper` | `UiaHelper.cs` | Wraps `System.Windows.Automation` calls: enumerate windows, resolve selectors, build `ElementInfo` trees, perform click/type (pattern-based, falling back to synthetic input), and `SendKeys` (click-to-focus + raw `SendKeys.SendWait`, Phase 9) |
 | `SessionContext` | `SessionContext.cs` | Persists the "current" pid to a temp JSON file so subsequent CLI invocations (separate processes) can omit `--pid` after `attach` |
 | `ScreenshotHelper` | `ScreenshotHelper.cs` | Captures a PNG screenshot of an element's bounding rect to local app data |
-| `NativeMethods` | `NativeMethods.cs` | P/Invoke user32 helpers for synthetic mouse/keyboard input and window queries; primary interaction mechanism since target apps often support no UIA patterns |
+| `NativeMethods` | `NativeMethods.cs` | P/Invoke user32 helpers for synthetic mouse/keyboard input and window queries; primary interaction mechanism since target apps often support no UIA patterns. Also wraps `SetForegroundWindow` (`activate`, Phase 9) and raw `SendKeys.SendWait` (`SendKeysRaw`, Phase 9) |
 
 ### AgentDebugToolkit.Debugger.VisualStudio
 
