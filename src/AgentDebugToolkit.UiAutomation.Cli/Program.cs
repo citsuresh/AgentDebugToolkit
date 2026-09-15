@@ -528,6 +528,24 @@ internal static class Verbs
                     new { expected = text, actual });
                 return 1;
             }
+        
+            // Phase 14: a matching read-back immediately after paste is not sufficient on its
+            // own for "clipboard-paste" -- some target controls (notably JS-driven composers,
+            // not native Win32 edit controls) asynchronously mutate/truncate/submit pasted
+            // content containing embedded newlines shortly after the paste, after our one-shot
+            // read already looked complete. See VerifyPasteStability's doc comment for the full
+            // investigation. Not applicable to "pattern" (SetValue is synchronous, no such race).
+            if (method == "clipboard-paste")
+            {
+                var instability = VerifyPasteStability(element, text, actual);
+                if (instability is not null)
+                {
+                    JsonOutput.WriteError(
+                        instability.Value.error, instability.Value.message,
+                        new { expected = text, actual = instability.Value.actual });
+                    return 1;
+                }
+            }
         }
 
         if (clipboardRestored is not null)
@@ -550,6 +568,78 @@ internal static class Verbs
     private static string? NormalizeLineEndings(string? s)
     {
         return s?.Replace("\r\n", "\n").Replace('\r', '\n');
+    }
+
+    // Additional settle delay for the second read in VerifyPasteStability, applied on top of
+    // whatever delay TypeViaPaste already waited before the first read. Chosen to give an
+    // async/JS-driven composer (as opposed to a native Win32 edit control) time to finish any
+    // post-paste processing of its own (e.g. treating an embedded newline as a submit trigger)
+    // before we take a second snapshot to compare against the first.
+    private const int PasteStabilitySettleMs = 250;
+
+    // Below this fraction of the input length, a verified clipboard-paste read-back is treated
+    // as "suspiciously short" even if it superficially compares equal via a partial/prefix match
+    // -- guards against a composer truncating to just the first line/paragraph while still
+    // reporting some text that could otherwise pass a naive comparison.
+    private const double PasteSuspiciousShrinkageThreshold = 0.5;
+
+    /// <summary>
+    /// Phase 14: investigates a real bug where a multi-paragraph --paste into a JS-driven chat
+    /// composer reported verify success (matching read-back immediately after paste) but the
+    /// composer itself then asynchronously truncated/submitted on the embedded newline shortly
+    /// after -- a race between our one-shot verification and the target app's own post-paste
+    /// processing, not a synchronous truncation the original single read-back could catch.
+    ///
+    /// Performs two checks beyond the original single read-back comparison:
+    /// (A) Re-reads the element after an additional settle delay and compares against the first
+    /// read; a mismatch (especially the text shrinking) means the target app mutated the content
+    /// after our verification already looked complete, and is reported as "verify-unstable"
+    /// rather than silently returning success.
+    /// (B) Independent of (A), flags the first read as suspiciously short if its length is below
+    /// PasteSuspiciousShrinkageThreshold of the input length -- catches a partial prefix that
+    /// happens to satisfy the exact-match comparison used elsewhere (e.g. the caller only
+    /// compared a normalized substring) without a full mismatch being detected.
+    ///
+    /// Only meaningful for method == "clipboard-paste" (the only path that allows embedded
+    /// newlines and the only one susceptible to this app-side race); callers must not invoke this
+    /// for "pattern" or "synthetic-keyboard".
+    /// </summary>
+    /// <returns>
+    /// null if stable and not suspiciously short (caller proceeds with its own exact-match
+    /// verification as before); otherwise an (error, message, actual) tuple the caller should
+    /// report instead of success. `actual` is the most recent/relevant read-back evidence for the
+    /// failure (the suspiciously-short first read for the shrinkage check, or the second,
+    /// post-mutation read for the instability check) -- not necessarily the same value as the
+    /// caller's own `firstRead`, so callers should use this `actual` rather than their own when
+    /// building the error payload.
+    /// </returns>
+    private static (string error, string message, string? actual)? VerifyPasteStability(
+        AutomationElement element, string text, string? firstRead)
+    {
+        if (text.Length > 0
+            && (firstRead?.Length ?? 0) < text.Length * PasteSuspiciousShrinkageThreshold)
+        {
+            return (
+                "verify-unstable",
+                "The clipboard-paste read-back is suspiciously shorter than the input text " +
+                "immediately after pasting; the target control may have already begun " +
+                "truncating or submitting the content.",
+                firstRead);
+        }
+
+        Thread.Sleep(PasteStabilitySettleMs);
+        var secondRead = UiaHelper.GetTextForPasteVerification(element);
+        if (NormalizeLineEndings(secondRead) != NormalizeLineEndings(firstRead))
+        {
+            return (
+                "verify-unstable",
+                "The element's text changed between two read-backs after pasting; the target " +
+                "control likely mutated the pasted content asynchronously (e.g. treating an " +
+                "embedded newline as a submit trigger) after verification appeared to succeed.",
+                secondRead);
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -1046,6 +1136,24 @@ internal static class Verbs
                     "verify-mismatch", "The input element's text after typing did not match the input.",
                     new { step = "type-verify", expected = text, actual });
                 return 1;
+            }
+        
+            // Phase 14: guard against the target composer asynchronously mutating/truncating/
+            // submitting pasted content (embedded newlines) after our one-shot read looked
+            // complete -- see VerifyPasteStability's doc comment and Verbs.Type's matching
+            // block for the full investigation. This is especially important here because a
+            // Send click follows immediately after this block; blocking on instability here
+            // prevents an incomplete/mutated message from being sent.
+            if (method == "clipboard-paste")
+            {
+                var instability = VerifyPasteStability(inputElement, text, actual);
+                if (instability is not null)
+                {
+                    JsonOutput.WriteError(
+                        instability.Value.error, instability.Value.message,
+                        new { step = "type-verify", expected = text, actual = instability.Value.actual });
+                    return 1;
+                }
             }
         }
 

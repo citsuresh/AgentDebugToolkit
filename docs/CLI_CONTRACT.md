@@ -134,6 +134,26 @@ keyboard input.
   `--verify false` to disable it) — fixed to match. The audit also found the pattern-only
   verification scoping described above was necessary to avoid the `synthetic-keyboard` false-positive
   described above; this was fixed before any live validation, not discovered live.
+- **Known limitation / mitigation — asynchronous post-paste mutation by the target control
+  (Phase 14, added 2026-09-15).** A real bug was observed pasting multi-paragraph text (with
+  blank-line paragraph breaks) into a JS-driven chat composer: `type --paste --verify` reported
+  success (`method: "clipboard-paste"`, no `verify-mismatch`), but the composer itself then
+  asynchronously truncated the content to just the first line and/or submitted it — after our
+  one-shot read-back already looked complete. Root cause: some composer-style targets (unlike
+  native Win32 edit controls) treat an embedded newline as a submit trigger or otherwise mutate
+  pasted content on a delay, racing ahead of a single synchronous verification read. This is
+  app-side behavior on the target control, not a defect in the paste/verify mechanism itself, and
+  cannot be fully eliminated from the automation side. Mitigation implemented: for
+  `method == "clipboard-paste"` only, after the existing exact-match verification passes, a
+  second check (`VerifyPasteStability`) (a) flags the read-back as suspicious if its length is
+  under 50% of the input length even though it nominally matched, and (b) re-reads the element
+  after an additional ~250ms settle delay and compares against the first read, failing with a new
+  `verify-unstable` error (`{ "success": false, "error": "verify-unstable", "message": "...",
+  "expected": "...", "actual": "..." }`) if the content changed or shrank in that window, instead
+  of reporting success. This does not apply to `method == "pattern"` (`SetValue` is synchronous;
+  no such race exists) or `"synthetic-keyboard"` (verification is already skipped for that path).
+  Callers should treat `verify-unstable` as a signal to retry, reduce message size, or investigate
+  the target control's own paste-handling behavior — it is not a transient/no-action error.
 - Validated live (2026-09-15) against the real Copilot Chat input (`--strategy Name --value "Ask
   Copilot"`, resolved via the synthetic-keyboard fallback since this control has no `ValuePattern`):
   `type --verify` returned `{ "method": "synthetic-keyboard", "success": true }` with no
@@ -518,6 +538,12 @@ an `AutomationId`-based Send-button click or keyboard input to the input element
   does not match `--text`. **Unlike `type --verify` (which is opt-in), this verb always attempts
   verification when possible** — it exists specifically to catch silent typing failures before
   committing to submitting.
+- Failure: `verify-unstable` (with `"step": "type-verify"`, plus `expected`/`actual` fields) for
+  `method == "clipboard-paste"` only — same asynchronous post-paste mutation guard as `type --paste
+  --verify` (see that section's Phase 14 known-limitation entry above). This verb's own send
+  action (Send-button click or `--submitKeys`) happens immediately after this check, so blocking
+  here on an unstable read-back specifically prevents sending an incomplete/mutated message —
+  this was the original real-world trigger for adding this check.
 - Failure: `element-not-found` (with `"step": "resolve-send"`) if an explicitly requested Send
   button `AutomationId` does not resolve. **Note:** if this occurs after typing has already
   succeeded (and passed verification, if attempted), the typed text remains in the input — it is
