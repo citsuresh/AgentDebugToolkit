@@ -137,9 +137,33 @@ internal static class UiaHelper
                 TreeScope.Descendants,
                 new PropertyCondition(AutomationElement.AutomationIdProperty, selector.Value)),
 
-            // NameRegex / ControlTypeIndex / Coordinates arrive in Phase 3; not implemented yet.
+            // NameRegex / ControlTypeIndex / Coordinates are not implemented yet — see
+            // docs/KNOWN_OPEN_FINDINGS.md.
             _ => throw new NotSupportedException(
-                $"Selector strategy '{selector.Strategy}' is not implemented in Phase 1.")
+                $"Selector strategy '{selector.Strategy}' is not implemented.")
+        };
+    }
+
+    /// <summary>
+    /// Same strategy support as <see cref="ResolveSelector"/>, but returns every matching
+    /// descendant (<c>FindAll</c>) instead of stopping at the first match.
+    /// </summary>
+    public static AutomationElementCollection ResolveSelectorAll(AutomationElement scope, Selector selector)
+    {
+        return selector.Strategy switch
+        {
+            SelectorStrategy.Name => scope.FindAll(
+                TreeScope.Descendants,
+                new PropertyCondition(AutomationElement.NameProperty, selector.Value)),
+
+            SelectorStrategy.AutomationId => scope.FindAll(
+                TreeScope.Descendants,
+                new PropertyCondition(AutomationElement.AutomationIdProperty, selector.Value)),
+
+            // NameRegex / ControlTypeIndex / Coordinates are not implemented yet — see
+            // docs/KNOWN_OPEN_FINDINGS.md.
+            _ => throw new NotSupportedException(
+                $"Selector strategy '{selector.Strategy}' is not implemented.")
         };
     }
 

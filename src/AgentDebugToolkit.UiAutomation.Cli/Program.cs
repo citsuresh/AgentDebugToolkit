@@ -62,8 +62,10 @@ try
             return Verbs.SendKeys(opts);
         case "submit-chat-message":
             return Verbs.SubmitChatMessage(opts);
-        case "has-pending-prompt":
-            return Verbs.HasPendingPrompt(opts);
+        case "find-first":
+            return Verbs.FindFirst(opts);
+        case "find-all":
+            return Verbs.FindAll(opts);
         default:
             JsonOutput.WriteError("invalid-argument", $"Unknown verb '{verb}'.");
             return 1;
@@ -872,101 +874,169 @@ internal static class Verbs
     }
 
     /// <summary>
-    /// Lightweight, shallow-cost check for whether a Copilot Chat-style confirmation prompt is
-    /// currently blocking on user input (e.g. a tool-approval card with Submit/Cancel and
-    /// optionally radio-button options), without walking/serializing the entire accessibility
-    /// tree the way <c>inspect --maxDepth N</c> does. Intended for repeated polling while waiting
-    /// for an agent turn to either finish or need input, where the deep-inspect approach is too
-    /// costly to call on every poll.
+    /// Generic, shallow-cost single-match lookup: resolves an optional scope element (defaults
+    /// to the window root) and runs a single <c>FindFirst</c> against it — no fixed-depth tree
+    /// walk/serialization the way <c>inspect --maxDepth N</c> does. This is a general-purpose UIA
+    /// primitive, not tied to any specific application's UI shape; callers compose whatever
+    /// app-specific detection logic they need (e.g. "is a prompt pending") out of one or more
+    /// calls to this and <see cref="FindAll"/>, keeping app-specific patterns in caller-side
+    /// scripts/config rather than baked into this exe.
     /// </summary>
     /// <remarks>
-    /// Detection is based on patterns validated live against this session's own Copilot Chat
-    /// panel (see <c>tools/Watch-CopilotChat.ps1</c>, which this verb supersedes for the
-    /// "is something pending" check specifically): a pending confirmation card is uniquely
-    /// identified by a descendant element with <c>Name == "Waiting..."</c>. When present, the
-    /// question text is read from descendant(s) with <c>AutomationId == "RadioFieldLabel"</c>,
-    /// and its options from <c>ControlType.RadioButton</c> descendants (excluding the literal
-    /// "Other" label, a generic fallback option rather than real content). No fixed-depth
-    /// traversal is used: <c>FindFirst</c> stops at the first match and never serializes visited
-    /// nodes, which is why this is meaningfully cheaper than a depth-bounded <c>inspect</c> (a
-    /// depth-bounded <c>inspect</c> still walks and serializes every node up to that depth,
-    /// whereas <c>FindFirst</c> only walks until it finds a match or exhausts the tree). No
-    /// shallower/cheaper anchor than the "Waiting..." Name match has been identified for this UI.
+    /// Supersedes the former <c>has-pending-prompt</c> verb, which hardcoded Copilot-Chat-specific
+    /// anchor/label/option patterns (Name=="Waiting...", AutomationId=="RadioFieldLabel",
+    /// ControlType.RadioButton) directly into the CLI. Those patterns still work — a caller can
+    /// reproduce the same check by calling <c>find-first --strategy Name --value "Waiting..."</c>
+    /// followed by <c>find-all --strategy AutomationId --value RadioFieldLabel</c> — but the
+    /// values now live in the caller, not this executable. See docs/CLI_CONTRACT.md for the
+    /// worked example.
     /// </remarks>
-    public static int HasPendingPrompt(Dictionary<string, string> opts)
+    public static int FindFirst(Dictionary<string, string> opts)
+    {
+        var (scope, scopeErrorCode, scopeError) = ResolveFindScope(opts);
+        if (scope is null)
+        {
+            JsonOutput.WriteError(scopeErrorCode!, scopeError!);
+            return 1;
+        }
+
+        var (strategy, value, argErrorCode, argError) = ParseSelectorArgs(opts);
+        if (argErrorCode is not null)
+        {
+            JsonOutput.WriteError(argErrorCode, argError!);
+            return 1;
+        }
+
+        var match = UiaHelper.ResolveSelector(scope, new Selector { Strategy = strategy, Value = value! });
+        if (match is null)
+        {
+            JsonOutput.WriteSuccess(new { found = false });
+            return 0;
+        }
+
+        JsonOutput.WriteSuccess(new { found = true, element = ToElementSummary(match) });
+        return 0;
+    }
+
+    /// <summary>
+    /// Generic, shallow-cost multi-match lookup — same scoping/strategy support as
+    /// <see cref="FindFirst"/>, but returns every descendant match via <c>FindAll</c> instead of
+    /// stopping at the first. <c>--excludeValue</c> is a generic convenience (skip elements whose
+    /// <c>Name</c> equals this) for the common case of filtering out one known placeholder value;
+    /// it is not tied to any specific application.
+    /// </summary>
+    public static int FindAll(Dictionary<string, string> opts)
+    {
+        var (scope, scopeErrorCode, scopeError) = ResolveFindScope(opts);
+        if (scope is null)
+        {
+            JsonOutput.WriteError(scopeErrorCode!, scopeError!);
+            return 1;
+        }
+
+        var (strategy, value, argErrorCode, argError) = ParseSelectorArgs(opts);
+        if (argErrorCode is not null)
+        {
+            JsonOutput.WriteError(argErrorCode, argError!);
+            return 1;
+        }
+
+        opts.TryGetValue("excludeValue", out var excludeValue);
+
+        var matches = UiaHelper.ResolveSelectorAll(scope, new Selector { Strategy = strategy, Value = value! });
+        var elements = new List<object>();
+        foreach (AutomationElement match in matches)
+        {
+            if (excludeValue is not null && match.Current.Name == excludeValue)
+            {
+                continue;
+            }
+
+            elements.Add(ToElementSummary(match));
+        }
+
+        JsonOutput.WriteSuccess(new { count = elements.Count, elements });
+        return 0;
+    }
+
+    private static object ToElementSummary(AutomationElement element)
+    {
+        return new
+        {
+            name = element.Current.Name ?? string.Empty,
+            automationId = element.Current.AutomationId ?? string.Empty,
+            controlType = element.Current.ControlType?.ProgrammaticName ?? string.Empty,
+            className = element.Current.ClassName ?? string.Empty,
+        };
+    }
+
+    private static (SelectorStrategy strategy, string? value, string? errorCode, string? error) ParseSelectorArgs(
+        Dictionary<string, string> opts)
+    {
+        if (!opts.TryGetValue("strategy", out var strategyText)
+            || !Enum.TryParse<SelectorStrategy>(strategyText, ignoreCase: true, out var strategy))
+        {
+            return (default, null, "invalid-argument", "--strategy is required and must be one of: Name, AutomationId.");
+        }
+
+        if (!opts.TryGetValue("value", out var value))
+        {
+            return (default, null, "invalid-argument", "--value is required.");
+        }
+
+        return (strategy, value, null, null);
+    }
+
+    /// <summary>
+    /// Resolves the search scope for <see cref="FindFirst"/>/<see cref="FindAll"/>: the window
+    /// root by default, or a descendant of it when <c>--scopeStrategy</c>/<c>--scopeValue</c> are
+    /// both supplied (narrowing the search, e.g. to a specific panel, for both speed and to avoid
+    /// ambiguous matches elsewhere in the window).
+    /// </summary>
+    private static (AutomationElement? scope, string? errorCode, string? error) ResolveFindScope(
+        Dictionary<string, string> opts)
     {
         var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
         if (errorCode is not null)
         {
-            JsonOutput.WriteError(errorCode, error!);
-            return 1;
+            return (null, errorCode, error);
         }
 
         if (!NativeMethods.IsResponding(windowHwnd, timeoutMs: 250))
         {
-            JsonOutput.WriteError("window-not-responding", "The target window is not responding.");
-            return 1;
+            return (null, "window-not-responding", "The target window is not responding.");
         }
 
-        var scope = UiaHelper.FindWindowByHwnd($"0x{windowHwnd.ToInt64():X}");
-        if (scope is null)
+        var window = UiaHelper.FindWindowByHwnd($"0x{windowHwnd.ToInt64():X}");
+        if (window is null)
         {
-            JsonOutput.WriteError("element-not-found", $"No window found for hwnd '0x{windowHwnd.ToInt64():X}'.");
-            return 1;
+            return (null, "element-not-found", $"No window found for hwnd '0x{windowHwnd.ToInt64():X}'.");
         }
 
-        var waiting = UiaHelper.ResolveSelector(scope, new Selector { Strategy = SelectorStrategy.Name, Value = "Waiting..." });
-        if (waiting is null)
+        var hasScopeStrategy = opts.TryGetValue("scopeStrategy", out var scopeStrategyText);
+        var hasScopeValue = opts.TryGetValue("scopeValue", out var scopeValue);
+        if (!hasScopeStrategy && !hasScopeValue)
         {
-            JsonOutput.WriteSuccess(new { pending = false });
-            return 0;
+            return (window, null, null);
         }
 
-        var questionParts = new List<string>();
-        try
+        if (!hasScopeStrategy || !hasScopeValue)
         {
-            var labels = scope.FindAll(
-                TreeScope.Descendants,
-                new PropertyCondition(AutomationElement.AutomationIdProperty, "RadioFieldLabel"));
-            foreach (AutomationElement label in labels)
-            {
-                var name = label.Current.Name;
-                if (!string.IsNullOrWhiteSpace(name))
-                {
-                    questionParts.Add(name);
-                }
-            }
-        }
-        catch
-        {
-            // The tree can mutate between the "Waiting..." match above and this lookup (e.g. the
-            // confirmation card is dismissed/replaced mid-poll) — degrade to an empty question
-            // rather than surfacing a transient UIA exception as unhandled-exception, consistent
-            // with how the freeform (non-radio) prompt case is already a non-error empty result.
+            return (null, "invalid-argument", "--scopeStrategy and --scopeValue must both be supplied, or neither.");
         }
 
-        var options = new List<string>();
-        try
+        if (!Enum.TryParse<SelectorStrategy>(scopeStrategyText, ignoreCase: true, out var scopeStrategy))
         {
-            var radioButtons = scope.FindAll(
-                TreeScope.Descendants,
-                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.RadioButton));
-            foreach (AutomationElement radio in radioButtons)
-            {
-                var name = radio.Current.Name;
-                if (!string.IsNullOrWhiteSpace(name) && name != "Other")
-                {
-                    options.Add(name);
-                }
-            }
-        }
-        catch
-        {
-            // Same rationale as the labels lookup above.
+            return (null, "invalid-argument", "--scopeStrategy must be one of: Name, AutomationId.");
         }
 
-        JsonOutput.WriteSuccess(new { pending = true, question = string.Join(" | ", questionParts), options });
-        return 0;
+        var scopeElement = UiaHelper.ResolveSelector(window, new Selector { Strategy = scopeStrategy, Value = scopeValue! });
+        if (scopeElement is null)
+        {
+            return (null, "element-not-found", $"No scope element found for --scopeStrategy '{scopeStrategyText}' --scopeValue '{scopeValue}'.");
+        }
+
+        return (scopeElement, null, null);
     }
 
     private static (AutomationElement? element, string? errorCode, string? error) ResolveElement(

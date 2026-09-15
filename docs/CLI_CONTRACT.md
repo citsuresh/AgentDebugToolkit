@@ -16,10 +16,15 @@ verbs are added in later phases — do not silently diverge from what's document
 - `Name`: exact match against `AutomationElement.Current.Name`.
 - `AutomationId`: exact match against `AutomationId` property (works for some target apps, not
   reliably for the FDM app family — see VALIDATION_FINDINGS.md).
-- `NameRegex`: value is a regex tested against `Name`. (Phase 3)
+- `NameRegex`: value is a regex tested against `Name`. **Not yet implemented** —
+  `Enum.TryParse<SelectorStrategy>` accepts it as a valid `--strategy` value, but
+  `UiaHelper.ResolveSelector`/`ResolveSelectorAll` throw `NotSupportedException` for it (see
+  `docs/KNOWN_OPEN_FINDINGS.md`).
 - `ControlTypeIndex`: value format `"<ControlType>:<index>"`, e.g. `"Button:2"` — the nth matching
-  control (0-based) among descendants of the scope. (Phase 3)
-- `Coordinates`: value format `"x,y"`, **client-area-relative** to the scope window. (Phase 3)
+  control (0-based) among descendants of the scope. **Not yet implemented** (same as `NameRegex`
+  above).
+- `Coordinates`: value format `"x,y"`, **client-area-relative** to the scope window. **Not yet
+  implemented** (same as `NameRegex` above).
 
 ### WindowInfo
 ```json
@@ -502,54 +507,65 @@ an `AutomationId`-based Send-button click or keyboard input to the input element
   landing in and being processed by the live chat session. No `--sendAutomationId`/Send-button
   resolution was needed for this path.
 
-### `has-pending-prompt --hwnd <h>` (Phase 11, 2026-09-15)
-Lightweight, shallow-cost check for whether a Copilot Chat-style confirmation prompt (a tool
-approval/question card with Submit/Cancel and optionally radio-button options, or a freeform
-question with a text field) is currently blocking on user input — without walking/serializing the
-entire accessibility tree the way `inspect --maxDepth N` does. Intended for repeated polling while
-waiting for an agent turn to either finish or need input, where a deep `inspect` call is too
-costly to run on every poll.
-- **Detection anchor.** A pending confirmation is identified by the existence of a descendant
-  element with `Name == "Waiting..."` anywhere under the resolved window — the only anchor
-  validated so far for this UI (see `tools/Watch-CopilotChat.ps1`, the PowerShell polling script
-  this verb supersedes for the "is something pending" check specifically). Resolution uses a
-  single `FindFirst` (via the existing `Name` `Selector` strategy), which stops at the first match
-  and never serializes visited nodes — this is why it is meaningfully cheaper than a
-  depth-bounded `inspect`, which still walks and serializes every node up to that depth regardless
-  of whether anything relevant is found. No shallower/cheaper anchor has been identified.
-- When a pending prompt is found, the question text is read from descendant(s) with
-  `AutomationId == "RadioFieldLabel"` (joined with `" | "` if more than one), and its options from
-  `ControlType.RadioButton` descendants, excluding the literal `"Other"` label (a generic fallback
-  option, not real content). A freeform (non-radio) prompt — e.g. a text-field confirmation — has
-  no such nodes, so `question` and `options` are simply empty in that case; this is not an error.
-- Success (not pending): `{ "success": true, "pending": false }`. This is the cheap/fast path —
-  no `RadioFieldLabel`/`RadioButton` lookups are attempted when `"Waiting..."` is not found.
-- Success (pending): `{ "success": true, "pending": true, "question": "<joined text>", "options": [...] }`.
+### `find-first --hwnd <h> --strategy <S> --value <V> [--scopeStrategy <S> --scopeValue <V>]` (Phase 13, 2026-09-15)
+Generic, shallow-cost single-match lookup: a single `FindFirst` against the resolved window (or a
+narrower scope, if `--scopeStrategy`/`--scopeValue` are both supplied) — no fixed-depth tree
+walk/serialization the way `inspect --maxDepth N` does. This is a general-purpose UIA primitive
+with no assumption about any particular application's UI shape; callers compose whatever
+app-specific detection logic they need (e.g. "is a confirmation prompt pending") out of one or
+more calls to `find-first`/`find-all`, keeping app-specific patterns (element names, AutomationIds,
+control types) in caller-side scripts/config rather than baked into this exe.
+- `--strategy`/`--value`: same `Selector` semantics as `click`/`type`/etc. (`Name`, `AutomationId`
+  today; `NameRegex`/`ControlTypeIndex`/`Coordinates` are accepted by the enum but not yet
+  implemented — see "Common types" above and `docs/KNOWN_OPEN_FINDINGS.md`).
+- `--scopeStrategy`/`--scopeValue` (optional, must both be supplied together or neither): resolves
+  a descendant of the window first and searches under it instead of the whole window — useful to
+  narrow a search to a specific panel, both for speed and to avoid ambiguous matches elsewhere in
+  the window (e.g. a control that appears in both a chat panel and a code editor pane).
+- Success (found): `{ "success": true, "found": true, "element": { "name", "automationId",
+  "controlType", "className" } }`.
+- Success (not found): `{ "success": true, "found": false }` — not an error, matching
+  `wait-for-element`'s non-error "not found" convention.
 - Failure: same window-resolution error codes as `inspect` (`element-not-found`/
-  `ambiguous-window`/`stale-context`/etc.), and `window-not-responding` (checked up front, matching
-  `click`/`type`/`send-keys`/`submit-chat-message`).
-- Unlike `inspect`, this verb has no `--maxDepth` option — it is intentionally not
-  depth-configurable, since its detection is anchor-based (`FindFirst`) rather than a bounded tree
-  walk.
-- **Regression Audit finding — degrade gracefully on tree mutation mid-poll.** The
-  `RadioFieldLabel`/`RadioButton` `FindAll` lookups are wrapped in try/catch: since this verb is
-  intended for repeated polling against a live, actively-changing chat panel, the confirmation
-  card can be dismissed/replaced between the initial `"Waiting..."` match and these follow-up
-  lookups. A transient UIA exception here degrades to an empty `question`/`options` (same as the
-  freeform-prompt case) rather than surfacing as `unhandled-exception`.
-- **Live validation (2026-09-15):** benchmarked directly against this session's own VS Insiders
-  window (hwnd `0xCA18B2`, `DOTNET_ROOT` cleared to avoid the VS-inherited-runtime launch issue):
-  `has-pending-prompt` returned in ~1.4s in the not-pending state versus ~5.8s for
-  `inspect --hwnd 0xCA18B2 --maxDepth 20` (~4.2x faster). Both branches were validated against
-  real UI state: `{"pending":false,"success":true}` while idle, and
-  `{"pending":true,"question":"","options":[],"success":true}` while a real (freeform,
-  non-radio-button) confirmation card was live on screen — the empty `question`/`options` in that
-  result is expected per the freeform-prompt case documented above, not a detection failure (the
-  `"Waiting..."` anchor itself was still found correctly, which is what `pending: true` reflects).
-  The radio-button `question`/`options` population path (`RadioFieldLabel`/`RadioButton` lookups)
-  reuses the same `PropertyCondition` patterns already validated by `tools/Watch-CopilotChat.ps1`
-  in earlier sessions, but was not independently re-validated live against a radio-button-style
-  card in this session — no such card happened to appear during validation.
+  `ambiguous-window`/`stale-context`/etc.), `window-not-responding` (checked up front, matching
+  `click`/`type`/`send-keys`/`submit-chat-message`/`find-all`), and `invalid-argument` if
+  `--scopeStrategy`/`--scopeValue` are only partially supplied.
+
+### `find-all --hwnd <h> --strategy <S> --value <V> [--scopeStrategy <S> --scopeValue <V>] [--excludeValue <V>]` (Phase 13, 2026-09-15)
+Same scoping/strategy support as `find-first`, but uses `FindAll` to return every matching
+descendant instead of stopping at the first.
+- `--excludeValue` (optional): skips any matched element whose `Name` equals this value — a
+  generic convenience for the common case of filtering out one known placeholder/fallback option
+  (e.g. a catch-all "Other" choice in a list of real options). This is a plain string filter, not
+  tied to any specific application's semantics.
+- Success: `{ "success": true, "count": N, "elements": [ { "name", "automationId", "controlType",
+  "className" }, ... ] }`.
+- Failure: same error codes as `find-first`.
+
+**Design note — supersedes the former `has-pending-prompt` verb (Phase 11).** That verb hardcoded
+Copilot-Chat-specific detection patterns directly into the CLI (`Name == "Waiting..."` as the
+pending-prompt anchor, `AutomationId == "RadioFieldLabel"` for the question text, and
+`ControlType.RadioButton` descendants excluding the literal `"Other"` label for options) — a
+design concern raised after Phase 11 shipped: the tool should stay a generic UIA interface, with
+app-specific patterns living in caller-side scripts/config, not baked into `agentdebug-ui.exe`
+itself. `find-first`/`find-all` replace it with fully generic primitives; a caller reproduces the
+exact same check by composing them, e.g.:
+```
+agentdebug-ui find-first --hwnd 0xCA18B2 --strategy Name --value "Waiting..."
+# if found.found == true:
+agentdebug-ui find-all --hwnd 0xCA18B2 --strategy AutomationId --value RadioFieldLabel
+```
+Enumerating the radio-button *options* themselves (as opposed to the label) needs a
+control-type-based match, which `find-all` does not yet support as a `Selector` strategy (`Name`/
+`AutomationId` only today — see "Common types" above); until `ControlTypeIndex` or an equivalent
+strategy is implemented, a caller can fall back to `inspect` scoped narrowly (e.g. via
+`--scopeStrategy`/`--scopeValue` first, then a shallow `inspect` on just that scope) for that
+specific sub-lookup. This mirrors what
+`tools/Watch-CopilotChat.ps1` already does today — it never called `has-pending-prompt`; it
+performs its own client-side filtering (Name/AutomationId/ControlType checks) over a full
+`inspect` dump, i.e. the app-specific logic already lived in the caller script, not the CLI. No
+existing caller depended on `has-pending-prompt`'s shape, so removing it is not a breaking change
+in practice.
 
 ## Conventions for future phases
 
