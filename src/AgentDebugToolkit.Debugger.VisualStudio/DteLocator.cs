@@ -28,62 +28,90 @@ internal static class DteLocator
             return (null, "rot-unavailable", "Could not access the Running Object Table.");
         }
 
-        rot.EnumRunning(out var enumMoniker);
-        if (enumMoniker is null)
-        {
-            return (null, "devenv-not-found", "No running Visual Studio instances were found.");
-        }
-
-        enumMoniker.Reset();
-        var monikers = new IMoniker[1];
-        var fetchedPtr = Marshal.AllocHGlobal(sizeof(int));
-        CreateBindCtx(0, out var bindCtx);
-
         try
         {
-            while (enumMoniker.Next(1, monikers, fetchedPtr) == 0 && Marshal.ReadInt32(fetchedPtr) == 1)
+            rot.EnumRunning(out var enumMoniker);
+            if (enumMoniker is null)
             {
-                var moniker = monikers[0];
-                string displayName;
-                try
-                {
-                    displayName = ComRetry.Invoke(() =>
-                    {
-                        moniker.GetDisplayName(bindCtx, null, out var name);
-                        return name;
-                    });
-                }
-                catch (COMException)
-                {
-                    continue;
-                }
+                return (null, "devenv-not-found", "No running Visual Studio instances were found.");
+            }
 
-                if (!displayName.StartsWith("!VisualStudio.DTE.", StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
+            try
+            {
+                enumMoniker.Reset();
+                var monikers = new IMoniker[1];
+                var fetchedPtr = Marshal.AllocHGlobal(sizeof(int));
+                CreateBindCtx(0, out var bindCtx);
 
                 try
                 {
-                    var comObject = ComRetry.Invoke(() =>
+                    while (enumMoniker.Next(1, monikers, fetchedPtr) == 0 && Marshal.ReadInt32(fetchedPtr) == 1)
                     {
-                        rot.GetObject(moniker, out var obj);
-                        return obj;
-                    });
-                    if (comObject is DTE dte)
-                    {
-                        candidates.Add((dte, displayName));
+                        var moniker = monikers[0];
+                        try
+                        {
+                            string displayName;
+                            try
+                            {
+                                displayName = ComRetry.Invoke(() =>
+                                {
+                                    moniker.GetDisplayName(bindCtx, null, out var name);
+                                    return name;
+                                });
+                            }
+                            catch (COMException)
+                            {
+                                continue;
+                            }
+
+                            if (!displayName.StartsWith("!VisualStudio.DTE.", StringComparison.OrdinalIgnoreCase))
+                            {
+                                continue;
+                            }
+
+                            try
+                            {
+                                var comObject = ComRetry.Invoke(() =>
+                                {
+                                    rot.GetObject(moniker, out var obj);
+                                    return obj;
+                                });
+                                if (comObject is DTE dte)
+                                {
+                                    candidates.Add((dte, displayName));
+                                }
+                            }
+                            catch (COMException)
+                            {
+                                // The instance may be busy/starting up; skip it rather than failing the whole scan.
+                            }
+                        }
+                        finally
+                        {
+                            // Only the enumeration moniker RCW is released here -- comObject/dte
+                            // above is intentionally NOT released: it is returned to (or held by)
+                            // the caller via `candidates`, and callers dispose/use it independently.
+                            Marshal.ReleaseComObject(moniker);
+                        }
                     }
                 }
-                catch (COMException)
+                finally
                 {
-                    // The instance may be busy/starting up; skip it rather than failing the whole scan.
+                    Marshal.FreeHGlobal(fetchedPtr);
+                    if (bindCtx is not null)
+                    {
+                        Marshal.ReleaseComObject(bindCtx);
+                    }
                 }
+            }
+            finally
+            {
+                Marshal.ReleaseComObject(enumMoniker);
             }
         }
         finally
         {
-            Marshal.FreeHGlobal(fetchedPtr);
+            Marshal.ReleaseComObject(rot);
         }
 
         if (candidates.Count == 0)
