@@ -124,11 +124,12 @@ every exit path (including the early `rot-unavailable`/`devenv-not-found` return
 `FindDte` returns. A Regression Auditor review found no in-scope issues; build succeeded with 0
 warnings/errors; no test project exists for this code.
 
-## Root nuget.config's `<clear/>` is solution-wide, not scoped to the new project
+## Root nuget.config's `<clear/>` is solution-wide, not scoped to the new project — RESOLVED
 
 - **First seen:** 2026-09-14
 - **Last seen:** 2026-09-14
 - **Occurrences:** 1
+- **Resolved:** Phase 19, commit `60f7d90`
 
 **Description:** The repo-root `nuget.config` (added to unblock restoring `EnvDTE`/`EnvDTE80`/
 `EnvDTE90` packages, since the machine-wide NuGet config points at private Azure DevOps feeds
@@ -143,7 +144,11 @@ project) not obvious from the failing project.
 **Why deferred:** No current project depends on the private feeds, so there is no active
 regression; this is a latent, forward-looking risk only.
 
-**Suggested fix (not yet applied):** Scope the `<clear/>`/source override to just the
-`Debugger.VisualStudio` project (e.g. via a project-local `nuget.config` in that project's own
-folder instead of the repo root), or restore the machine's private feeds alongside `nuget.org` at
-the repo root so other projects keep access to them.
+**Fix applied (Phase 19):** Removed the repo-root `nuget.config` and replaced it with a
+project-local `nuget.config` inside `src/AgentDebugToolkit.Debugger.VisualStudio/`, containing
+the same `<clear/>` + `nuget.org`-only source list. NuGet's hierarchical config resolution scopes
+this restriction to just that project's restore, per-project, during a solution-wide
+build/restore — verified via `dotnet restore`/`dotnet build` on the full solution: all 4 projects
+restored and built successfully, with `Debugger.VisualStudio` still resolving EnvDTE/EnvDTE80/
+EnvDTE90 from nuget.org and the other three projects restoring against the normal machine-wide
+NuGet source configuration. A Regression Auditor review found no in-scope issues.
