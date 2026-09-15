@@ -67,6 +67,10 @@ throwing. `inspect` remains successful in this case; only the affected element(s
 ### `attach --process <name>`
 Resolves a running process by exact name match (no `.exe` suffix assumed either way — match
 flexibly). Persists session context.
+- **Fixed 2026-09-15:** a trailing `.exe` suffix on `--process` (e.g. `--process Fdm.exe`) is now
+  stripped (case-insensitively) before matching against `Process.ProcessName` (which never includes
+  it). Previously this silently produced `process-not-found` despite the "match flexibly" contract
+  above — the flexible matching was documented but not actually implemented for the `.exe` case.
 - Success: `{ "success": true, "pid": 145376, "processName": "Fdm", "windows": [WindowInfo, ...] }`
 - Failure: `ambiguous-process` (include `"candidates": [{pid, title}, ...]`) or
   `"process-not-found"`.
@@ -86,6 +90,13 @@ screenshot.
 ### `click --hwnd <h> --strategy <s> --value <v> [--scopeHwnd <h2>]`
 Resolves the element via selector (scoped to `--scopeHwnd` if given, else `--hwnd`), attempts
 `InvokePattern`/`TogglePattern`, falls back to synthetic click at `BoundingRectangle` center.
+- **Fixed 2026-09-15:** `--scopeHwnd` is now actually honored — previously it was accepted as an
+  argument but silently ignored, and the selector was always resolved against `--hwnd`/the session
+  context window regardless. It now narrows the selector search to the element identified by
+  `--scopeHwnd` (and its subtree) when given, falling back to `--hwnd` otherwise, matching the
+  documented contract. Applies to both `click` and `type` (both call the same internal resolution
+  helper). An invalid or unresolvable `--scopeHwnd` fails with `invalid-argument` /
+  `element-not-found` respectively, before the `--strategy`/`--value` selector is even attempted.
 - Success: `{ "success": true, "method": "pattern" | "synthetic-click", "elementFound": ElementInfo }`
 - `elementFound` reflects the element's state as resolved **before** the click is invoked, not
   after — this avoids reporting the click's own aftereffect (e.g. `isEnabled`/`isOffscreen`
@@ -243,6 +254,11 @@ resolved element.
 
 ## Phase 2 verbs
 
+**Implementation status (added 2026-09-15): all four verbs below were previously documented but
+had no dispatch case in the CLI (an unimplemented gap); they are now implemented as described.**
+All four accept `--pid` explicitly or fall back to the persisted session context (same convention
+as `list-windows`/`click`/`type`), even though the signatures below show `--pid` without brackets.
+
 ### `wait-for-window-change --pid <n> --timeoutMs <n> [--settleMs 300]`
 Snapshots `list-windows` immediately, polls until the window set is stable for `settleMs`
 consecutive milliseconds, or `timeoutMs` elapses.
@@ -268,16 +284,30 @@ within that window until it reaches `--state` (default `appeared`) or `--timeout
   `element-not-found`), returned immediately without polling.
 
 ### `wait-for-process-responding --pid <n> --timeoutMs <n>`
-Uses `SendMessageTimeout` (or equivalent) hang detection.
+Polls the target process's foreground window with `SendMessageTimeout` (via
+`NativeMethods.IsResponding`, 100ms probe) until it responds, or `timeoutMs` elapses — this
+reflects whether the process's *main*/active window is responsive, not just any window (a
+secondary/tool window could stay responsive while the main window hangs). Falls back to "any
+top-level window responds" only when there is no single unambiguous window to prefer (no
+foreground window and more than one top-level window); a process with exactly one window uses
+that window regardless of its foreground state. A process with no top-level windows is treated as
+not-responding.
 - Success: `{ "success": true, "responding": true, "elapsedMs": 15 }`
-- Failure: `"process-not-responding"` if it never responds within timeout.
+- Failure: `"process-not-responding"` if it never responds within timeout; `invalid-argument` for a
+  missing/negative `--timeoutMs`; same pid-resolution errors as other pid-based verbs otherwise.
 
 ### `delay --ms <n>`
+Plain `Thread.Sleep`; reports actual elapsed time (may exceed the requested `--ms` slightly due to
+OS scheduling granularity).
 - Success: `{ "success": true, "waitedMs": 500 }`
+- Failure: `invalid-argument` for a missing/negative `--ms`.
 
 ### `set-context --pid <n>`
-Manual session-context override.
+Manual session-context override: persists `--pid` as the current process the same way `attach`
+does, without a by-name lookup — useful when the caller already knows the pid.
 - Success: `{ "success": true, "pid": 145376 }`
+- Failure: `invalid-argument` for a missing/non-integer `--pid`; `stale-context` if the pid is not a
+  running process.
 
 ---
 

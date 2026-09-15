@@ -66,6 +66,14 @@ try
             return Verbs.FindFirst(opts);
         case "find-all":
             return Verbs.FindAll(opts);
+        case "wait-for-window-change":
+            return Verbs.WaitForWindowChange(opts);
+        case "wait-for-process-responding":
+            return Verbs.WaitForProcessResponding(opts);
+        case "delay":
+            return Verbs.Delay(opts);
+        case "set-context":
+            return Verbs.SetContext(opts);
         default:
             JsonOutput.WriteError("invalid-argument", $"Unknown verb '{verb}'.");
             return 1;
@@ -106,8 +114,16 @@ internal static class Verbs
             return 1;
         }
 
+        // Normalize a trailing ".exe" suffix before matching: Process.ProcessName never
+        // includes it, so a caller passing e.g. "--process Fdm.exe" would otherwise silently
+        // fail to match despite the documented "no .exe suffix assumed either way -- match
+        // flexibly" contract.
+        var normalizedProcessName = processName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
+            ? processName[..^".exe".Length]
+            : processName;
+
         var candidates = Process.GetProcesses()
-            .Where(p => p.ProcessName.Equals(processName, StringComparison.OrdinalIgnoreCase))
+            .Where(p => p.ProcessName.Equals(normalizedProcessName, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         if (candidates.Count == 0)
@@ -143,6 +159,203 @@ internal static class Verbs
 
         var windows = UiaHelper.ListTopLevelWindows(pid.Value);
         JsonOutput.WriteSuccess(new { windows });
+        return 0;
+    }
+
+    /// <summary>
+    /// Snapshots the target process's top-level window set, polls until it is stable (unchanged)
+    /// for <paramref name="settleMs"/> (default 300) consecutive milliseconds, or <c>--timeoutMs</c>
+    /// elapses. "Stable" is determined by comparing hwnd sets between polls; a window closing and a
+    /// different one opening within the same tick still counts as a change worth re-settling on.
+    /// </summary>
+    public static int WaitForWindowChange(Dictionary<string, string> opts)
+    {
+        var (pid, errorCode, error) = ResolveValidatedPid(opts);
+        if (pid is null)
+        {
+            JsonOutput.WriteError(errorCode!, error!);
+            return 1;
+        }
+
+        if (opts.TryGetValue("timeoutMs", out var timeoutText)
+            && (!int.TryParse(timeoutText, out var parsedTimeoutMs) || parsedTimeoutMs < 0))
+        {
+            JsonOutput.WriteError("invalid-argument", "--timeoutMs must be a non-negative integer.");
+            return 1;
+        }
+
+        if (!opts.TryGetValue("timeoutMs", out var timeoutRaw))
+        {
+            JsonOutput.WriteError("invalid-argument", "--timeoutMs is required.");
+            return 1;
+        }
+
+        var timeoutMs = int.Parse(timeoutRaw);
+
+        if (opts.TryGetValue("settleMs", out var settleText)
+            && (!int.TryParse(settleText, out var parsedSettleMs) || parsedSettleMs < 0))
+        {
+            JsonOutput.WriteError("invalid-argument", "--settleMs must be a non-negative integer.");
+            return 1;
+        }
+
+        var settleMs = opts.TryGetValue("settleMs", out var settleRaw) ? int.Parse(settleRaw) : 300;
+
+        var windowsBefore = UiaHelper.ListTopLevelWindows(pid.Value);
+        var stopwatch = Stopwatch.StartNew();
+        var lastSnapshot = windowsBefore;
+        var lastChangeElapsedMs = stopwatch.ElapsedMilliseconds;
+
+        while (true)
+        {
+            Thread.Sleep(50);
+            var current = UiaHelper.ListTopLevelWindows(pid.Value);
+            var changed = !current.Select(w => w.Hwnd).OrderBy(h => h)
+                .SequenceEqual(lastSnapshot.Select(w => w.Hwnd).OrderBy(h => h));
+
+            if (changed)
+            {
+                lastSnapshot = current;
+                lastChangeElapsedMs = stopwatch.ElapsedMilliseconds;
+            }
+            else if (stopwatch.ElapsedMilliseconds - lastChangeElapsedMs >= settleMs)
+            {
+                var beforeHwnds = windowsBefore.Select(w => w.Hwnd).ToHashSet();
+                var afterHwnds = lastSnapshot.Select(w => w.Hwnd).ToHashSet();
+                JsonOutput.WriteSuccess(new
+                {
+                    windowsBefore,
+                    windowsAfter = lastSnapshot,
+                    newWindows = lastSnapshot.Where(w => !beforeHwnds.Contains(w.Hwnd)).ToList(),
+                    closedWindows = windowsBefore.Where(w => !afterHwnds.Contains(w.Hwnd)).ToList(),
+                    elapsedMs = stopwatch.ElapsedMilliseconds
+                });
+                return 0;
+            }
+
+            if (stopwatch.ElapsedMilliseconds >= timeoutMs)
+            {
+                var beforeHwnds = windowsBefore.Select(w => w.Hwnd).ToHashSet();
+                var afterHwnds = lastSnapshot.Select(w => w.Hwnd).ToHashSet();
+                JsonOutput.WriteError(
+                    "timeout",
+                    $"Window set for pid {pid.Value} did not stabilize within {timeoutMs}ms.",
+                    new
+                    {
+                        windowsBefore,
+                        windowsAfter = lastSnapshot,
+                        newWindows = lastSnapshot.Where(w => !beforeHwnds.Contains(w.Hwnd)).ToList(),
+                        closedWindows = windowsBefore.Where(w => !afterHwnds.Contains(w.Hwnd)).ToList(),
+                        elapsedMs = stopwatch.ElapsedMilliseconds
+                    });
+                return 1;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Polls <see cref="NativeMethods.IsResponding"/> against the target process's foreground
+    /// window (falling back to "any window responds" only when there is no single unambiguous
+    /// window to prefer), until it responds or <c>--timeoutMs</c> elapses. A process with no
+    /// top-level windows at all is treated as not-responding (there is nothing to send the probe
+    /// message to).
+    /// </summary>
+    public static int WaitForProcessResponding(Dictionary<string, string> opts)
+    {
+        var (pid, errorCode, error) = ResolveValidatedPid(opts);
+        if (pid is null)
+        {
+            JsonOutput.WriteError(errorCode!, error!);
+            return 1;
+        }
+
+        if (!opts.TryGetValue("timeoutMs", out var timeoutRaw)
+            || !int.TryParse(timeoutRaw, out var timeoutMs) || timeoutMs < 0)
+        {
+            JsonOutput.WriteError("invalid-argument", "--timeoutMs is required and must be a non-negative integer.");
+            return 1;
+        }
+
+        var stopwatch = Stopwatch.StartNew();
+        while (true)
+        {
+            // Prefer the foreground window (same preference as ResolveWindowHwnd) so this verb
+            // reflects whether the process's *main*/active window is responsive rather than
+            // reporting success merely because some secondary window (toolbar, splash, etc.) is
+            // still pumping messages while the actual target window is hung. Falls back to "any
+            // window responds" only when there is no single unambiguous window to prefer (no
+            // foreground window and more than one top-level window) -- a process with exactly one
+            // window is unambiguous regardless of foreground state.
+            var windows = UiaHelper.ListTopLevelWindows(pid.Value);
+            var foregroundWindows = windows.Where(w => w.IsForeground).ToList();
+            var primaryWindow = foregroundWindows.Count == 1
+                ? foregroundWindows[0]
+                : windows.Count == 1 ? windows[0] : null;
+
+            var responding = primaryWindow is not null
+                ? NativeMethods.IsResponding(UiaHelper.ParseHwnd(primaryWindow.Hwnd), timeoutMs: 100)
+                : windows.Any(w => NativeMethods.IsResponding(UiaHelper.ParseHwnd(w.Hwnd), timeoutMs: 100));
+
+            if (responding)
+            {
+                JsonOutput.WriteSuccess(new { responding = true, elapsedMs = stopwatch.ElapsedMilliseconds });
+                return 0;
+            }
+
+            if (stopwatch.ElapsedMilliseconds >= timeoutMs)
+            {
+                JsonOutput.WriteError(
+                    "process-not-responding",
+                    $"Process {pid.Value} did not respond within {timeoutMs}ms.");
+                return 1;
+            }
+
+            Thread.Sleep(100);
+        }
+    }
+
+    public static int Delay(Dictionary<string, string> opts)
+    {
+        if (!opts.TryGetValue("ms", out var msText)
+            || !int.TryParse(msText, out var ms) || ms < 0)
+        {
+            JsonOutput.WriteError("invalid-argument", "--ms is required and must be a non-negative integer.");
+            return 1;
+        }
+
+        var stopwatch = Stopwatch.StartNew();
+        Thread.Sleep(ms);
+        JsonOutput.WriteSuccess(new { waitedMs = stopwatch.ElapsedMilliseconds });
+        return 0;
+    }
+
+    /// <summary>
+    /// Manual session-context override: persists <c>--pid</c> as the "current" process for
+    /// subsequent invocations, the same way <see cref="Attach"/> does, without re-resolving by
+    /// process name. Useful when the caller already knows the pid (e.g. from its own process
+    /// launch) and wants to skip the by-name lookup.
+    /// </summary>
+    public static int SetContext(Dictionary<string, string> opts)
+    {
+        if (!opts.TryGetValue("pid", out var pidText) || !int.TryParse(pidText, out var pid))
+        {
+            JsonOutput.WriteError("invalid-argument", "--pid is required and must be an integer.");
+            return 1;
+        }
+
+        Process process;
+        try
+        {
+            process = Process.GetProcessById(pid);
+        }
+        catch (ArgumentException)
+        {
+            JsonOutput.WriteError("stale-context", $"Process {pid} is no longer available.");
+            return 1;
+        }
+
+        SessionContext.Save(process.Id, process.ProcessName, process.StartTime.ToUniversalTime());
+        JsonOutput.WriteSuccess(new { pid = process.Id });
         return 0;
     }
 
@@ -1046,6 +1259,29 @@ internal static class Verbs
     private static (AutomationElement? element, string? errorCode, string? error) ResolveElement(
         IntPtr windowHwnd, Dictionary<string, string> opts)
     {
+        // --scopeHwnd, when given, narrows the search to that element (and its subtree) instead
+        // of the primary --hwnd/session-context window -- e.g. a specific pane/panel handle
+        // obtained from a prior inspect/find-first call, for speed and to avoid ambiguous
+        // matches elsewhere in the window. Falls back to --hwnd (windowHwnd) when absent, per
+        // the documented "scoped to --scopeHwnd if given, else --hwnd" contract.
+        if (opts.TryGetValue("scopeHwnd", out var scopeHwndText))
+        {
+            IntPtr scopeHwnd;
+            try
+            {
+                scopeHwnd = UiaHelper.ParseHwnd(scopeHwndText);
+            }
+            catch (Exception ex) when (ex is FormatException or OverflowException)
+            {
+                return (null, "invalid-argument", $"Invalid scopeHwnd '{scopeHwndText}'.");
+            }
+
+            var scopeElement = UiaHelper.FindWindowByHwnd($"0x{scopeHwnd.ToInt64():X}");
+            return scopeElement is null
+                ? (null, "element-not-found", $"No scope element found for scopeHwnd '0x{scopeHwnd.ToInt64():X}'.")
+                : ResolveElement(scopeElement, opts);
+        }
+
         var scope = UiaHelper.FindWindowByHwnd($"0x{windowHwnd.ToInt64():X}");
         return scope is null
             ? (null, "element-not-found", $"No window found for hwnd '0x{windowHwnd.ToInt64():X}'.")
