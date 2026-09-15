@@ -4,6 +4,23 @@
 
 ## Current Focus
 
+Phase 11 (`has-pending-prompt --hwnd <h>` verb) is implemented, committed (`41bf2de`), and
+pushed to `origin/main`. A lightweight alternative to a costly `inspect --maxDepth 20` poll for
+detecting whether the Copilot Chat agent is blocked on a confirmation/prompt card: anchor-based
+detection via `ResolveSelector` on `Name=="Waiting..."`; when found, scoped `FindAll` lookups
+extract the question (`AutomationId=RadioFieldLabel`) and options (`ControlType.RadioButton`,
+excluding `"Other"`). Output: `{ success, pending: false }` (cheap path) or `{ success,
+pending: true, question, options }`. Benchmarked ~4x faster than `inspect --maxDepth 20`
+(~1.2-1.9s vs ~5.8-12.5s). An independent Regression Auditor found one Medium finding (the two
+`FindAll` calls were unguarded by try/catch, unlike every other `FindAll` site in the codebase)
+— fixed and re-verified by a follow-up audit pass before commit.
+
+This session also independently live-validated `send-keys` (previously only informally
+exercised during an earlier audit) against a disposable, isolated Notepad instance (not this VS
+window) — sent literal text, verified via `get-text`, then sent `^a{DEL}` and verified the field
+was cleared. Both the literal-text and key-combo paths behaved as expected; no bug found, no
+code changes made. Test instance closed after validation.
+
 Phase 9 (reliable interaction primitives) is implemented, committed (`4178912`), and pushed to
 `origin/main`. New verbs: `activate --hwnd <h>` (SetForegroundWindow wrapper), `send-keys --hwnd
 <h> --strategy <s> --value <v> --keys <SendKeys syntax>` (raw key-combo pass-through, companion to
@@ -41,10 +58,8 @@ own VS Insiders window (hwnd `0xCA18B2`) — see Open Tasks entry for the exact 
   the text (`method: "synthetic-keyboard"`), and submitted it via the default `--submitKeys
   {ENTER}` with no Send-button `AutomationId` needed — `{"method":"synthetic-keyboard","success":true}`.
   This closes the Phase 9 gap below.
-  - Phase 11 (`has-pending-prompt --hwnd <h>` verb, NOT YET COMMITTED — awaiting explicit
-    user go-ahead) is implemented: a lightweight alternative to a costly `inspect --maxDepth 20`
-    poll for detecting whether the Copilot Chat agent is blocked on a confirmation/prompt card.
-    Anchor-based detection via a single `FindFirst`-equivalent (`ResolveSelector` with
+  - Phase 11 (`has-pending-prompt --hwnd <h>` verb) is implemented, committed (`41bf2de`), and
+    pushed. Anchor-based detection via a single `FindFirst`-equivalent (`ResolveSelector` with
     `Strategy=Name, Value="Waiting..."`); when found, two scoped `FindAll` lookups extract the
     question (`AutomationId=RadioFieldLabel` nodes) and options (`ControlType.RadioButton` nodes,
     excluding literal `"Other"`). Output: `{ success, pending: false }` (cheap path, no
@@ -52,17 +67,21 @@ own VS Insiders window (hwnd `0xCA18B2`) — see Open Tasks entry for the exact 
     option — detection is anchor-based, not depth-bounded. Live-validated: `pending: false`
     (idle) multiple times, and `pending: true` against a real freeform (non-radio) confirmation
     card (`question`/`options` legitimately empty in that case — no RadioFieldLabel/RadioButton
-    nodes exist for a freeform prompt). The radio-button `question`/`options` extraction path was
-    NOT independently live-validated against an actual radio-button card this session (no such
-    card appeared). Benchmarked ~4x faster than `inspect --maxDepth 20` (~1.2-1.9s vs ~5.8-12.5s
-    via direct .exe). An independent Regression Auditor found one Medium finding — the two
-    `FindAll` calls were unguarded by try/catch, inconsistent with every other `FindAll` site in
-    the codebase (`UiaHelper.ListTopLevelWindows`/`ToElementInfo`/`CollectVisibleText`), a real
-    risk since this verb polls an actively-changing chat panel. Fix applied (both wrapped in
-    try/catch, degrading to empty question/options on a transient UIA exception) and re-verified
-    by a follow-up Regression Auditor pass — build clean, no new issues, `docs/CLI_CONTRACT.md`
-    updated to document the graceful-degradation behavior. **Not yet committed/pushed** — pending
-    explicit user confirmation per this project's no-auto-commit rule.
+    nodes exist for a freeform prompt). Benchmarked ~4x faster than `inspect --maxDepth 20`
+    (~1.2-1.9s vs ~5.8-12.5s via direct .exe). An independent Regression Auditor found one
+    Medium finding — the two `FindAll` calls were unguarded by try/catch, inconsistent with
+    every other `FindAll` site in the codebase (`UiaHelper.ListTopLevelWindows`/`ToElementInfo`/
+    `CollectVisibleText`), a real risk since this verb polls an actively-changing chat panel. Fix
+    applied (both wrapped in try/catch, degrading to empty question/options on a transient UIA
+    exception) and re-verified by a follow-up Regression Auditor pass before commit.
+  - **Remaining gap:** the radio-button `question`/`options` extraction path has NOT been
+    independently live-validated against an actual radio-button-style confirmation card (no such
+    card appeared during this session's live testing — only a freeform text-field card was
+    available). Worth validating opportunistically if/when a radio-button card next appears.
+  - `send-keys` was independently live-validated this session against a disposable, isolated
+    Notepad instance (hwnd separate from this VS window): sent literal text via `send-keys`,
+    verified with `get-text`, then sent `^a{DEL}` and verified the field was cleared. Both the
+    literal-text and key-combo paths behaved as expected — no bug found, no code changes made.
 - (Phase 9 finding, now addressed by the above) The real Copilot Chat panel in the test VS
   Insiders instance (hwnd `0xCA18B2`, pid `141556`) exposes no discoverable `AutomationId` for its
   input or Send button (confirmed via full tree inspection) — `submit-chat-message`'s original
