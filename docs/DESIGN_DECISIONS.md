@@ -27,3 +27,17 @@ external store.
 
 **Alternatives considered:** Requiring `--pid` on every call — rejected for CLI ergonomics;
 supported as an override via `ResolvePid` regardless.
+
+## 2026-09-15 — Detached broker owns ConsoleAutomation ConPTY state
+
+**Decision:** `agentdebug-console` launches a detached broker process that owns the ConPTY
+handle, target process, host pipes, terminal buffer, and named-pipe server; public CLI verbs are
+short-lived pipe clients using persisted broker session data.
+
+**Rationale:** ConPTY handles and continuously drained output cannot be transferred safely between
+independent CLI invocations. A broker preserves interactive terminal state while the public CLI
+remains simple and independently deployable from the UI Automation and Visual Studio components.
+
+**Alternatives considered:** Keeping all state in each public invocation — rejected because it
+would lose the target's terminal state and output stream. Adding a dependency on the other CLI
+projects — rejected to keep console automation isolated from their process/UIA/EnvDTE concerns.

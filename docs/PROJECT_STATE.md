@@ -4,18 +4,25 @@
 
 ## Current Focus
 
-Initial project-memory bootstrap: set up `docs/*.md` memory files, code knowledge graph, and
-the `project-memory-management-graph` skill's prompt files for this repo. No feature work done
-in this session.
+Phase 7 console automation is implemented through a detached ConPTY broker and documented for
+agent use. The initial repository and README commits were pushed to `origin/main`.
 
 ## Open Tasks / Known Issues
 
-- None identified yet this session — see `docs/IMPLEMENTATION_PLAN.md` for the project's own
-  planned phases (selector strategies beyond Name/AutomationId, navigation map, etc.).
+- Validate Phase 7 exit criteria against `CAMFWDownloadConsole.exe`; current validation uses
+  `cmd.exe` smoke targets only.
+- Phase 2 UI Automation gaps remain: `wait-for-window-change`,
+  `wait-for-process-responding`, `delay`, and `set-context` are documented but not dispatched;
+  `--scopeHwnd` is ignored by `click`/`type`; and `attach --process <name>.exe` does not
+  normalize the suffix.
+- Continue the planned selector, navigation-map, multi-window, and Phase 8 work in
+  `docs/IMPLEMENTATION_PLAN.md`.
 
 ## Recently Changed Files
 
-- `.github/copilot-instructions.md` (created)
-- `.github/prompts/begin-session.prompt.md`, `bootstrap.prompt.md`, `end-session.prompt.md` (created)
-- `docs/CODE_SUMMARY.md`, `docs/KEY_FLOWS.md`, `docs/DESIGN_DECISIONS.md`, `docs/PROJECT_STATE.md`, `docs/ROADMAP.md` (created)
-- `docs/full-graph.json`, `docs/project-dependencies.json`, `docs/graph-viewer.html` (created via Bootstrap)
+- `README.md` (added GitHub project overview, quick start, and agent operating guidance)
+- `docs/CLI_CONTRACT.md`, `docs/IMPLEMENTATION_PLAN.md` (Phase 7 console contract and status)
+- `docs/ARCHITECTURE.md` (implemented ConPTY broker architecture and session model)
+- `src/AgentDebugToolkit.ConsoleAutomation.Cli/BrokerProgram.cs` (shutdown acknowledgement and
+  disconnect-safe cancellation)
+- `.gitignore` (Visual Studio `.vs/` state ignored)

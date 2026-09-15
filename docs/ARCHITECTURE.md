@@ -8,7 +8,7 @@ AgentDebugToolkit/
 	AgentDebugToolkit.Core/                 Shared models, no UIA/EnvDTE dependency
 	AgentDebugToolkit.UiAutomation.Cli/     Thin UIA executor (Phases 1-4)
 	AgentDebugToolkit.Debugger.VisualStudio/  EnvDTE-based debugger bridge (Phase 6, independent)
-	AgentDebugToolkit.ConsoleAutomation/    Future, separate mechanism (not UIA-based)
+	AgentDebugToolkit.ConsoleAutomation.Cli/ Detached ConPTY broker client (Phase 7, independent)
   docs/
 	ARCHITECTURE.md                (this file)
 	IMPLEMENTATION_PLAN.md          Phased delivery plan
@@ -51,6 +51,11 @@ AgentDebugToolkit/
    CLI — separate project, separate process, separate JSON contract, only sharing
    `AgentDebugToolkit.Core` where genuinely common (e.g., a shared `JsonResult<T>` envelope type).
 
+8. **Console automation uses a detached broker.** `agentdebug-console` public invocations are
+   short-lived named-pipe clients. The broker owns the nonserializable ConPTY handle, target
+   process, synchronous host pipes, output reader, and terminal buffer for the session lifetime.
+   The component remains independent of Core, UI Automation, and EnvDTE.
+
 ## Process/session model
 
 - `attach --process <name>` resolves a running process by name (must match exactly one process;
@@ -67,3 +72,15 @@ Every CLI invocation prints exactly one JSON object to stdout and sets exit code
 non-zero on failure. Failures always include an `"error"` field with a short machine-readable code
 (e.g., `"element-not-found"`, `"stale-context"`, `"ambiguous-process"`, `"timeout"`) plus a
 human-readable `"message"`. See `CLI_CONTRACT.md` for exact shapes per verb.
+
+## Console broker session model
+
+- `launch` starts the target under ConPTY and persists `{sessionId, brokerPid, brokerStartedAtUtc,
+  pipeName, targetPid}` in `%TEMP%\agentdebugtoolkit\console-session.json`.
+- Subsequent console verbs validate the broker PID/start time before using the named pipe; stale
+  context is conditionally cleared without deleting a newer session.
+- The broker drains VT output into `TerminalBuffer` continuously. After target exit, it closes the
+  pseudoconsole and waits for output-pipe EOF before exposing final screen/status data.
+- Each pipe connection carries exactly one newline-terminated request. Malformed, disconnected,
+  and timed-out clients are isolated; target input is serialized through a bounded queue so a
+  blocked target does not consume all request handlers.
