@@ -296,6 +296,131 @@ with or changing the target UI.
 - OCR/template-image fallback for fully non-UIA-exposed custom controls, if Phase 3's C1FlexGrid
   spot-check or other findings show a real need.
 
+## Phase 9 — Reliable interaction primitives (proposed scope, not yet implemented)
+
+**Status:** proposed for review only (2026-09-15) — items below are documented as candidate scope
+per the Pre-Build Decomposition Protocol; none are implemented yet pending explicit approval.
+
+- **`send-keys` verb — IMPLEMENTED (2026-09-15).** A companion to the existing `type` verb (which
+  sends literal text only, via `ValuePattern.SetValue` or synthetic keyboard input). `type` cannot
+  express control key sequences (e.g. `Ctrl+A`, `Delete`, `Enter`) because `NativeMethods.SendText`
+  escapes `SendKeys` special characters before sending, specifically to prevent literal input text
+  from being misinterpreted as `SendKeys` syntax. `send-keys --hwnd <h> --strategy <s> --value <v>
+  --keys <SendKeys syntax>` instead accepts and passes through unescaped `SendKeys.SendWait`
+  syntax, element-scoped consistent with `click`/`type`. Returns `{ "success": true, "sent": true
+  }` on success; `invalid-argument` for missing/empty `--keys` or malformed `SendKeys` syntax;
+  same window/element-resolution codes as `click`/`type` otherwise. See `docs/CLI_CONTRACT.md` for
+  the full contract. Regression Audit found one blocking issue (a Recurrence Escalation: the 2nd
+  occurrence of the same underlying pattern as `activate`'s earlier fix — malformed caller-supplied
+  syntax, here an unbalanced `{` or unrecognized key name passed to `SendKeys.SendWait`, was
+  uncaught and would have surfaced as `unhandled-exception` instead of `invalid-argument`) — fixed
+  by wrapping the call in a try/catch translating `ArgumentException`/`InvalidOperationException`/
+  `FormatException` to `invalid-argument`. Live-validated against the same VS Insiders window's
+  Copilot Chat input: an initial attempt using `--strategy AutomationId --value WpfTextView`
+  resolved ambiguously to the code editor pane instead of the chat input (that `AutomationId` is
+  not unique to chat), so `--strategy Name --value "Ask Copilot"` (the placeholder Name shown when
+  the input is empty) was used instead — confirmed unique and correct. Sent `--keys "test"`,
+  confirmed via `read-visible-text` that "test" landed in the chat input, then cleared it via
+  `--keys "^a{DEL}"`, confirmed cleared via screenshot. Also confirmed malformed syntax
+  (`--keys "{"`) returns a clean `invalid-argument`.
+- **`activate` verb — IMPLEMENTED (2026-09-15).** Wraps `NativeMethods.SetForegroundWindow`
+  (previously declared but unused) so a caller can explicitly bring a window to the foreground
+  before `click`/`type`. `activate --hwnd <h>` returns `{ "success": true, "activated": true }`
+  on success; `invalid-argument` for a missing/malformed `--hwnd`; `stale-context` if
+  `SetForegroundWindow` returns `false` (window closed, or Windows denied the switch via
+  focus-stealing prevention — documented as non-fatal, caller may retry/fall back to manual
+  activation). Unlike every Phase 8 verb, this is intentionally interactive/non-read-only.
+  See `docs/CLI_CONTRACT.md` for the full contract. Regression Audit found one blocking issue
+  (the initial `catch (FormatException or OverflowException)` filter missed
+  `ArgumentOutOfRangeException`, thrown by `ParseHwnd`'s underlying `Convert.ToInt64` for an
+  empty/`"0x"` `--hwnd` value, which would have surfaced as `unhandled-exception` instead of
+  `invalid-argument`) — fixed by broadening the filter to also catch `ArgumentException`.
+  Live-validated against the same VS Insiders window (hwnd `0xCA18B2`): backgrounded it with
+  Notepad, confirmed `isForeground: false` via `list-windows`, then called `activate` from a
+  shell that was itself not the foreground process — `SetForegroundWindow` returned `false` and
+  the verb correctly reported `stale-context`, demonstrating the documented focus-stealing
+  prevention path live rather than a plain success case. Also validated all `invalid-argument`
+  paths (missing/empty/`"0x"`/non-hex `--hwnd`) return cleanly with no unhandled exception.
+- **`type --verify` flag — IMPLEMENTED (2026-09-15).** An optional flag on the existing `type`
+  verb that re-reads the element (via the same mechanism as `get-text`) after typing and fails
+  with `verify-mismatch` (includes `expected`/`actual` fields) if the read-back value doesn't
+  match the input text — surfacing silent typing failures that `type`'s plain success response
+  can't detect on its own. See `docs/CLI_CONTRACT.md` for the full contract. Regression Audit
+  found two blocking issues: (1) the initial implementation used presence-only detection
+  (`opts.ContainsKey("verify")`), diverging from the existing `--screenshot` boolean-flag
+  convention (no way to pass `--verify false` to disable) — fixed to match that convention; (2)
+  critical: verification would produce a false-positive `verify-mismatch` for any element without
+  `ValuePattern` support, because `Type`'s synthetic-keyboard fallback has no corresponding
+  `ValuePattern`-based read-back, so `GetText` falls back to the element's static accessibility
+  `Name` instead of its typed content — comparing that against the typed text would almost always
+  mismatch even on a fully successful type. Fixed by scoping verification to only run when
+  `method == "pattern"`, silently skipping it (not erroring) for `"synthetic-keyboard"` results.
+  Live-validated against the same VS Insiders Copilot Chat input (a synthetic-keyboard-only
+  control): `type --verify` returned `{ "method": "synthetic-keyboard", "success": true }` with
+  no spurious `verify-mismatch`, confirming the skip logic. The `verify-mismatch` failure path
+  itself (for `ValuePattern`-backed controls) was validated by code review/build only, not live,
+  per user direction — no safe `ValuePattern`-backed control was available in this session to
+  deliberately mistype into.
+- **`submit-chat-message` composite verb — IMPLEMENTED (2026-09-15).** A composite verb tailored
+  to the Copilot Chat input pattern: given `--hwnd`, an input `AutomationId`, a Send-button
+  `AutomationId`, and `--text`, it clicks the input, types the text, verifies it landed via
+  read-back (when possible), then clicks Send — as a single call instead of a caller scripting the
+  equivalent three-call sequence. See `docs/CLI_CONTRACT.md` for the full contract, error `step`
+  values, and known limitations. Regression Audit found one medium finding (reusing
+  `UiaHelper.Click` for the input's pre-type focus click risked an unintended
+  invoke/toggle side effect if the input happened to expose those patterns — fixed by using a
+  plain `NativeMethods.Click` synthetic click on the input's bounding-rect center instead, since
+  `UiaHelper.Click`'s invoke/toggle-then-synthetic-click ordering is a real behavioral difference
+  from a "just focus this" click) and one minor finding (the three upfront `invalid-argument`
+  argument-validation checks omitted the `step` field present on every other failure path — fixed
+  by adding `step = "validate-arguments"`). Non-blocking notes from the audit: partial-typed state
+  on `verify-mismatch` failure (inherent to a non-transactional composite verb, documented as a
+  known limitation), no ambiguity detection on `AutomationId` lookups (pre-existing
+  `ResolveSelector` limitation, out of scope), and the two internal `Click` calls' own methods
+  being discarded from the response (acceptable — the response reports `Type`'s method only, a
+  documented simplification). **Live validation could not be completed end-to-end**: a full tree
+  inspection of the real, running VS Insiders window (`inspect --hwnd 0xCA18B2 --maxDepth 15`)
+  found no Send-button-like `AutomationId` anywhere, and the only `AutomationId` matching
+  `WpfTextView` resolves to the code editor pane, not the chat input (consistent with `send-keys`'s
+  earlier finding that the chat input needed a `Name`-based selector instead) — the real Copilot
+  Chat panel's input and Send button are not resolvable via `AutomationId` at all in this session,
+  so this verb's core design assumption doesn't hold for this specific chat UI. Validation is
+  therefore code-review/build-only; the individual primitives it composes (window/element
+  resolution, click, type, verify, click) are each independently live-validated by `click`,
+  `type`, `type --verify`, and `send-keys` above.
+- **`type` embedded-newline rejection — IMPLEMENTED (2026-09-15), a real behavior change.** Per
+  explicit user decision, `type` (and `submit-chat-message`, which calls `UiaHelper.Type` directly)
+  now reject `--text` containing an embedded `\n`/`\r` with `invalid-argument`, checked before
+  window/element resolution — previously a raw newline reached the underlying `SendKeys.SendWait`
+  call on the synthetic-keyboard fallback path uninterpreted-as-literal, observed live to trigger
+  unintended UI navigation (unexpectedly focusing a different control) rather than being typed as
+  literal text. Regression Audit found the rejection is unconditional across both of `type`'s
+  paths, including `ValuePattern.SetValue` (where the observed bug cannot occur, since no
+  `SendKeys` call is involved) — meaning a multi-line `ValuePattern`-backed control cannot
+  currently receive newline text via `type` at all. Per explicit user decision, this was kept as a
+  deliberate simplicity/uniformity tradeoff (one consistent rule across both paths) rather than
+  made path-aware, and is documented as such in `docs/CLI_CONTRACT.md`. Live-validated: `type
+  --text "line1\nline2"` against the real Copilot Chat input returned a clean `invalid-argument`
+  with no unhandled exception and no attempt to send the text.
+- **`activate`/`SetForegroundWindow` caller-focus-state limitation — already documented.** Verified
+  this Phase 9 item is satisfied by the "Known limitation — foreground denial depends on the
+  caller's own focus state" note already added to `docs/CLI_CONTRACT.md`'s `activate` section
+  during the `send-keys`/Part A documentation pass — no separate change was needed.
+
+  `PW_RENDERFULLCONTENT` capture (Phase 8) can return an incomplete or incorrectly scaled frame
+  for a non-foreground/non-visible window, depending on how the target renders when not actively
+  composited — this should be recorded as a known constraint in `docs/CLI_CONTRACT.md` (and
+  potentially `docs/KNOWN_OPEN_FINDINGS.md`, pending explicit confirmation per that file's rules)
+  rather than treated as a bug to fix outright; the proposed `activate` verb above is one way an
+  agent could work around it by bringing the window to foreground first.
+
+**Not yet decided at proposal stage (to be resolved during breakdown/implementation):**
+- Whether `send-keys` is element-scoped (like `click`/`type`) or window-scoped only.
+- The exact error code name for `type --verify`'s mismatch case.
+- Whether the `PrintWindow` non-foreground limitation is best captured only as contract
+  documentation, or also as a `docs/KNOWN_OPEN_FINDINGS.md` entry (requires explicit user
+  confirmation per that file's rules before being added).
+
 ---
 
 ## Out of scope for now (explicitly deferred, do not build speculatively)

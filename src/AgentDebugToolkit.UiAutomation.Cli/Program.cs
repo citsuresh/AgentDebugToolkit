@@ -35,6 +35,12 @@ try
             return Verbs.ReadVisibleText(opts);
         case "screenshot":
             return Verbs.Screenshot(opts);
+        case "activate":
+            return Verbs.Activate(opts);
+        case "send-keys":
+            return Verbs.SendKeys(opts);
+        case "submit-chat-message":
+            return Verbs.SubmitChatMessage(opts);
         default:
             JsonOutput.WriteError("invalid-argument", $"Unknown verb '{verb}'.");
             return 1;
@@ -161,8 +167,13 @@ internal static class Verbs
             return 1;
         }
 
-        var method = UiaHelper.Click(element);
+        // Capture elementFound BEFORE invoking the click, not after: UiaHelper.Click() can change
+        // the element's state (e.g. IsEnabled, IsOffscreen, or even cause it to disappear as a
+        // direct result of the click), so reading it afterward would report the click's
+        // aftereffect rather than what was actually clicked. This is a call-ordering fix, not a
+        // timing/sleep fix — no delay is introduced, only the read is moved before the action.
         var info = UiaHelper.ToElementInfo(element, includeChildren: false, maxDepth: 0);
+        var method = UiaHelper.Click(element);
         JsonOutput.WriteSuccess(new { method, elementFound = info });
         return 0;
     }
@@ -172,6 +183,21 @@ internal static class Verbs
         if (!opts.TryGetValue("text", out var text))
         {
             JsonOutput.WriteError("invalid-argument", "--text is required.");
+            return 1;
+        }
+
+        // Reject embedded newlines: a raw '\n'/'\r' passed through to SendKeys.SendWait is not
+        // treated as literal text — it can trigger unintended UI navigation (e.g. moving focus to
+        // a different control), which was observed directly during Phase 9 validation rather than
+        // being a theoretical concern. Rejecting up front is safer than silently mangling input or
+        // producing surprising side effects.
+        if (text.Contains('\n') || text.Contains('\r'))
+        {
+            JsonOutput.WriteError(
+                "invalid-argument",
+                "--text must not contain embedded newline characters ('\\n'/'\\r'); these are not " +
+                "treated as literal text by the underlying SendKeys mechanism and can trigger " +
+                "unintended UI navigation instead.");
             return 1;
         }
 
@@ -196,7 +222,85 @@ internal static class Verbs
         }
 
         var method = UiaHelper.Type(element, text);
+
+        // Optional read-back verification: --verify (matching --screenshot's boolean-flag
+        // convention: absent or "false" disables it, any other value enables it) re-reads the
+        // element's text after typing and fails with verify-mismatch if it doesn't match what was
+        // sent. This exists to catch silent typing failures (e.g. a control that ignored or
+        // truncated the input) that the plain success response cannot detect on its own.
+        //
+        // Verification is only meaningful when Type used ValuePattern.SetValue ("pattern"): in
+        // that case GetText also reads back via ValuePattern, so both sides reflect the control's
+        // actual value. When Type fell back to synthetic-keyboard input ("synthetic-keyboard",
+        // i.e. no ValuePattern support), GetText falls back to the element's accessibility Name
+        // (a static label), not its typed content — comparing that against the typed text would
+        // almost always report a false-positive mismatch, not a genuine typing failure. Skip
+        // verification for that case rather than produce an unreliable result.
+        if (opts.TryGetValue("verify", out var verifyText) && verifyText != "false" && method == "pattern")
+        {
+            var actual = UiaHelper.GetText(element);
+            if (actual != text)
+            {
+                JsonOutput.WriteError(
+                    "verify-mismatch",
+                    "The element's text after typing did not match the input.",
+                    new { expected = text, actual });
+                return 1;
+            }
+        }
+
         JsonOutput.WriteSuccess(new { method });
+        return 0;
+    }
+
+    /// <summary>
+    /// Companion to Type for key combinations Type cannot express: Type's underlying SendText
+    /// always escapes SendKeys special characters so literal text is never misinterpreted as
+    /// SendKeys syntax, which means Type has no way to send e.g. Ctrl+A, Delete, or Enter as key
+    /// presses. send-keys instead accepts raw/unescaped SendKeys syntax via --keys.
+    /// </summary>
+    public static int SendKeys(Dictionary<string, string> opts)
+    {
+        if (!opts.TryGetValue("keys", out var keys) || keys.Length == 0)
+        {
+            JsonOutput.WriteError("invalid-argument", "--keys is required and must be non-empty.");
+            return 1;
+        }
+
+        var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
+        if (errorCode is not null)
+        {
+            JsonOutput.WriteError(errorCode, error!);
+            return 1;
+        }
+
+        if (!NativeMethods.IsResponding(windowHwnd, timeoutMs: 250))
+        {
+            JsonOutput.WriteError("window-not-responding", "The target window is not responding.");
+            return 1;
+        }
+
+        var (element, elementErrorCode, elementError) = ResolveElement(windowHwnd, opts);
+        if (element is null)
+        {
+            JsonOutput.WriteError(elementErrorCode!, elementError!);
+            return 1;
+        }
+
+        try
+        {
+            UiaHelper.SendKeys(element, keys);
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or FormatException)
+        {
+            // SendKeys.SendWait throws for malformed syntax (e.g. an unbalanced "{" or an
+            // unrecognized key name like "{FOO}") — surface this as a clean invalid-argument
+            // instead of letting it propagate to the top-level unhandled-exception handler.
+            JsonOutput.WriteError("invalid-argument", $"Invalid --keys syntax '{keys}': {ex.Message}");
+            return 1;
+        }
+
+        JsonOutput.WriteSuccess(new { sent = true });
         return 0;
     }
 
@@ -408,6 +512,182 @@ internal static class Verbs
         }
 
         JsonOutput.WriteSuccess(new { screenshotPath });
+        return 0;
+    }
+
+    /// <summary>
+    /// Brings a window to the foreground. Unlike every Phase 8 verb, this is intentionally
+    /// interactive/non-read-only: it changes window activation/z-order/focus state rather than
+    /// only observing it.
+    /// </summary>
+    public static int Activate(Dictionary<string, string> opts)
+    {
+        if (!opts.TryGetValue("hwnd", out var hwndText))
+        {
+            JsonOutput.WriteError("invalid-argument", "--hwnd is required.");
+            return 1;
+        }
+
+        IntPtr windowHwnd;
+        try
+        {
+            windowHwnd = UiaHelper.ParseHwnd(hwndText);
+        }
+        catch (Exception ex) when (ex is FormatException or OverflowException or ArgumentException)
+        {
+            // ArgumentException (and its ArgumentOutOfRangeException subclass) covers empty or
+            // "0x"-only input: ParseHwnd's underlying Convert.ToInt64 throws
+            // ArgumentOutOfRangeException for an empty string rather than FormatException.
+            JsonOutput.WriteError("invalid-argument", $"Invalid hwnd '{hwndText}'.");
+            return 1;
+        }
+
+        // SetForegroundWindow can legitimately return false
+        // window: Windows' focus-stealing prevention denies the foreground switch depending on
+        // which process last had input focus (e.g. the calling process isn't the foreground
+        // process and doesn't hold input for the target's thread). This is not the same as the
+        // window having closed, but both surface as a "could not activate" outcome here; treat it
+        // as stale-context (matching screenshot's usage for "target no longer usable as
+        // resolved") rather than a fatal error — a caller should not treat this as fatal and may
+        // retry or fall back to manual activation.
+        var activated = NativeMethods.SetForegroundWindow(windowHwnd);
+        if (!activated)
+        {
+            JsonOutput.WriteError(
+                "stale-context",
+                $"Could not bring hwnd '0x{windowHwnd.ToInt64():X}' to the foreground. The window " +
+                "may have closed, or Windows denied the foreground switch (focus-stealing " +
+                "prevention) — this is not necessarily fatal; retry or activate manually.");
+            return 1;
+        }
+
+        JsonOutput.WriteSuccess(new { activated = true });
+        return 0;
+    }
+
+    /// <summary>
+    /// Composite verb tailored to the Copilot Chat input pattern: click the input, type the text,
+    /// verify it landed via read-back, then click Send — as a single call instead of the
+    /// click/type/click dance a caller would otherwise have to script themselves. Both the input
+    /// and Send button are resolved via AutomationId (the only selector strategy this verb
+    /// supports, since it targets a specific, known UI pattern rather than being a general-purpose
+    /// element-scoped verb like click/type/send-keys).
+    /// </summary>
+    public static int SubmitChatMessage(Dictionary<string, string> opts)
+    {
+        if (!opts.TryGetValue("text", out var text))
+        {
+            JsonOutput.WriteError("invalid-argument", "--text is required.", new { step = "validate-arguments" });
+            return 1;
+        }
+
+        // Same embedded-newline guard as the standalone type verb (this composite verb calls
+        // UiaHelper.Type directly rather than Verbs.Type, so the check is duplicated here rather
+        // than inherited).
+        if (text.Contains('\n') || text.Contains('\r'))
+        {
+            JsonOutput.WriteError(
+                "invalid-argument",
+                "--text must not contain embedded newline characters ('\\n'/'\\r'); these are not " +
+                "treated as literal text by the underlying SendKeys mechanism and can trigger " +
+                "unintended UI navigation instead.",
+                new { step = "validate-arguments" });
+            return 1;
+        }
+
+        if (!opts.TryGetValue("inputAutomationId", out var inputAutomationId) || inputAutomationId.Length == 0)
+        {
+            JsonOutput.WriteError(
+                "invalid-argument", "--inputAutomationId is required and must be non-empty.",
+                new { step = "validate-arguments" });
+            return 1;
+        }
+
+        if (!opts.TryGetValue("sendAutomationId", out var sendAutomationId) || sendAutomationId.Length == 0)
+        {
+            JsonOutput.WriteError(
+                "invalid-argument", "--sendAutomationId is required and must be non-empty.",
+                new { step = "validate-arguments" });
+            return 1;
+        }
+
+        var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
+        if (errorCode is not null)
+        {
+            JsonOutput.WriteError(errorCode, error!, new { step = "resolve-window" });
+            return 1;
+        }
+
+        if (!NativeMethods.IsResponding(windowHwnd, timeoutMs: 250))
+        {
+            JsonOutput.WriteError(
+                "window-not-responding", "The target window is not responding.", new { step = "resolve-window" });
+            return 1;
+        }
+
+        var scope = UiaHelper.FindWindowByHwnd($"0x{windowHwnd.ToInt64():X}");
+        if (scope is null)
+        {
+            JsonOutput.WriteError(
+                "element-not-found", $"No window found for hwnd '0x{windowHwnd.ToInt64():X}'.",
+                new { step = "resolve-window" });
+            return 1;
+        }
+
+        var inputElement = UiaHelper.ResolveSelector(
+            scope, new Selector { Strategy = SelectorStrategy.AutomationId, Value = inputAutomationId });
+        if (inputElement is null)
+        {
+            JsonOutput.WriteError(
+                "element-not-found", $"No input element found for AutomationId '{inputAutomationId}'.",
+                new { step = "resolve-input" });
+            return 1;
+        }
+
+        // Click the input to focus it first: uses a plain synthetic mouse click at the element's
+        // bounding-rect center rather than UiaHelper.Click, which is intentionally NOT reused here
+        // — UiaHelper.Click tries InvokePattern/TogglePattern before falling back to a synthetic
+        // click, and if the resolved input element happens to also expose one of those patterns
+        // (plausible for some custom WPF automation peers), invoking/toggling it as a side effect
+        // of "just focusing before typing" would be an unintended state change distinct from what
+        // Type's own click-to-focus fallback does (which is always a plain physical click, never a
+        // pattern invoke on the same element being typed into).
+        var inputRect = inputElement.Current.BoundingRectangle;
+        NativeMethods.Click(
+            (int)(inputRect.X + inputRect.Width / 2), (int)(inputRect.Y + inputRect.Height / 2));
+
+        var method = UiaHelper.Type(inputElement, text);
+
+        // Read-back verification is attempted whenever possible (unlike type --verify, which is
+        // opt-in): this composite verb exists specifically to catch silent typing failures before
+        // committing to clicking Send, so verification is not optional here. Same
+        // pattern-vs-synthetic-keyboard caveat as type --verify applies: only meaningful when
+        // ValuePattern was used, since GetText's Name fallback would otherwise produce a
+        // false-positive mismatch for a control with no ValuePattern support.
+        if (method == "pattern")
+        {
+            var actual = UiaHelper.GetText(inputElement);
+            if (actual != text)
+            {
+                JsonOutput.WriteError(
+                    "verify-mismatch", "The input element's text after typing did not match the input.",
+                    new { step = "type-verify", expected = text, actual });
+                return 1;
+            }
+        }
+
+        var sendElement = UiaHelper.ResolveSelector(
+            scope, new Selector { Strategy = SelectorStrategy.AutomationId, Value = sendAutomationId });
+        if (sendElement is null)
+        {
+            JsonOutput.WriteError(
+                "element-not-found", $"No Send button element found for AutomationId '{sendAutomationId}'.",
+                new { step = "resolve-send" });
+            return 1;
+        }
+
+        UiaHelper.Click(sendElement);
+        JsonOutput.WriteSuccess(new { method });
         return 0;
     }
 

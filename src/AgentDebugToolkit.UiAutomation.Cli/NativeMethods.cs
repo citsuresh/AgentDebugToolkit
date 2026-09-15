@@ -70,6 +70,18 @@ internal static class NativeMethods
         System.Windows.Forms.SendKeys.SendWait(EscapeSendKeys(text));
     }
 
+    /// <summary>
+    /// Sends raw, unescaped SendKeys syntax (e.g. "^a" for Ctrl+A, "{DELETE}", "{ENTER}") to the
+    /// currently focused control. Unlike <see cref="SendText"/>, this does NOT escape special
+    /// characters — it is the caller's responsibility to pass valid SendKeys syntax. This exists
+    /// specifically so key combinations that cannot be expressed as literal text (which SendText
+    /// intentionally escapes to prevent) can still be issued.
+    /// </summary>
+    public static void SendKeysRaw(string keys)
+    {
+        System.Windows.Forms.SendKeys.SendWait(keys);
+    }
+
     private static string EscapeSendKeys(string text)
     {
         var special = "+^%~(){}[]";

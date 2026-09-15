@@ -230,6 +230,28 @@ internal static class UiaHelper
         return element.Current.Name;
     }
 
+    /// <summary>
+    /// Click-to-focus the element, then send raw/unescaped SendKeys syntax (e.g. "^a" for Ctrl+A,
+    /// "{DELETE}", "{ENTER}"). Always uses synthetic keyboard input — there is no UIA pattern
+    /// equivalent for key-combination input like there is for literal text (ValuePattern), so
+    /// unlike <see cref="Type"/> this has no pattern-based fast path.
+    /// </summary>
+    /// <exception cref="ArgumentException">
+    /// Thrown (by the underlying SendKeys.SendWait) if <paramref name="keys"/> is not valid
+    /// SendKeys syntax (e.g. an unbalanced brace or an unrecognized key name). Callers must
+    /// translate this to a clean invalid-argument response rather than letting it propagate as an
+    /// unhandled exception.
+    /// </exception>
+    public static void SendKeys(AutomationElement element, string keys)
+    {
+        var r = element.Current.BoundingRectangle;
+        var cx = (int)(r.X + r.Width / 2);
+        var cy = (int)(r.Y + r.Height / 2);
+        NativeMethods.Click(cx, cy);
+        Thread.Sleep(100);
+        NativeMethods.SendKeysRaw(keys);
+    }
+
     // Bounds for read-visible-text traversal: mirrors inspect's existing default maxDepth (8) and
     // adds a breadth cap and a total-node cap so a large/complex accessibility tree (e.g. an IDE
     // window) cannot produce unbounded JSON output or run away traversing thousands of elements.

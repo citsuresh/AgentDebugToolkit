@@ -82,12 +82,64 @@ screenshot.
 Resolves the element via selector (scoped to `--scopeHwnd` if given, else `--hwnd`), attempts
 `InvokePattern`/`TogglePattern`, falls back to synthetic click at `BoundingRectangle` center.
 - Success: `{ "success": true, "method": "pattern" | "synthetic-click", "elementFound": ElementInfo }`
+- `elementFound` reflects the element's state as resolved **before** the click is invoked, not
+  after — this avoids reporting the click's own aftereffect (e.g. `isEnabled`/`isOffscreen`
+  changing, or the element disappearing) as if it were the pre-click target. A caller that needs
+  to confirm the click's effect (e.g. an element becoming disabled/offscreen, or a new window
+  appearing) should use `wait-for-element`/`wait-for-window-change` afterward rather than reading
+  this field.
 - Failure: `element-not-found` if selector resolves to nothing.
 
-### `type --hwnd <h> --strategy <s> --value <v> --text <input> [--scopeHwnd <h2>]`
+### `type --hwnd <h> --strategy <s> --value <v> --text <input> [--scopeHwnd <h2>] [--verify]`
 Resolves element, attempts `ValuePattern.SetValue`, falls back to click-to-focus + synthetic
 keyboard input.
 - Success: `{ "success": true, "method": "pattern" | "synthetic-keyboard" }`
+- **`--verify` (optional, Phase 9, added 2026-09-15):** boolean-style flag matching `inspect`'s
+  `--screenshot` convention — absent or `--verify false` disables it, any other value (including
+  a bare `--verify`) enables it. After typing, re-reads the element's text (same mechanism as
+  `get-text`) and compares it to `--text`. **Verification is only performed when `method` is
+  `"pattern"`** (i.e. `ValuePattern.SetValue` was used) — when `Type` falls back to
+  `"synthetic-keyboard"`, the corresponding read-back (`get-text`) also has no `ValuePattern` to
+  read from and falls back to the element's accessibility `Name` (a static label, not typed
+  content), which would produce a false-positive mismatch on essentially every successful type
+  into such a control. `--verify` is silently skipped (not reported as an error) for
+  `"synthetic-keyboard"` results — the response is the normal `{ "success": true, "method":
+  "synthetic-keyboard" }` with no verification having occurred. Callers needing verified confirmation
+  for synthetic-keyboard-only controls must currently do their own `get-text`-based comparison
+  with a control-appropriate expectation (e.g. reading `Value` some other way), since generic
+  `Name`-based comparison cannot serve that purpose.
+- Failure (verify only): `verify-mismatch` if `method == "pattern"` and the read-back text does
+  not equal `--text`. Response includes `expected`/`actual` fields:
+  `{ "success": false, "error": "verify-mismatch", "message": "...", "expected": "...", "actual": "..." }`.
+  Found and fixed during Regression Audit: an initial version used presence-only detection
+  (`opts.ContainsKey("verify")`), which diverged from `--screenshot`'s convention (no way to pass
+  `--verify false` to disable it) — fixed to match. The audit also found the pattern-only
+  verification scoping described above was necessary to avoid the `synthetic-keyboard` false-positive
+  described above; this was fixed before any live validation, not discovered live.
+- Validated live (2026-09-15) against the real Copilot Chat input (`--strategy Name --value "Ask
+  Copilot"`, resolved via the synthetic-keyboard fallback since this control has no `ValuePattern`):
+  `type --verify` returned `{ "method": "synthetic-keyboard", "success": true }` with no
+  `verify-mismatch` — confirming verification was correctly skipped rather than spuriously
+  failing. The `verify-mismatch` failure path itself (for `ValuePattern`-backed controls) was
+  validated by code review and build only, not live, per user direction (no safe
+  `ValuePattern`-backed control was available to deliberately mistype into in this session).
+- **Known limitation — embedded newlines are rejected, even for `ValuePattern`-backed controls
+  (added 2026-09-15).** `--text` containing an embedded `\n`/`\r` is rejected up front with
+  `invalid-argument`, before window/element resolution: `{ "success": false, "error":
+  "invalid-argument", "message": "--text must not contain embedded newline characters..." }`. This
+  is a real behavior change (not just a doc note) — previously a raw newline was passed through
+  uninterpreted-as-literal to the underlying `SendKeys.SendWait` call on the synthetic-keyboard
+  fallback path, which was observed live to trigger unintended UI navigation (unexpectedly
+  focusing a different control) rather than being typed as literal text. The rejection is
+  unconditional across **both** of `type`'s paths, including `ValuePattern.SetValue` (the
+  `"pattern"` method), even though that path does not go through `SendKeys` and could not exhibit
+  the observed navigation bug — a multi-line `ValuePattern`-backed control therefore cannot
+  currently receive newline text via `type` at all. This was a deliberate simplicity/uniformity
+  tradeoff (one consistent rule across both paths) rather than an oversight — flagged during
+  Regression Audit and confirmed as the intended tradeoff rather than fixed to be path-aware.
+  Validated live (2026-09-15): `type --text "line1\nline2"` (containing an embedded newline)
+  against the Copilot Chat input returned a clean `invalid-argument` with no unhandled exception
+  and no attempt to send the text.
 
 ### `get-text --hwnd <h> --strategy <s> --value <v>`
 Reads current `Name` or `ValuePattern.Value` (whichever is more appropriate/available) of the
@@ -195,6 +247,151 @@ content). Does not activate/focus the window.
   obscured on-screen by another application window: the `PrintWindow` path correctly captured the
   target window's own content (menu bar, editor, Chat panel with correct text), confirming the
   fix for the `CopyFromScreen`-only fallback's obscured-window limitation.
+
+## Phase 9 verbs (reliable interaction primitives)
+
+### `activate --hwnd <h>`
+Brings the given window to the foreground via `SetForegroundWindow`. **Unlike every Phase 8
+verb, this is intentionally interactive/non-read-only** — it changes window activation, z-order,
+and input focus rather than only observing the target. Requires an explicit `--hwnd`; does not
+fall back to `--pid`/persisted session context.
+- Success: `{ "success": true, "activated": true }`
+- Failure: `invalid-argument` if `--hwnd` is missing or malformed.
+- Failure: `stale-context` if `SetForegroundWindow` returns false. This can mean the window
+  closed, **or** that Windows legitimately denied the foreground switch due to focus-stealing
+  prevention (which process last had input focus determines whether the OS honors the request) —
+  this is not necessarily a fatal condition for the caller. A caller receiving `stale-context`
+  from `activate` should not assume the window is gone; it may retry, or fall back to manual
+  activation (e.g. asking the user to click the window) before continuing with `click`/`type`.
+- Validated live (2026-09-15): backgrounded the target Visual Studio Insiders window (hwnd
+  `0xCA18B2`) by opening Notepad on top of it, confirmed via `list-windows` that its
+  `isForeground` was `false`, then called `activate --hwnd 0xCA18B2` from a shell that was itself
+  not the foreground process. `SetForegroundWindow` returned `false` and the verb correctly
+  reported `stale-context` with the documented message; a follow-up `list-windows` confirmed the
+  window remained backgrounded. This is a live demonstration of the documented focus-stealing
+  prevention behavior itself (the calling process was not privileged to steal foreground focus),
+  not a verb defect — it confirms the failure path is surfaced cleanly rather than crashing or
+  silently no-oping. Also validated the `invalid-argument` paths: missing `--hwnd`, empty string,
+  `"0x"`, and non-hex text all return a clean `invalid-argument` response (no unhandled
+  exception), including the empty/`"0x"` cases that required broadening the exception filter to
+  catch `ArgumentException` (found via Regression Audit, see below).
+- **Known limitation — foreground denial depends on the caller's own focus state, not just the
+  target's.** `SetForegroundWindow` is denied by Windows' focus-stealing prevention whenever the
+  *calling* process does not itself currently hold foreground/input focus — this was reproduced
+  live (2026-09-15): a shell that was not itself the foreground process called `activate` against
+  a valid, open, backgrounded window and was denied (`stale-context`), even though the target
+  window was perfectly healthy. This means a caller cannot assume `activate` will succeed just
+  because the target window is known-good; success also depends on what currently holds
+  foreground focus on the desktop at call time, which the caller does not directly control. A
+  `stale-context` result from `activate` should be treated as "could not activate this time," not
+  as evidence the window/session is invalid.
+
+### `send-keys --hwnd <h> --strategy <s> --value <v> --keys <SendKeys syntax>`
+Companion to `type` for input `type` cannot express. `type`'s underlying `SendText` always
+escapes `SendKeys` special characters (`+^%~(){}[]`) so literal input text is never
+misinterpreted as `SendKeys` syntax — this means `type` has no way to send key combinations like
+`Ctrl+A`, `Delete`, or `Enter` as actual key presses. `send-keys` instead accepts and passes
+through **unescaped** `SendKeys.SendWait` syntax via `--keys` (e.g. `--keys "^a"` for Ctrl+A,
+`--keys "{DELETE}"`, `--keys "{ENTER}"`). Element-scoped, consistent with `click`/`type`: resolves
+the window and element via the same `--hwnd`/`--strategy`/`--value` selector mechanism, checks
+`IsResponding` up front, then click-to-focuses the element (same as `type`'s fallback path)
+before sending the raw key sequence. There is no UIA-pattern fast path (unlike `type`'s
+`ValuePattern` attempt) since there is no pattern equivalent for raw key-combination input —
+`send-keys` always uses synthetic keyboard input.
+- Success: `{ "success": true, "sent": true }`
+- Failure: `invalid-argument` if `--keys` is missing/empty, or if `--keys` is not valid `SendKeys`
+  syntax (e.g. an unbalanced `{` or an unrecognized key name like `{FOO}` — `SendKeys.SendWait`
+  throws for these; `send-keys` catches this and reports it as `invalid-argument` with the
+  underlying message rather than propagating as `unhandled-exception`).
+- Failure: same window/element-resolution error codes as `click`/`type`
+  (`element-not-found`/`ambiguous-window`/`stale-context`/etc.), and `window-not-responding`
+  (checked up front, matching `click`/`type`).
+- **Known limitation — embedded newlines.** Like `type` (see below), `--keys` is not restricted
+  from containing characters that `SendKeys` syntax interprets specially in ways that don't map
+  to "literal key" (e.g. a `{FOO}` typo, or characters requiring escaping that were not escaped).
+  Since `--keys` is documented as raw/unescaped by design, this is expected — callers are
+  responsible for passing valid `SendKeys` syntax; `send-keys` only guards against outright
+  `SendKeys.SendWait` exceptions, not semantically "wrong but syntactically valid" key sequences
+  (e.g. sending `{ENTER}` to a control that doesn't expect it).
+- Validated live (2026-09-15) against the real Visual Studio Insiders window's Copilot Chat
+  input box (resolved via `--strategy Name --value "Ask Copilot"`, the placeholder Name shown
+  when the input is empty — note `--strategy AutomationId --value WpfTextView` was tried first
+  and resolved ambiguously to the code editor pane instead, since `WpfTextView` is not unique to
+  the chat input; `Name`-based selection was used instead for this specific control). Sent
+  literal-safe `--keys "test"`, confirmed via `read-visible-text` that "test" landed in the chat
+  input, then cleared it back to empty via `--keys "^a{DEL}"` (Ctrl+A, Delete), confirmed via a
+  follow-up screenshot showing the input back at its placeholder-empty state. Also validated that
+  malformed syntax (`--keys "{"`) returns a clean `invalid-argument` rather than crashing.
+
+### `submit-chat-message --hwnd <h> --inputAutomationId <id1> --sendAutomationId <id2> --text <input>`
+Composite verb tailored to the Copilot Chat input pattern specifically: click the input, type the
+text, verify it landed via read-back, then click Send — as a single call instead of a caller
+scripting the equivalent `click` → `type --verify` → `click` sequence themselves. Unlike
+`click`/`type`/`send-keys` (which accept any `Selector` strategy via `--strategy`/`--value`), this
+verb only supports `AutomationId` for both the input and Send button, since it targets one
+specific, known UI pattern rather than being a general-purpose element-scoped verb.
+- Internal sequence: resolve window → resolve input element by `--inputAutomationId` → synthetic
+  click at the input's bounding-rect center (see rationale below — deliberately NOT
+  `UiaHelper.Click`) → `UiaHelper.Type` → conditional read-back verification (only when `method ==
+  "pattern"`, same rationale as `type --verify`) → resolve Send button by `--sendAutomationId` →
+  `UiaHelper.Click` on the Send button.
+- Success: `{ "success": true, "method": "pattern" | "synthetic-keyboard" }` (the `method` reflects
+  how the input's `Type` call proceeded; the two `Click` calls' own internal methods are not
+  reported — a known simplification, see below).
+- Failure: `invalid-argument` (with `"step": "validate-arguments"`) if `--text`,
+  `--inputAutomationId`, or `--sendAutomationId` is missing/empty, or if `--text` contains an
+  embedded newline (same rejection as `type`, duplicated here since this verb calls
+  `UiaHelper.Type` directly rather than going through `Verbs.Type`).
+- Failure: any window-resolution error code (with `"step": "resolve-window"`), or
+  `window-not-responding` (with `"step": "resolve-window"`).
+- Failure: `element-not-found` (with `"step": "resolve-input"`) if the input `AutomationId` does
+  not resolve.
+- Failure: `verify-mismatch` (with `"step": "type-verify"`, plus `expected`/`actual` fields) if the
+  input element supports `ValuePattern` (`method == "pattern"`) and the read-back text after typing
+  does not match `--text`. **Unlike `type --verify` (which is opt-in), this verb always attempts
+  verification when possible** — it exists specifically to catch silent typing failures before
+  committing to clicking Send.
+- Failure: `element-not-found` (with `"step": "resolve-send"`) if the Send button `AutomationId`
+  does not resolve. **Note:** if this occurs after typing has already succeeded (and passed
+  verification, if attempted), the typed text remains in the input — it is not cleared or rolled
+  back. A caller retrying after a `resolve-send` failure should account for the input already
+  containing the previously-typed text.
+- **Design note — synthetic click instead of `UiaHelper.Click` for the input.** The input-focus
+  click (before typing) uses a plain `NativeMethods.Click(x, y)` synthetic mouse click at the
+  element's bounding-rect center, not `UiaHelper.Click`. This was a fix applied during Regression
+  Audit: `UiaHelper.Click` tries `InvokePattern`/`TogglePattern` before falling back to a synthetic
+  click, so reusing it here risked invoking or toggling the input element as an unintended side
+  effect if it happened to also expose one of those patterns — a real risk distinct from `Type`'s
+  own click-to-focus fallback, which is always a plain physical click. The Send button click still
+  uses `UiaHelper.Click` (an actual invoke/click of the button is the intended action there).
+- **Known limitation — partial-typed state on `verify-mismatch`.** If verification fails, the
+  mismatched/partial text remains in the input and Send is never clicked, leaving the input in a
+  different state than before the call. This is inherent to a composite verb that performs real,
+  non-transactional side effects across multiple steps — there is no rollback.
+- **Known limitation — no ambiguity detection on `AutomationId` lookups.** Both `--inputAutomationId`
+  and `--sendAutomationId` resolve via the existing `ResolveSelector` helper, which returns the
+  first match (`FindFirst`) with no error if multiple elements share the same `AutomationId` within
+  the window — this is a pre-existing limitation of `ResolveSelector` shared with `click`/`type`,
+  not something new to this verb, but is worth calling out here since this verb chains two such
+  lookups back to back.
+- **Live validation status (2026-09-15): not completed end-to-end against a real Copilot Chat
+  panel.** A full tree inspection (`inspect --hwnd 0xCA18B2 --maxDepth 15`) of the real, running VS
+  Insiders window found no `AutomationId` resembling a Send button anywhere in the tree, and the
+  only `AutomationId` matching `WpfTextView` (initially assumed, based on `send-keys`'s earlier
+  discovery, to also work here) resolves to the code editor pane, not the chat input — consistent
+  with `send-keys`'s Part A finding that the chat input required a `Name`-based selector instead,
+  since `submit-chat-message` only supports `AutomationId`. This means, for the specific Copilot
+  Chat implementation available in this session, the input and Send button are not resolvable via
+  `AutomationId` at all (the chat panel is very likely a custom/webview-hosted control without
+  conventional `AutomationId`s exposed for these two elements) — `submit-chat-message`'s core
+  design assumption (both elements resolvable via `AutomationId`) does not hold for this
+  particular chat UI. Validation for this verb is therefore code-review/build-only: the
+  implementation builds successfully, and its individual pieces (window/element resolution,
+  synthetic click, `Type`, conditional verify, `Click`) reuse the same primitives already
+  live-validated independently by `click`, `type`, `type --verify`, and `send-keys`. A caller with
+  a chat UI that does expose these elements via `AutomationId` (or a future revision of
+  `submit-chat-message` supporting other selector strategies) would need to re-validate live
+  against that specific UI.
 
 ## Conventions for future phases
 
