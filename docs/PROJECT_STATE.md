@@ -4,133 +4,100 @@
 
 ## Current Focus
 
-Phase 14 (paste-verify stability guard against asynchronous post-paste mutation) is implemented,
-committed (`a3debf6`), and pushed to `origin/main`. Real bug reported by the user: pasting a
-multi-paragraph message (blank-line paragraph breaks) into the VS Copilot Chat composer via
-`type --paste --verify` reported success (`method: "clipboard-paste"`, no `verify-mismatch`), but
-only a truncated first-line fragment actually landed/was sent -- reproduced twice with the same
-message, resolved only by collapsing to a single line. Root cause (unconfirmed but consistent with
-observed symptom): some JS-driven composer controls (unlike native Win32 edit controls) treat an
-embedded newline as a submit trigger, or otherwise mutate pasted content, asynchronously -- after
-our one-shot synchronous verification read already looked complete. This is app-side target
-behavior, not a defect in the paste/verify mechanism, and cannot be fully eliminated from the
-automation side.
+This session worked through the remaining backlog in `docs/KNOWN_OPEN_FINDINGS.md`, phase by
+phase, using the Regression Auditor Protocol (Pre-Build Decomposition confirmed by the user
+before implementing, independent Regression Auditor subagent review after, doc updates only on
+explicit user request). All entries in `docs/KNOWN_OPEN_FINDINGS.md` are now resolved except
+none remain open -- the backlog is fully cleared as of this session.
 
-Fix (Pre-Build Decomposition Part A+B+C, all approved and implemented): added
-`VerifyPasteStability(element, text, firstRead)`, invoked only for `method == "clipboard-paste"`
-after the existing exact-match check passes. (A) Re-reads the element after an additional ~250ms
-settle delay and compares to the first read; a mismatch (content changed/shrank) fails as
-`verify-unstable` instead of reporting success. (B) Independently flags the first read as
-suspicious if its length is under 50% of the input length even though it nominally matched --
-guards a partial-prefix false positive. Wired into both `type --paste --verify` and
-`submit-chat-message` (critically, this check happens *before* the Send-button click/`--submitKeys`
-call in the latter, so an unstable paste blocks sending rather than being sent -- the original
-real-world trigger for this fix). `docs/CLI_CONTRACT.md` updated with a Phase 14 known-limitation/
-mitigation entry under both `type` and `submit-chat-message`.
+**Phase 15 -- `SessionContext.Save()` `File.Move` `UnauthorizedAccessException` race.** Added
+`SessionContextWriteException` and a `MoveWithRetry` helper (5 attempts, exponential backoff
+20/40/80/160/320ms, retrying only on `UnauthorizedAccessException` after audit-driven narrowing
+from an initially-broader `IOException` filter) to `SessionContext.cs`. Both `Save()` call sites
+in `Program.cs` (`Attach`, `SetContext` verbs) now catch it and report a dedicated
+`session-context-write-failed` error code instead of the generic `unhandled-exception`.
+`docs/CLI_CONTRACT.md` updated (error envelope + `attach`/`set-context` failure lists). Committed
+`d9f1a15`; finding marked resolved in commit `2d10430`.
 
-Two Regression Auditor passes run (one on the initial diff, one narrow follow-up on the fixes
-applied from the first): first pass found (1) the error payload reported the stale first read as
-`actual` even when the second (mutated) read was the real evidence of failure, and (2) a cosmetic
-brace-collapse (`}}` on one line) at both call sites that obscured block structure without being a
-functional bug. Both fixed: `VerifyPasteStability`'s return tuple now includes the specific
-`actual` read that triggered the failure (first read for the shrinkage case, second read for the
-instability case), and both call sites use that returned value rather than their own local
-`actual`; braces re-split onto separate lines. Follow-up audit confirmed both fixes correct, no
-new issues, build clean (0 warnings/errors) both times.
+**Phase 16 -- Unimplemented selector strategies (`NameRegex`/`ControlTypeIndex`/`Coordinates`)
+throwing uncaught `NotSupportedException`.** Added a central `UiaHelper.
+TryParseImplementedSelectorStrategy` helper (allow-listing only `Name`/`AutomationId`) and
+replaced 4 raw `Enum.TryParse<SelectorStrategy>` call sites in `Program.cs` (`WaitForElement`,
+`ParseSelectorArgs` for `find-first`/`find-all`, `ResolveFindScope`'s scope-strategy check,
+`ResolveElement` for `click`/`type`/`get-text`/`send-keys`/`submit-chat-message`) with it, so
+unimplemented strategies are now rejected centrally with `invalid-argument` at argument-parsing
+time rather than surfacing as an unhandled exception. `docs/CLI_CONTRACT.md`'s `Selector` section
+rewritten accordingly. Committed `3e35d60`; finding marked resolved in the same commit.
 
-Item 3 (radio-button-path live validation, previously open) -- superseded/dropped after user
-clarification mid-session confirmed it as no longer applicable to current work; not acted on this
-session, no explicit closure needed (see prior session's history for context if revisited).
+**Phase 17 -- `DteLocator` COM object leak.** `FindDte` previously never released the
+`IRunningObjectTable`/`IEnumMoniker`/`IBindCtx`/per-iteration `IMoniker` RCWs (only the unmanaged
+`fetchedPtr` was freed). Restructured with nested `try/finally` blocks releasing each via
+`Marshal.ReleaseComObject` on every exit path, including the early `rot-unavailable`/
+`devenv-not-found` returns -- the returned `DTE` object itself is deliberately left unreleased
+since the caller uses it after `FindDte` returns. Committed `49f27db`; finding marked resolved in
+commit `80e1f5c`.
 
-Phase 2 UI Automation gaps (previous session's task, completed and pushed as `06850e6` before this
-session's Phase 14 work): `wait-for-window-change`, `wait-for-process-responding`, `delay`, and
-`set-context` verbs -- previously documented but never dispatched -- are now implemented and wired
-into the CLI's dispatch switch. `wait-for-process-responding` was refined (per user's choice,
-during Regression Audit follow-up) to prefer the process's single foreground/unambiguous window
-over "any window responds" semantics, mirroring `ResolveWindowHwnd`'s existing foreground-preference
-pattern, falling back to "any window responds" only when no single unambiguous window exists.
-`--scopeHwnd` now actually scopes `click`/`type` (previously accepted but silently ignored) via a
-fix to the `ResolveElement(hwnd, opts)` overload. `attach --process` now normalizes a trailing
-`.exe` suffix (case-insensitive) before matching, while error messages still show the user's
-original input. `docs/CLI_CONTRACT.md` updated throughout (implementation-status notes, per-verb
-docs, "Fixed 2026-09-15" notes on `attach`/`click`, and `wait-for-process-responding`'s doc entry
-rewritten to describe the foreground-preference semantics). Regression Audit run (one flagged
-issue -- the any-window-responds semantics -- resolved via explicit user choice as described
-above); build clean throughout.
+**Phase 18 -- `JsonOutput` null-field-omission review (no code change).** Reviewed whether any
+verb added since the original finding (`find-first`/`find-all`, Phase 2's new verbs, Phase 15's
+`session-context-write-failed`) now depends on distinguishing JSON `null` from an absent field.
+Confirmed none do -- `ToElementSummary` always substitutes `string.Empty` for null UIA properties,
+Phase 2 verb payloads are all non-nullable, and `session-context-write-failed` only carries plain
+string fields via `WriteError`. Left deferred as-is at the user's explicit direction; no doc or
+code changes made.
 
-Also this session (prior to Phase 2 work): revisited the `type`/`submit-chat-message` embedded-
-newline rejection (previously unconditional) -- narrowed to apply only to the synthetic-keyboard
-path, since `ValuePattern`-backed elements never touch `SendKeys` (the underlying bug's mechanism)
-and can safely receive embedded newlines directly via `SetValue`. Committed/pushed as `dee237e`
-along with a doc-only addition: `screenshot`'s `PrintWindow`/`PW_RENDERFULLCONTENT` known
-limitation for non-foreground/non-visible windows, now documented in `CLI_CONTRACT.md` (previously
-flagged during Phase 9 but never written up).
+**Phase 19 -- Root `nuget.config`'s `<clear/>` was solution-wide, not scoped to
+`Debugger.VisualStudio`.** Deleted the repo-root `nuget.config` and added an equivalent
+project-local `nuget.config` inside `src/AgentDebugToolkit.Debugger.VisualStudio/`, so only that
+project's restore is scoped down to `nuget.org` (needed for EnvDTE/EnvDTE80/EnvDTE90); `Core`,
+`ConsoleAutomation.Cli`, and `UiAutomation.Cli` restore against the normal machine-wide NuGet
+source configuration again. Verified via `dotnet restore`/`dotnet build` on the full solution -- all
+4 projects restored and built successfully. Committed `60f7d90`; finding marked resolved in commit
+`309aa01`.
 
-Phase 13 (generic `find-first`/`find-all` verbs, replacing `has-pending-prompt`), Phase 12
-(clipboard-paste fallback), Phase 11 (removed in Phase 13), Phase 9/10, and earlier phases remain
-implemented, committed, and pushed -- see git history (`ae45478`, `380079d`, `41bf2de`, `4178912`,
+Earlier phases (1-14) remain implemented, committed, and pushed -- see git history
+(`a3debf6`, `06850e6`, `dee237e`, `45eb0f3`, `ae45478`, `380079d`, `41bf2de`, `4178912`,
 `94c5f15`) for details; unchanged this session.
 
 ## Open Tasks / Known Issues
 
-**Currently open:** none from this session's active work list. Only the intentionally-deferred
-items in `docs/KNOWN_OPEN_FINDINGS.md` remain (see below) -- untouched at the user's explicit
-direction.
+**Currently open:** none. `docs/KNOWN_OPEN_FINDINGS.md` has no unresolved entries as of this
+session (Phase 15, 16, 17, and 19 findings all marked resolved; the Phase 18 finding was reviewed
+and intentionally left deferred with no action needed).
 
-**Resolved (kept for history):**
-
-- **Radio-button prompt detection path -- independently live-validated (2026-09-15)** against a
-  real `ChoicePrompt` radio-button card that appeared in this session (hwnd `0xCA18B2`, question
-  "What should the next task be?" with 3 options). `find-first --strategy Name --value "<option
-  text>"` correctly located a specific option as `ControlType.RadioButton`. `find-first`/`find-all
-  --strategy AutomationId --value RadioFieldLabel` correctly located the single question-label
-  element (`ControlType.Text`, `count: 1`), reproducing the old `has-pending-prompt`'s "is a prompt
-  pending" signal via the generic caller-side composition documented in `CLI_CONTRACT.md`'s
-  migration note. Confirms the one known remaining gap: enumerating *all* radio options generically
-  still requires knowing each option's `Name` ahead of time, since `find-all` has no
-  `ControlType`-based match yet (`Name`/`AutomationId` only) -- not a regression, matches the
-  already-documented limitation. No code change needed; this closes the validation gap only.
-
-- `find-first`/`find-all`'s `--scopeStrategy`/`--scopeValue` narrowing -- **independently
-  live-validated (2026-09-15)** against the real VS Insiders window (hwnd `0xCA18B2`): scoping
-  `find-first --strategy AutomationId --value SendButton` to `--scopeStrategy Name --scopeValue
-  Chat` (the chat tool pane, a real ancestor of `SendButton`) correctly returned `found: true`,
-  while scoping the identical search to an unrelated ancestor (`--scopeStrategy AutomationId
-  --scopeValue SccStatusBar` or `chatTitle`) correctly returned `found: false` -- proving the scope
-  genuinely restricts the search rather than silently searching the whole window regardless.
-  `find-all` with the same scope-to-`Chat` case returned `count: 1` (the real match), scoping to
-  `SccStatusBar` returned `count: 0`, and `--excludeValue Send` correctly filtered the one match
-  down to `count: 0`. Committed `45eb0f3`. No longer open.
-  - Enumerating radio-button *options* via `find-all` still needs a control-type-based match, not
-    yet a supported `Selector` strategy (`Name`/`AutomationId` only today) -- documented as a known
-    gap in `CLI_CONTRACT.md`'s migration note, with `inspect` as the fallback.
-- `screenshot`'s `PrintWindow`/`PW_RENDERFULLCONTENT` non-foreground/non-visible-window limitation
-  -- already documented in `CLI_CONTRACT.md` (added `dee237e`). Not open.
-- Validate Phase 7 exit criteria against `CAMFWDownloadConsole.exe` -- **not actually
-  outstanding**: `IMPLEMENTATION_PLAN.md` already shows all 4 exit criteria checked off with real
-  `CAMFWDownloadConsole.exe` output from an earlier session; no further action needed.
-- See `docs/KNOWN_OPEN_FINDINGS.md` for user-curated deferred findings (clipboard-unrelated:
-  `SessionContext.Save()` file-move race, `JsonOutput` null-field omission, unimplemented selector
-  strategies throwing uncaught exceptions, `DteLocator` COM object leaks, `nuget.config` scope) --
-  these remain intentionally deferred, not touched.
+**Notable recurring environment quirks (not code issues, just operational notes for future
+sessions):**
+- The built-in `replace_string_in_file`/`multi_replace_string_in_file` tools intermittently
+  matched against a stale cached version of `Program.cs` (and once `UiaHelper.cs`), causing large
+  unintended deletions on apply. Reliable workaround used repeatedly this session: `git checkout
+  --` to revert, then a direct PowerShell `[System.IO.File]::ReadAllText`/`.Replace`/`WriteAllText`
+  patch, taking care to match each file's original BOM status (`Program.cs` has a BOM; most other
+  files in this repo do not).
+- `run_build` on `AgentDebugToolkit.UiAutomation.Cli.csproj` can fail with a locked
+  `agentdebug-ui.exe` if a previous manual test run is still active -- resolved via
+  `Get-Process agentdebug-ui` + `Stop-Process -Id <pid>`.
+- `run_build`/`dotnet build` against the top-level `AgentDebugToolkit.slnx` can fail with
+  "Project ... was not found in the current solution" via the `run_build` VS tool in some cases;
+  building the specific `.csproj` (or using `dotnet build AgentDebugToolkit.slnx` directly via
+  PowerShell) is the reliable fallback.
 
 ## Recently Changed Files
 
-- `src/AgentDebugToolkit.UiAutomation.Cli/Program.cs`:
-  - Newline-rejection narrowed to synthetic-keyboard-only path in `Verbs.Type`/
-    `Verbs.SubmitChatMessage` (committed `dee237e`).
-  - Added `Verbs.WaitForWindowChange`, `Verbs.WaitForProcessResponding` (with foreground-preference
-    refinement), `Verbs.Delay`, `Verbs.SetContext` plus their dispatch cases; `--scopeHwnd` support
-    in `ResolveElement(hwnd, opts)`; `.exe`-suffix normalization in `Attach` (committed `06850e6`).
-  - Added `VerifyPasteStability` helper (with `PasteStabilitySettleMs`/
-    `PasteSuspiciousShrinkageThreshold` constants) and wired it into `Verbs.Type` and
-    `Verbs.SubmitChatMessage`'s verify blocks; return tuple includes the specific `actual` read
-    that triggered a failure (committed `a3debf6`).
-- `docs/CLI_CONTRACT.md`:
-  - Newline-limitation docs rewritten for `type`/`submit-chat-message`; `screenshot` PrintWindow
-    known-limitation note added (committed `dee237e`).
-  - Phase 2 verb docs (4 new verbs) added/expanded; "Fixed 2026-09-15" notes on `attach`/`click`;
-    `wait-for-process-responding` doc rewritten for foreground-preference semantics
-    (committed `06850e6`).
-  - Phase 14 known-limitation/mitigation entries added under `type` and `submit-chat-message`
-    (committed `a3debf6`).
+- `src/AgentDebugToolkit.UiAutomation.Cli/SessionContext.cs` -- Phase 15: `SessionContextWriteException`,
+  `MoveWithRetry` (5 attempts, exponential backoff, `UnauthorizedAccessException`-only retry).
+  Committed `d9f1a15`.
+- `src/AgentDebugToolkit.UiAutomation.Cli/Program.cs` -- Phase 15: `session-context-write-failed`
+  handling at both `SessionContext.Save()` call sites (committed `d9f1a15`). Phase 16: 4 call
+  sites switched to `UiaHelper.TryParseImplementedSelectorStrategy` (committed `3e35d60`).
+- `src/AgentDebugToolkit.UiAutomation.Cli/UiaHelper.cs` -- Phase 16: added
+  `ImplementedSelectorStrategies` array and `TryParseImplementedSelectorStrategy` helper.
+  Committed `3e35d60`.
+- `src/AgentDebugToolkit.Debugger.VisualStudio/DteLocator.cs` -- Phase 17: nested `try/finally`
+  blocks releasing `rot`/`enumMoniker`/`bindCtx`/per-iteration `moniker` via
+  `Marshal.ReleaseComObject`. Committed `49f27db`.
+- `nuget.config` (repo root) -- Phase 19: deleted. `src/AgentDebugToolkit.Debugger.VisualStudio/
+  nuget.config` -- Phase 19: added (same content, project-scoped). Committed `60f7d90`.
+- `docs/CLI_CONTRACT.md` -- Phase 15 (error code + failure lists) and Phase 16 (Selector section
+  rewrite) updates, committed alongside their respective code changes.
+- `docs/KNOWN_OPEN_FINDINGS.md` -- Phase 15 finding marked resolved (`2d10430`); Phase 16 finding
+  marked resolved (`3e35d60`); Phase 17 finding marked resolved (`80e1f5c`); Phase 19 finding
+  marked resolved (`309aa01`); Phase 18 finding reviewed, left deferred with no changes.
