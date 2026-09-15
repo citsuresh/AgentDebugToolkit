@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.0",
-  "generatedAt": "2026-09-15T09:05:34.0265186Z",
+  "generatedAt": "2026-09-15T09:33:52.460098Z",
   "solutionPath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\AgentDebugToolkit.slnx",
   "mode": "incremental",
-  "commitSha": "4178912e7ed72d77e200f6d0641a71a217d23a1c",
+  "commitSha": "94c5f156ddb5a8012dc9753e99f12d927b2880e5",
   "nodes": [
     {
       "id": "AgentDebugToolkit.Core.Models.SelectorStrategy",
@@ -3952,7 +3952,7 @@
       "project": "AgentDebugToolkit.UiAutomation.Cli",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
       "startLine": 1,
-      "endLine": 847,
+      "endLine": 911,
       "accessibility": "internal",
       "isStatic": false,
       "isAbstract": false
@@ -3965,7 +3965,7 @@
       "project": "AgentDebugToolkit.UiAutomation.Cli",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
       "startLine": 1,
-      "endLine": 847,
+      "endLine": 911,
       "accessibility": "private",
       "isStatic": true,
       "isAbstract": false
@@ -3978,7 +3978,7 @@
       "project": "AgentDebugToolkit.UiAutomation.Cli",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
       "startLine": 72,
-      "endLine": 846,
+      "endLine": 910,
       "accessibility": "internal",
       "isStatic": true,
       "isAbstract": false
@@ -4133,8 +4133,8 @@
       "containingType": "Verbs",
       "project": "AgentDebugToolkit.UiAutomation.Cli",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "startLine": 576,
-      "endLine": 692,
+      "startLine": 575,
+      "endLine": 756,
       "accessibility": "public",
       "isStatic": true,
       "isAbstract": false
@@ -4146,8 +4146,8 @@
       "containingType": "Verbs",
       "project": "AgentDebugToolkit.UiAutomation.Cli",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "startLine": 694,
-      "endLine": 701,
+      "startLine": 758,
+      "endLine": 765,
       "accessibility": "private",
       "isStatic": true,
       "isAbstract": false
@@ -4159,8 +4159,8 @@
       "containingType": "Verbs",
       "project": "AgentDebugToolkit.UiAutomation.Cli",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "startLine": 703,
-      "endLine": 727,
+      "startLine": 767,
+      "endLine": 791,
       "accessibility": "private",
       "isStatic": true,
       "isAbstract": false
@@ -4172,8 +4172,8 @@
       "containingType": "Verbs",
       "project": "AgentDebugToolkit.UiAutomation.Cli",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "startLine": 729,
-      "endLine": 739,
+      "startLine": 793,
+      "endLine": 803,
       "accessibility": "private",
       "isStatic": true,
       "isAbstract": false
@@ -4185,8 +4185,8 @@
       "containingType": "Verbs",
       "project": "AgentDebugToolkit.UiAutomation.Cli",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "startLine": 741,
-      "endLine": 785,
+      "startLine": 805,
+      "endLine": 849,
       "accessibility": "private",
       "isStatic": true,
       "isAbstract": false
@@ -4198,8 +4198,8 @@
       "containingType": "Verbs",
       "project": "AgentDebugToolkit.UiAutomation.Cli",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "startLine": 787,
-      "endLine": 793,
+      "startLine": 851,
+      "endLine": 857,
       "accessibility": "private",
       "isStatic": true,
       "isAbstract": false
@@ -4211,8 +4211,8 @@
       "containingType": "Verbs",
       "project": "AgentDebugToolkit.UiAutomation.Cli",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "startLine": 795,
-      "endLine": 832,
+      "startLine": 859,
+      "endLine": 896,
       "accessibility": "private",
       "isStatic": true,
       "isAbstract": false
@@ -4224,8 +4224,8 @@
       "containingType": "Verbs",
       "project": "AgentDebugToolkit.UiAutomation.Cli",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "startLine": 834,
-      "endLine": 845,
+      "startLine": 898,
+      "endLine": 909,
       "accessibility": "private",
       "isStatic": true,
       "isAbstract": false
@@ -10439,35 +10439,42 @@
       "sourceId": "Program.\u003CMain\u003E$(string[])",
       "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 578
+      "line": 577
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
       "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 580
+      "line": 579
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
       "targetId": "string.Contains(char)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 587
+      "line": 586
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
       "targetId": "string.Contains(char)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 587
+      "line": 586
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
       "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 589
+      "line": 588
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 597
     },
     {
       "type": "calls",
@@ -10479,119 +10486,126 @@
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 600
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
       "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 606
+      "line": 599
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
       "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 608
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.ResolveWindowHwnd(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 614
+      "line": 602
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
       "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 617
+      "line": 610
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.UiAutomation.Cli.NativeMethods.IsResponding(nint,uint)",
+      "targetId": "string.Equals(string?,StringComparison)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 618
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
       "line": 621
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 623
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.FindWindowByHwnd(string)",
+      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
       "line": 628
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "nint.ToInt64()",
+      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 628
+      "line": 629
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
       "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 631
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "nint.ToInt64()",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
       "line": 632
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.ResolveSelector(AutomationElement,Selector)",
+      "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 637
+      "line": 640
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
       "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 641
+      "line": 648
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.UiAutomation.Cli.NativeMethods.Click(int,int)",
+      "targetId": "Verbs.ResolveWindowHwnd(Dictionary\u003Cstring, string\u003E)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 656
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.Type(AutomationElement,string)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 659
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.GetText(AutomationElement)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 669
+      "line": 654
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
       "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 657
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.UiAutomation.Cli.NativeMethods.IsResponding(nint,uint)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 661
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 663
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.FindWindowByHwnd(string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 668
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "nint.ToInt64()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 668
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 671
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "nint.ToInt64()",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
       "line": 672
     },
@@ -10600,231 +10614,287 @@
       "sourceId": "Program.\u003CMain\u003E$(string[])",
       "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.ResolveSelector(AutomationElement,Selector)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 679
+      "line": 680
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
       "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 683
+      "line": 686
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.Click(AutomationElement)",
+      "targetId": "AgentDebugToolkit.UiAutomation.Cli.NativeMethods.Click(int,int)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 689
+      "line": 701
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteSuccess(object,bool)",
+      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.Type(AutomationElement,string)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 690
+      "line": 704
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.FindWindowByHwnd(string)",
+      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.GetText(AutomationElement)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 697
+      "line": 714
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "nint.ToInt64()",
+      "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 697
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "nint.ToInt64()",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 699
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.ResolveElement(AutomationElement,Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 700
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 706
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "System.Enum.TryParse\u00601(string?,bool,out SelectorStrategy)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 707
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 713
+      "line": 717
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
       "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.ResolveSelector(AutomationElement,Selector)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 719
+      "line": 726
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.ResolveWindowHwnd(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 732
+      "line": 730
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.ResolveDiscoveredWindow(string)",
+      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.Click(AutomationElement)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 738
+      "line": 736
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "nint.ToInt64()",
+      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.SendKeys(AutomationElement,string)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 738
+      "line": 743
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
+      "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 744
+      "line": 747
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.ParseHwnd(string)",
+      "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteSuccess(object,bool)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 748
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.ResolveValidatedPid(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 760
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.ListTopLevelWindows(int)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 766
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "System.Linq.Enumerable.ToList\u00601()",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 772
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "System.Linq.Enumerable.Where\u00601(Func\u003CWindowInfo, bool\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 772
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.ParseHwnd(string)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 775
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.ParseHwnd(string)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 780
+      "line": 754
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
       "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.FindWindowByHwnd(string)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 789
+      "line": 761
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "nint.ToInt64()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 761
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "nint.ToInt64()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 763
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.ResolveElement(AutomationElement,Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 764
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
       "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 798
+      "line": 770
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Enum.TryParse\u00601(string?,bool,out SelectorStrategy)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 771
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 777
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.ResolveSelector(AutomationElement,Selector)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 783
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.ResolveWindowHwnd(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 796
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.ResolveDiscoveredWindow(string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 802
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "nint.ToInt64()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 802
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 808
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.ParseHwnd(string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 812
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.ResolveValidatedPid(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 824
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.ListTopLevelWindows(int)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 830
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Linq.Enumerable.ToList\u00601()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 836
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Linq.Enumerable.Where\u00601(Func\u003CWindowInfo, bool\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 836
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.ParseHwnd(string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 839
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.ParseHwnd(string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 844
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.FindWindowByHwnd(string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 853
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 862
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
       "targetId": "int.TryParse(string?,out int)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 798
+      "line": 862
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
       "targetId": "Verbs.IsProcessRunning(int)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 800
+      "line": 864
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
       "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.ContainsKey(string)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 805
+      "line": 869
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
       "targetId": "AgentDebugToolkit.UiAutomation.Cli.SessionContext.Load()",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 810
+      "line": 874
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
       "targetId": "System.Diagnostics.Process.GetProcessById(int)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 818
+      "line": 882
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
       "targetId": "string.Equals(string?,StringComparison)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 820
+      "line": 884
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
       "targetId": "System.DateTime.ToUniversalTime()",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 821
+      "line": 885
     },
     {
       "type": "calls",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
       "targetId": "System.Diagnostics.Process.GetProcessById(int)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 838
+      "line": 902
     },
     {
       "type": "uses",
@@ -10845,21 +10915,28 @@
       "sourceId": "Program.\u003CMain\u003E$(string[])",
       "targetId": "AgentDebugToolkit.Core.Models.Selector",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 638
+      "line": 678
     },
     {
       "type": "uses",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
       "targetId": "AgentDebugToolkit.Core.Models.Selector",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 680
+      "line": 679
     },
     {
       "type": "uses",
       "sourceId": "Program.\u003CMain\u003E$(string[])",
       "targetId": "AgentDebugToolkit.Core.Models.Selector",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 718
+      "line": 727
+    },
+    {
+      "type": "uses",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Core.Models.Selector",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 782
     },
     {
       "type": "calls",
@@ -11762,35 +11839,42 @@
       "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
       "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 578
+      "line": 577
     },
     {
       "type": "calls",
       "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
       "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 580
+      "line": 579
     },
     {
       "type": "calls",
       "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
       "targetId": "string.Contains(char)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 587
+      "line": 586
     },
     {
       "type": "calls",
       "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
       "targetId": "string.Contains(char)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 587
+      "line": 586
     },
     {
       "type": "calls",
       "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
       "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 589
+      "line": 588
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 597
     },
     {
       "type": "calls",
@@ -11802,119 +11886,126 @@
     {
       "type": "calls",
       "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 600
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
       "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 606
+      "line": 599
     },
     {
       "type": "calls",
       "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
       "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 608
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "Verbs.ResolveWindowHwnd(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 614
+      "line": 602
     },
     {
       "type": "calls",
       "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
       "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 617
+      "line": 610
     },
     {
       "type": "calls",
       "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.UiAutomation.Cli.NativeMethods.IsResponding(nint,uint)",
+      "targetId": "string.Equals(string?,StringComparison)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 618
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
       "line": 621
     },
     {
       "type": "calls",
       "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 623
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.FindWindowByHwnd(string)",
+      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
       "line": 628
     },
     {
       "type": "calls",
       "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "nint.ToInt64()",
+      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 628
+      "line": 629
     },
     {
       "type": "calls",
       "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
       "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 631
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "nint.ToInt64()",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
       "line": 632
     },
     {
       "type": "calls",
       "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.ResolveSelector(AutomationElement,Selector)",
+      "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 637
+      "line": 640
     },
     {
       "type": "calls",
       "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
       "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 641
+      "line": 648
     },
     {
       "type": "calls",
       "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.UiAutomation.Cli.NativeMethods.Click(int,int)",
+      "targetId": "Verbs.ResolveWindowHwnd(Dictionary\u003Cstring, string\u003E)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 656
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.Type(AutomationElement,string)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 659
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.GetText(AutomationElement)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 669
+      "line": 654
     },
     {
       "type": "calls",
       "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
       "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 657
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.UiAutomation.Cli.NativeMethods.IsResponding(nint,uint)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 661
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 663
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.FindWindowByHwnd(string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 668
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "nint.ToInt64()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 668
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 671
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "nint.ToInt64()",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
       "line": 672
     },
@@ -11923,252 +12014,315 @@
       "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
       "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.ResolveSelector(AutomationElement,Selector)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 679
+      "line": 680
     },
     {
       "type": "calls",
       "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
       "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 683
+      "line": 686
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.UiAutomation.Cli.NativeMethods.Click(int,int)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 701
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.Type(AutomationElement,string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 704
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.GetText(AutomationElement)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 714
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 717
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.ResolveSelector(AutomationElement,Selector)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 726
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 730
     },
     {
       "type": "calls",
       "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
       "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.Click(AutomationElement)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 689
+      "line": 736
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.SendKeys(AutomationElement,string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 743
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 747
     },
     {
       "type": "calls",
       "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
       "targetId": "AgentDebugToolkit.Core.JsonOutput.WriteSuccess(object,bool)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 690
+      "line": 754
     },
     {
       "type": "uses",
       "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
       "targetId": "AgentDebugToolkit.Core.Models.Selector",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 638
+      "line": 678
     },
     {
       "type": "uses",
       "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
       "targetId": "AgentDebugToolkit.Core.Models.Selector",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 680
+      "line": 679
+    },
+    {
+      "type": "uses",
+      "sourceId": "Verbs.SubmitChatMessage(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Core.Models.Selector",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
+      "line": 727
     },
     {
       "type": "calls",
       "sourceId": "Verbs.ResolveElement(nint,Dictionary\u003Cstring, string\u003E)",
       "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.FindWindowByHwnd(string)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 697
+      "line": 761
     },
     {
       "type": "calls",
       "sourceId": "Verbs.ResolveElement(nint,Dictionary\u003Cstring, string\u003E)",
       "targetId": "nint.ToInt64()",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 697
+      "line": 761
     },
     {
       "type": "calls",
       "sourceId": "Verbs.ResolveElement(nint,Dictionary\u003Cstring, string\u003E)",
       "targetId": "nint.ToInt64()",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 699
+      "line": 763
     },
     {
       "type": "calls",
       "sourceId": "Verbs.ResolveElement(nint,Dictionary\u003Cstring, string\u003E)",
       "targetId": "Verbs.ResolveElement(AutomationElement,Dictionary\u003Cstring, string\u003E)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 700
+      "line": 764
     },
     {
       "type": "calls",
       "sourceId": "Verbs.ResolveElement(AutomationElement,Dictionary\u003Cstring, string\u003E)",
       "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 706
+      "line": 770
     },
     {
       "type": "calls",
       "sourceId": "Verbs.ResolveElement(AutomationElement,Dictionary\u003Cstring, string\u003E)",
       "targetId": "System.Enum.TryParse\u00601(string?,bool,out SelectorStrategy)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 707
+      "line": 771
     },
     {
       "type": "calls",
       "sourceId": "Verbs.ResolveElement(AutomationElement,Dictionary\u003Cstring, string\u003E)",
       "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 713
+      "line": 777
     },
     {
       "type": "calls",
       "sourceId": "Verbs.ResolveElement(AutomationElement,Dictionary\u003Cstring, string\u003E)",
       "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.ResolveSelector(AutomationElement,Selector)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 719
+      "line": 783
     },
     {
       "type": "uses",
       "sourceId": "Verbs.ResolveElement(AutomationElement,Dictionary\u003Cstring, string\u003E)",
       "targetId": "AgentDebugToolkit.Core.Models.Selector",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 718
+      "line": 782
     },
     {
       "type": "calls",
       "sourceId": "Verbs.ResolveWindow(Dictionary\u003Cstring, string\u003E)",
       "targetId": "Verbs.ResolveWindowHwnd(Dictionary\u003Cstring, string\u003E)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 732
+      "line": 796
     },
     {
       "type": "calls",
       "sourceId": "Verbs.ResolveWindow(Dictionary\u003Cstring, string\u003E)",
       "targetId": "Verbs.ResolveDiscoveredWindow(string)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 738
+      "line": 802
     },
     {
       "type": "calls",
       "sourceId": "Verbs.ResolveWindow(Dictionary\u003Cstring, string\u003E)",
       "targetId": "nint.ToInt64()",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 738
+      "line": 802
     },
     {
       "type": "calls",
       "sourceId": "Verbs.ResolveWindowHwnd(Dictionary\u003Cstring, string\u003E)",
       "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 744
+      "line": 808
     },
     {
       "type": "calls",
       "sourceId": "Verbs.ResolveWindowHwnd(Dictionary\u003Cstring, string\u003E)",
       "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.ParseHwnd(string)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 748
+      "line": 812
     },
     {
       "type": "calls",
       "sourceId": "Verbs.ResolveWindowHwnd(Dictionary\u003Cstring, string\u003E)",
       "targetId": "Verbs.ResolveValidatedPid(Dictionary\u003Cstring, string\u003E)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 760
+      "line": 824
     },
     {
       "type": "calls",
       "sourceId": "Verbs.ResolveWindowHwnd(Dictionary\u003Cstring, string\u003E)",
       "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.ListTopLevelWindows(int)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 766
+      "line": 830
     },
     {
       "type": "calls",
       "sourceId": "Verbs.ResolveWindowHwnd(Dictionary\u003Cstring, string\u003E)",
       "targetId": "System.Linq.Enumerable.ToList\u00601()",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 772
+      "line": 836
     },
     {
       "type": "calls",
       "sourceId": "Verbs.ResolveWindowHwnd(Dictionary\u003Cstring, string\u003E)",
       "targetId": "System.Linq.Enumerable.Where\u00601(Func\u003CWindowInfo, bool\u003E)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 772
+      "line": 836
     },
     {
       "type": "calls",
       "sourceId": "Verbs.ResolveWindowHwnd(Dictionary\u003Cstring, string\u003E)",
       "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.ParseHwnd(string)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 775
+      "line": 839
     },
     {
       "type": "calls",
       "sourceId": "Verbs.ResolveWindowHwnd(Dictionary\u003Cstring, string\u003E)",
       "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.ParseHwnd(string)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 780
+      "line": 844
     },
     {
       "type": "calls",
       "sourceId": "Verbs.ResolveDiscoveredWindow(string)",
       "targetId": "AgentDebugToolkit.UiAutomation.Cli.UiaHelper.FindWindowByHwnd(string)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 789
+      "line": 853
     },
     {
       "type": "calls",
       "sourceId": "Verbs.ResolveValidatedPid(Dictionary\u003Cstring, string\u003E)",
       "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 798
+      "line": 862
     },
     {
       "type": "calls",
       "sourceId": "Verbs.ResolveValidatedPid(Dictionary\u003Cstring, string\u003E)",
       "targetId": "int.TryParse(string?,out int)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 798
+      "line": 862
     },
     {
       "type": "calls",
       "sourceId": "Verbs.ResolveValidatedPid(Dictionary\u003Cstring, string\u003E)",
       "targetId": "Verbs.IsProcessRunning(int)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 800
+      "line": 864
     },
     {
       "type": "calls",
       "sourceId": "Verbs.ResolveValidatedPid(Dictionary\u003Cstring, string\u003E)",
       "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.ContainsKey(string)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 805
+      "line": 869
     },
     {
       "type": "calls",
       "sourceId": "Verbs.ResolveValidatedPid(Dictionary\u003Cstring, string\u003E)",
       "targetId": "AgentDebugToolkit.UiAutomation.Cli.SessionContext.Load()",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 810
+      "line": 874
     },
     {
       "type": "calls",
       "sourceId": "Verbs.ResolveValidatedPid(Dictionary\u003Cstring, string\u003E)",
       "targetId": "System.Diagnostics.Process.GetProcessById(int)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 818
+      "line": 882
     },
     {
       "type": "calls",
       "sourceId": "Verbs.ResolveValidatedPid(Dictionary\u003Cstring, string\u003E)",
       "targetId": "string.Equals(string?,StringComparison)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 820
+      "line": 884
     },
     {
       "type": "calls",
       "sourceId": "Verbs.ResolveValidatedPid(Dictionary\u003Cstring, string\u003E)",
       "targetId": "System.DateTime.ToUniversalTime()",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 821
+      "line": 885
     },
     {
       "type": "calls",
       "sourceId": "Verbs.IsProcessRunning(int)",
       "targetId": "System.Diagnostics.Process.GetProcessById(int)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
-      "line": 838
+      "line": 902
     }
   ]
 }

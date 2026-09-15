@@ -16,20 +16,20 @@ newlines in `--text` with `invalid-argument` (a real behavior change) since a ra
 Decomposition + Regression Auditor discipline; each part was audited and any findings fixed before
 proceeding.
 
-Phase 10 (chat composer selector gap fix) is implemented and committed, addressing the known
-Phase 9 limitation that the real Visual Studio Copilot Chat composer/Send button expose no usable
-`AutomationId`. `submit-chat-message` now accepts either `--inputAutomationId <id>` (original,
-preserved for compatibility) or `--inputStrategy Name --inputValue <value>` (new — matches the
-composer's `Name="Ask Copilot"` while empty) for input selection, and either
-`--sendAutomationId <id>` (original, preserved) or `--submitKeys <SendKeys syntax>` (new, defaults
-to `{ENTER}` — sends keyboard input to the input element instead of clicking a Send button) for
-submission. The two modes in each pair are mutually exclusive, enforced with `invalid-argument`.
-An independent Regression Auditor subagent confirmed the original `--inputAutomationId`/
-`--sendAutomationId` compatibility path is behaviorally unchanged (same validation order, error
-codes, success shape) and found no other issues. `docs/CLI_CONTRACT.md` updated accordingly. Live
-end-to-end validation of the new Name+submitKeys path was explicitly deferred by user choice
-(code-review/build-only, consistent with how Phase 9 documented this same gap) — see Open
-Tasks.
+Phase 10 (chat composer selector gap fix) is implemented, committed (`94c5f15`), and pushed to
+`origin/main`, addressing the known Phase 9 limitation that the real Visual Studio Copilot Chat
+composer/Send button expose no usable `AutomationId`. `submit-chat-message` now accepts either
+`--inputAutomationId <id>` (original, preserved for compatibility) or `--inputStrategy Name
+--inputValue <value>` (new — matches the composer's `Name="Ask Copilot"` while empty) for input
+selection, and either `--sendAutomationId <id>` (original, preserved) or `--submitKeys <SendKeys
+syntax>` (new, defaults to `{ENTER}` — sends keyboard input to the input element instead of
+clicking a Send button) for submission. The two modes in each pair are mutually exclusive,
+enforced with `invalid-argument`. An independent Regression Auditor subagent confirmed the
+original `--inputAutomationId`/`--sendAutomationId` compatibility path is behaviorally unchanged
+(same validation order, error codes, success shape) and found no other issues. `docs/CLI_CONTRACT.md`
+updated accordingly. Live end-to-end validation of the new Name+submitKeys path was explicitly
+deferred by user choice (code-review/build-only, consistent with how Phase 9 documented this same
+gap) — see Open Tasks.
 
 ## Open Tasks / Known Issues
 
