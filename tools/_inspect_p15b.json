@@ -1,0 +1,1 @@
+﻿{"success":false,"error":"unhandled-exception","message":"Element does not exist or it is virtualized; use VirtualizedItem Pattern if it is supported.\n   at MS.Internal.Automation.ElementUtil.InvokeCrossThread(Dispatcher dispatcher, DispatcherOperationCallback work, Object arg)\r\n   at MS.Internal.Automation.ElementProxy.get_BoundingRectangle()"}
