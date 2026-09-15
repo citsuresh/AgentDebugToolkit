@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0",
+  "generatedAt": "2026-09-14T15:12:02.5788486Z",
+  "solutionPath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\AgentDebugToolkit.slnx",
+  "commitSha": "54440fc9dbc232b537c9bf75b763b56f852f7cac",
+  "projects": [
+    {
+      "name": "AgentDebugToolkit.Core",
+      "path": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Core\\AgentDebugToolkit.Core.csproj",
+      "references": []
+    },
+    {
+      "name": "AgentDebugToolkit.UiAutomation.Cli",
+      "path": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\AgentDebugToolkit.UiAutomation.Cli.csproj",
+      "references": [
+        "AgentDebugToolkit.Core"
+      ]
+    }
+  ]
+}

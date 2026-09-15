@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AgentDebugToolkit.Core/AgentDebugToolkit.Core.csproj" />
+    <Project Path="src/AgentDebugToolkit.UiAutomation.Cli/AgentDebugToolkit.UiAutomation.Cli.csproj" />
+    <Project Path="src/AgentDebugToolkit.Debugger.VisualStudio/AgentDebugToolkit.Debugger.VisualStudio.csproj" />
+    <Project Path="src/AgentDebugToolkit.ConsoleAutomation.Cli/AgentDebugToolkit.ConsoleAutomation.Cli.csproj" />
+  </Folder>
+</Solution>
