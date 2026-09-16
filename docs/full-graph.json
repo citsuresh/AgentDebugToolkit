@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.0",
-  "generatedAt": "2026-09-15T13:47:40.2880078Z",
+  "generatedAt": "2026-09-15T14:35:45.9468891Z",
   "solutionPath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\AgentDebugToolkit.slnx",
   "mode": "incremental",
-  "commitSha": "309aa0173de5ea3d0412ef3ac2acbf24aae20ca8",
+  "commitSha": "81be2c6ff1280b1be7773a7b17977c0c1e3e0edd",
   "nodes": [
     {
       "id": "AgentDebugToolkit.Core.Models.SelectorStrategy",
@@ -2840,240 +2840,6 @@
       "isAbstract": false
     },
     {
-      "id": "Program",
-      "kind": "class",
-      "name": "Program",
-      "containingType": null,
-      "project": "AgentDebugToolkit.Debugger.VisualStudio",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "startLine": 1,
-      "endLine": 325,
-      "accessibility": "internal",
-      "isStatic": false,
-      "isAbstract": false
-    },
-    {
-      "id": "Program.\u003CMain\u003E$(string[])",
-      "kind": "method",
-      "name": "\u003CMain\u003E$",
-      "containingType": "Program",
-      "project": "AgentDebugToolkit.Debugger.VisualStudio",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "startLine": 1,
-      "endLine": 325,
-      "accessibility": "private",
-      "isStatic": true,
-      "isAbstract": false
-    },
-    {
-      "id": "Verbs",
-      "kind": "class",
-      "name": "Verbs",
-      "containingType": null,
-      "project": "AgentDebugToolkit.Debugger.VisualStudio",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "startLine": 70,
-      "endLine": 324,
-      "accessibility": "internal",
-      "isStatic": true,
-      "isAbstract": false
-    },
-    {
-      "id": "Verbs.DebuggerStatus(Dictionary\u003Cstring, string\u003E)",
-      "kind": "method",
-      "name": "DebuggerStatus",
-      "containingType": "Verbs",
-      "project": "AgentDebugToolkit.Debugger.VisualStudio",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "startLine": 72,
-      "endLine": 93,
-      "accessibility": "public",
-      "isStatic": true,
-      "isAbstract": false
-    },
-    {
-      "id": "Verbs.GetCallStack(Dictionary\u003Cstring, string\u003E)",
-      "kind": "method",
-      "name": "GetCallStack",
-      "containingType": "Verbs",
-      "project": "AgentDebugToolkit.Debugger.VisualStudio",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "startLine": 95,
-      "endLine": 119,
-      "accessibility": "public",
-      "isStatic": true,
-      "isAbstract": false
-    },
-    {
-      "id": "Verbs.GetLocals(Dictionary\u003Cstring, string\u003E)",
-      "kind": "method",
-      "name": "GetLocals",
-      "containingType": "Verbs",
-      "project": "AgentDebugToolkit.Debugger.VisualStudio",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "startLine": 121,
-      "endLine": 145,
-      "accessibility": "public",
-      "isStatic": true,
-      "isAbstract": false
-    },
-    {
-      "id": "Verbs.GetExceptionInfo(Dictionary\u003Cstring, string\u003E)",
-      "kind": "method",
-      "name": "GetExceptionInfo",
-      "containingType": "Verbs",
-      "project": "AgentDebugToolkit.Debugger.VisualStudio",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "startLine": 147,
-      "endLine": 181,
-      "accessibility": "public",
-      "isStatic": true,
-      "isAbstract": false
-    },
-    {
-      "id": "Verbs.Continue(Dictionary\u003Cstring, string\u003E)",
-      "kind": "method",
-      "name": "Continue",
-      "containingType": "Verbs",
-      "project": "AgentDebugToolkit.Debugger.VisualStudio",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "startLine": 183,
-      "endLine": 206,
-      "accessibility": "public",
-      "isStatic": true,
-      "isAbstract": false
-    },
-    {
-      "id": "Verbs.StepOver(Dictionary\u003Cstring, string\u003E)",
-      "kind": "method",
-      "name": "StepOver",
-      "containingType": "Verbs",
-      "project": "AgentDebugToolkit.Debugger.VisualStudio",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "startLine": 208,
-      "endLine": 208,
-      "accessibility": "public",
-      "isStatic": true,
-      "isAbstract": false
-    },
-    {
-      "id": "Verbs.StepInto(Dictionary\u003Cstring, string\u003E)",
-      "kind": "method",
-      "name": "StepInto",
-      "containingType": "Verbs",
-      "project": "AgentDebugToolkit.Debugger.VisualStudio",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "startLine": 210,
-      "endLine": 210,
-      "accessibility": "public",
-      "isStatic": true,
-      "isAbstract": false
-    },
-    {
-      "id": "Verbs.StepOut(Dictionary\u003Cstring, string\u003E)",
-      "kind": "method",
-      "name": "StepOut",
-      "containingType": "Verbs",
-      "project": "AgentDebugToolkit.Debugger.VisualStudio",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "startLine": 212,
-      "endLine": 212,
-      "accessibility": "public",
-      "isStatic": true,
-      "isAbstract": false
-    },
-    {
-      "id": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
-      "kind": "method",
-      "name": "Step",
-      "containingType": "Verbs",
-      "project": "AgentDebugToolkit.Debugger.VisualStudio",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "startLine": 214,
-      "endLine": 232,
-      "accessibility": "private",
-      "isStatic": true,
-      "isAbstract": false
-    },
-    {
-      "id": "Verbs.StartDebugging(Dictionary\u003Cstring, string\u003E)",
-      "kind": "method",
-      "name": "StartDebugging",
-      "containingType": "Verbs",
-      "project": "AgentDebugToolkit.Debugger.VisualStudio",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "startLine": 234,
-      "endLine": 257,
-      "accessibility": "public",
-      "isStatic": true,
-      "isAbstract": false
-    },
-    {
-      "id": "Verbs.StopDebugging(Dictionary\u003Cstring, string\u003E)",
-      "kind": "method",
-      "name": "StopDebugging",
-      "containingType": "Verbs",
-      "project": "AgentDebugToolkit.Debugger.VisualStudio",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "startLine": 259,
-      "endLine": 277,
-      "accessibility": "public",
-      "isStatic": true,
-      "isAbstract": false
-    },
-    {
-      "id": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
-      "kind": "method",
-      "name": "ResolveDte",
-      "containingType": "Verbs",
-      "project": "AgentDebugToolkit.Debugger.VisualStudio",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "startLine": 279,
-      "endLine": 283,
-      "accessibility": "private",
-      "isStatic": true,
-      "isAbstract": false
-    },
-    {
-      "id": "Verbs.RequireBreakMode(Dictionary\u003Cstring, string\u003E)",
-      "kind": "method",
-      "name": "RequireBreakMode",
-      "containingType": "Verbs",
-      "project": "AgentDebugToolkit.Debugger.VisualStudio",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "startLine": 285,
-      "endLine": 299,
-      "accessibility": "private",
-      "isStatic": true,
-      "isAbstract": false
-    },
-    {
-      "id": "Verbs.ToModeString(dbgDebugMode)",
-      "kind": "method",
-      "name": "ToModeString",
-      "containingType": "Verbs",
-      "project": "AgentDebugToolkit.Debugger.VisualStudio",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "startLine": 301,
-      "endLine": 307,
-      "accessibility": "private",
-      "isStatic": true,
-      "isAbstract": false
-    },
-    {
-      "id": "Verbs.TryGetLastHitLocation(Debugger)",
-      "kind": "method",
-      "name": "TryGetLastHitLocation",
-      "containingType": "Verbs",
-      "project": "AgentDebugToolkit.Debugger.VisualStudio",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "startLine": 309,
-      "endLine": 323,
-      "accessibility": "private",
-      "isStatic": true,
-      "isAbstract": false
-    },
-    {
       "id": "AgentDebugToolkit.UiAutomation.Cli.NativeMethods",
       "kind": "class",
       "name": "NativeMethods",
@@ -4629,6 +4395,305 @@
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
       "startLine": 1548,
       "endLine": 1559,
+      "accessibility": "private",
+      "isStatic": true,
+      "isAbstract": false
+    },
+    {
+      "id": "Program",
+      "kind": "class",
+      "name": "Program",
+      "containingType": null,
+      "project": "AgentDebugToolkit.Debugger.VisualStudio",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "startLine": 1,
+      "endLine": 547,
+      "accessibility": "internal",
+      "isStatic": false,
+      "isAbstract": false
+    },
+    {
+      "id": "Program.\u003CMain\u003E$(string[])",
+      "kind": "method",
+      "name": "\u003CMain\u003E$",
+      "containingType": "Program",
+      "project": "AgentDebugToolkit.Debugger.VisualStudio",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "startLine": 1,
+      "endLine": 547,
+      "accessibility": "private",
+      "isStatic": true,
+      "isAbstract": false
+    },
+    {
+      "id": "Verbs",
+      "kind": "class",
+      "name": "Verbs",
+      "containingType": null,
+      "project": "AgentDebugToolkit.Debugger.VisualStudio",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "startLine": 79,
+      "endLine": 546,
+      "accessibility": "internal",
+      "isStatic": true,
+      "isAbstract": false
+    },
+    {
+      "id": "Verbs.DebuggerStatus(Dictionary\u003Cstring, string\u003E)",
+      "kind": "method",
+      "name": "DebuggerStatus",
+      "containingType": "Verbs",
+      "project": "AgentDebugToolkit.Debugger.VisualStudio",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "startLine": 81,
+      "endLine": 93,
+      "accessibility": "public",
+      "isStatic": true,
+      "isAbstract": false
+    },
+    {
+      "id": "Verbs.GetStatusSnapshot(DTE)",
+      "kind": "method",
+      "name": "GetStatusSnapshot",
+      "containingType": "Verbs",
+      "project": "AgentDebugToolkit.Debugger.VisualStudio",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "startLine": 95,
+      "endLine": 108,
+      "accessibility": "private",
+      "isStatic": true,
+      "isAbstract": false
+    },
+    {
+      "id": "Verbs.GetCallStack(Dictionary\u003Cstring, string\u003E)",
+      "kind": "method",
+      "name": "GetCallStack",
+      "containingType": "Verbs",
+      "project": "AgentDebugToolkit.Debugger.VisualStudio",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "startLine": 110,
+      "endLine": 134,
+      "accessibility": "public",
+      "isStatic": true,
+      "isAbstract": false
+    },
+    {
+      "id": "Verbs.GetLocals(Dictionary\u003Cstring, string\u003E)",
+      "kind": "method",
+      "name": "GetLocals",
+      "containingType": "Verbs",
+      "project": "AgentDebugToolkit.Debugger.VisualStudio",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "startLine": 136,
+      "endLine": 160,
+      "accessibility": "public",
+      "isStatic": true,
+      "isAbstract": false
+    },
+    {
+      "id": "Verbs.GetExceptionInfo(Dictionary\u003Cstring, string\u003E)",
+      "kind": "method",
+      "name": "GetExceptionInfo",
+      "containingType": "Verbs",
+      "project": "AgentDebugToolkit.Debugger.VisualStudio",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "startLine": 162,
+      "endLine": 196,
+      "accessibility": "public",
+      "isStatic": true,
+      "isAbstract": false
+    },
+    {
+      "id": "Verbs.Continue(Dictionary\u003Cstring, string\u003E)",
+      "kind": "method",
+      "name": "Continue",
+      "containingType": "Verbs",
+      "project": "AgentDebugToolkit.Debugger.VisualStudio",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "startLine": 198,
+      "endLine": 221,
+      "accessibility": "public",
+      "isStatic": true,
+      "isAbstract": false
+    },
+    {
+      "id": "Verbs.StepOver(Dictionary\u003Cstring, string\u003E)",
+      "kind": "method",
+      "name": "StepOver",
+      "containingType": "Verbs",
+      "project": "AgentDebugToolkit.Debugger.VisualStudio",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "startLine": 223,
+      "endLine": 223,
+      "accessibility": "public",
+      "isStatic": true,
+      "isAbstract": false
+    },
+    {
+      "id": "Verbs.StepInto(Dictionary\u003Cstring, string\u003E)",
+      "kind": "method",
+      "name": "StepInto",
+      "containingType": "Verbs",
+      "project": "AgentDebugToolkit.Debugger.VisualStudio",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "startLine": 225,
+      "endLine": 225,
+      "accessibility": "public",
+      "isStatic": true,
+      "isAbstract": false
+    },
+    {
+      "id": "Verbs.StepOut(Dictionary\u003Cstring, string\u003E)",
+      "kind": "method",
+      "name": "StepOut",
+      "containingType": "Verbs",
+      "project": "AgentDebugToolkit.Debugger.VisualStudio",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "startLine": 227,
+      "endLine": 227,
+      "accessibility": "public",
+      "isStatic": true,
+      "isAbstract": false
+    },
+    {
+      "id": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
+      "kind": "method",
+      "name": "Step",
+      "containingType": "Verbs",
+      "project": "AgentDebugToolkit.Debugger.VisualStudio",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "startLine": 229,
+      "endLine": 247,
+      "accessibility": "private",
+      "isStatic": true,
+      "isAbstract": false
+    },
+    {
+      "id": "Verbs.StartDebugging(Dictionary\u003Cstring, string\u003E)",
+      "kind": "method",
+      "name": "StartDebugging",
+      "containingType": "Verbs",
+      "project": "AgentDebugToolkit.Debugger.VisualStudio",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "startLine": 249,
+      "endLine": 272,
+      "accessibility": "public",
+      "isStatic": true,
+      "isAbstract": false
+    },
+    {
+      "id": "Verbs.StopDebugging(Dictionary\u003Cstring, string\u003E)",
+      "kind": "method",
+      "name": "StopDebugging",
+      "containingType": "Verbs",
+      "project": "AgentDebugToolkit.Debugger.VisualStudio",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "startLine": 274,
+      "endLine": 292,
+      "accessibility": "public",
+      "isStatic": true,
+      "isAbstract": false
+    },
+    {
+      "id": "Verbs.SetBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "kind": "method",
+      "name": "SetBreakpoint",
+      "containingType": "Verbs",
+      "project": "AgentDebugToolkit.Debugger.VisualStudio",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "startLine": 294,
+      "endLine": 334,
+      "accessibility": "public",
+      "isStatic": true,
+      "isAbstract": false
+    },
+    {
+      "id": "Verbs.ListBreakpoints(Dictionary\u003Cstring, string\u003E)",
+      "kind": "method",
+      "name": "ListBreakpoints",
+      "containingType": "Verbs",
+      "project": "AgentDebugToolkit.Debugger.VisualStudio",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "startLine": 336,
+      "endLine": 368,
+      "accessibility": "public",
+      "isStatic": true,
+      "isAbstract": false
+    },
+    {
+      "id": "Verbs.RemoveBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "kind": "method",
+      "name": "RemoveBreakpoint",
+      "containingType": "Verbs",
+      "project": "AgentDebugToolkit.Debugger.VisualStudio",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "startLine": 370,
+      "endLine": 449,
+      "accessibility": "public",
+      "isStatic": true,
+      "isAbstract": false
+    },
+    {
+      "id": "Verbs.WaitForBreak(Dictionary\u003Cstring, string\u003E)",
+      "kind": "method",
+      "name": "WaitForBreak",
+      "containingType": "Verbs",
+      "project": "AgentDebugToolkit.Debugger.VisualStudio",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "startLine": 451,
+      "endLine": 499,
+      "accessibility": "public",
+      "isStatic": true,
+      "isAbstract": false
+    },
+    {
+      "id": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
+      "kind": "method",
+      "name": "ResolveDte",
+      "containingType": "Verbs",
+      "project": "AgentDebugToolkit.Debugger.VisualStudio",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "startLine": 501,
+      "endLine": 505,
+      "accessibility": "private",
+      "isStatic": true,
+      "isAbstract": false
+    },
+    {
+      "id": "Verbs.RequireBreakMode(Dictionary\u003Cstring, string\u003E)",
+      "kind": "method",
+      "name": "RequireBreakMode",
+      "containingType": "Verbs",
+      "project": "AgentDebugToolkit.Debugger.VisualStudio",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "startLine": 507,
+      "endLine": 521,
+      "accessibility": "private",
+      "isStatic": true,
+      "isAbstract": false
+    },
+    {
+      "id": "Verbs.ToModeString(dbgDebugMode)",
+      "kind": "method",
+      "name": "ToModeString",
+      "containingType": "Verbs",
+      "project": "AgentDebugToolkit.Debugger.VisualStudio",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "startLine": 523,
+      "endLine": 529,
+      "accessibility": "private",
+      "isStatic": true,
+      "isAbstract": false
+    },
+    {
+      "id": "Verbs.TryGetLastHitLocation(Debugger)",
+      "kind": "method",
+      "name": "TryGetLastHitLocation",
+      "containingType": "Verbs",
+      "project": "AgentDebugToolkit.Debugger.VisualStudio",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "startLine": 531,
+      "endLine": 545,
       "accessibility": "private",
       "isStatic": true,
       "isAbstract": false
@@ -7581,1224 +7646,6 @@
       "targetId": "System.Text.Json.JsonSerializer.Deserialize\u00601(string,JsonSerializerOptions?)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\JsonOutput.cs",
       "line": 62
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 6
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Program.ParseOptions(string[])",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 11
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "System.Linq.Enumerable.ToArray\u00601()",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 11
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "System.Linq.Enumerable.Skip\u00601(int)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 11
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.DebuggerStatus(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 18
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.GetCallStack(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 20
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.GetLocals(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 22
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.GetExceptionInfo(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 24
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.Continue(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 26
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.StepOver(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 28
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.StepInto(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 30
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.StepOut(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 32
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.StartDebugging(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 34
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.StopDebugging(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 36
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 38
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 44
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 49
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "string.StartsWith(string)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 58
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "string.StartsWith(string)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 64
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 74
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 77
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.ToModeString(dbgDebugMode)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 81
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 81
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 86
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.TryGetLastHitLocation(Debugger)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 88
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 91
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.RequireBreakMode(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 97
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 100
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CThread\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 104
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 107
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CStackFrames\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 112
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "System.Collections.Generic.List\u003Cobject\u003E.Add(object)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 114
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 117
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.RequireBreakMode(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 123
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 126
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CStackFrame\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 130
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 133
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CExpressions\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 138
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "System.Collections.Generic.List\u003Cobject\u003E.Add(object)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 140
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 143
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.RequireBreakMode(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 149
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 152
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CStackFrame\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 156
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 159
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CExpressions\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 164
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 175
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 179
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 185
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 188
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 192
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 198
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke(Action)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 203
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "EnvDTE.Debugger.Go(bool)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 203
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 204
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.ToModeString(dbgDebugMode)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 204
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 204
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 208
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "EnvDTE.Debugger.StepOver(bool)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 208
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 210
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "EnvDTE.Debugger.StepInto(bool)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 210
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 212
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "EnvDTE.Debugger.StepOut(bool)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 212
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.RequireBreakMode(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 216
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 219
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CStackFrame\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 223
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 225
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke(Action)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 229
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "System.Action\u003CEnvDTE.Debugger\u003E.Invoke(Debugger)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 229
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 230
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.ToModeString(dbgDebugMode)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 230
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 230
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 236
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 239
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 243
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 245
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke(Action)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 254
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "EnvDTE.DTE.ExecuteCommand(string,string)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 254
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 255
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.ToModeString(dbgDebugMode)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 255
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 255
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 261
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 264
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 268
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 270
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke(Action)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 274
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "EnvDTE.Debugger.Stop(bool)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 274
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 275
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.ToModeString(dbgDebugMode)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 275
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 275
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 281
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.DteLocator.FindDte(string?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 282
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 287
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 293
-    },
-    {
-      "type": "calls",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CBreakpoint\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 313
-    },
-    {
-      "type": "uses",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 55
-    },
-    {
-      "type": "uses",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "System.Collections.Generic.List\u003Cobject\u003E",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 111
-    },
-    {
-      "type": "uses",
-      "sourceId": "Program.\u003CMain\u003E$(string[])",
-      "targetId": "System.Collections.Generic.List\u003Cobject\u003E",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 137
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.DebuggerStatus(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 74
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.DebuggerStatus(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 77
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.DebuggerStatus(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "Verbs.ToModeString(dbgDebugMode)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 81
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.DebuggerStatus(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 81
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.DebuggerStatus(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 86
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.DebuggerStatus(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "Verbs.TryGetLastHitLocation(Debugger)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 88
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.DebuggerStatus(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 91
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.GetCallStack(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "Verbs.RequireBreakMode(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 97
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.GetCallStack(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 100
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.GetCallStack(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CThread\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 104
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.GetCallStack(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 107
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.GetCallStack(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CStackFrames\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 112
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.GetCallStack(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "System.Collections.Generic.List\u003Cobject\u003E.Add(object)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 114
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.GetCallStack(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 117
-    },
-    {
-      "type": "uses",
-      "sourceId": "Verbs.GetCallStack(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "System.Collections.Generic.List\u003Cobject\u003E",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 111
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.GetLocals(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "Verbs.RequireBreakMode(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 123
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.GetLocals(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 126
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.GetLocals(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CStackFrame\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 130
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.GetLocals(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 133
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.GetLocals(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CExpressions\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 138
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.GetLocals(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "System.Collections.Generic.List\u003Cobject\u003E.Add(object)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 140
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.GetLocals(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 143
-    },
-    {
-      "type": "uses",
-      "sourceId": "Verbs.GetLocals(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "System.Collections.Generic.List\u003Cobject\u003E",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 137
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.GetExceptionInfo(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "Verbs.RequireBreakMode(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 149
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.GetExceptionInfo(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 152
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.GetExceptionInfo(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CStackFrame\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 156
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.GetExceptionInfo(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 159
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.GetExceptionInfo(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CExpressions\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 164
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.GetExceptionInfo(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 175
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.GetExceptionInfo(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 179
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.Continue(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 185
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.Continue(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 188
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.Continue(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 192
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.Continue(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 198
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.Continue(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke(Action)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 203
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.Continue(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "EnvDTE.Debugger.Go(bool)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 203
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.Continue(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 204
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.Continue(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "Verbs.ToModeString(dbgDebugMode)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 204
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.Continue(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 204
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.StepOver(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 208
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.StepOver(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "EnvDTE.Debugger.StepOver(bool)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 208
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.StepInto(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 210
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.StepInto(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "EnvDTE.Debugger.StepInto(bool)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 210
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.StepOut(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 212
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.StepOut(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "EnvDTE.Debugger.StepOut(bool)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 212
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
-      "targetId": "Verbs.RequireBreakMode(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 216
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 219
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CStackFrame\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 223
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 225
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke(Action)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 229
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
-      "targetId": "System.Action\u003CEnvDTE.Debugger\u003E.Invoke(Debugger)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 229
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 230
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
-      "targetId": "Verbs.ToModeString(dbgDebugMode)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 230
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 230
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.StartDebugging(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 236
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.StartDebugging(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 239
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.StartDebugging(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 243
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.StartDebugging(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 245
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.StartDebugging(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke(Action)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 254
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.StartDebugging(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "EnvDTE.DTE.ExecuteCommand(string,string)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 254
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.StartDebugging(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 255
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.StartDebugging(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "Verbs.ToModeString(dbgDebugMode)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 255
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.StartDebugging(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 255
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.StopDebugging(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 261
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.StopDebugging(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 264
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.StopDebugging(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 268
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.StopDebugging(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 270
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.StopDebugging(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke(Action)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 274
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.StopDebugging(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "EnvDTE.Debugger.Stop(bool)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 274
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.StopDebugging(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 275
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.StopDebugging(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "Verbs.ToModeString(dbgDebugMode)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 275
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.StopDebugging(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 275
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 281
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.DteLocator.FindDte(string?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 282
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.RequireBreakMode(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 287
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.RequireBreakMode(Dictionary\u003Cstring, string\u003E)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 293
-    },
-    {
-      "type": "calls",
-      "sourceId": "Verbs.TryGetLastHitLocation(Debugger)",
-      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CBreakpoint\u003E)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
-      "line": 313
     },
     {
       "type": "calls",
@@ -15190,6 +14037,2064 @@
       "targetId": "System.Diagnostics.Process.GetProcessById(int)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
       "line": 1552
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 7
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Program.ParseOptions(string[])",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 12
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Linq.Enumerable.ToArray\u00601()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 12
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Linq.Enumerable.Skip\u00601(int)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 12
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.DebuggerStatus(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 19
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.GetCallStack(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 21
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.GetLocals(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 23
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.GetExceptionInfo(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 25
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.Continue(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 27
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.StepOver(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 29
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.StepInto(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 31
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.StepOut(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 33
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.StartDebugging(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 35
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.StopDebugging(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 37
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.SetBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 39
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.ListBreakpoints(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 41
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.RemoveBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 43
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.WaitForBreak(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 45
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 47
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 53
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 58
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "string.StartsWith(string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 67
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "string.StartsWith(string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 73
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 83
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 86
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.GetStatusSnapshot(DTE)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 90
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 91
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.ToModeString(dbgDebugMode)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 97
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 97
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 102
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.TryGetLastHitLocation(Debugger)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 104
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.RequireBreakMode(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 112
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 115
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CThread\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 119
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 122
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CStackFrames\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 127
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Collections.Generic.List\u003Cobject\u003E.Add(object)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 129
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 132
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.RequireBreakMode(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 138
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 141
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CStackFrame\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 145
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 148
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CExpressions\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 153
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Collections.Generic.List\u003Cobject\u003E.Add(object)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 155
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 158
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.RequireBreakMode(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 164
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 167
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CStackFrame\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 171
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 174
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CExpressions\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 179
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 190
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 194
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 200
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 203
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 207
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 213
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke(Action)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 218
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "EnvDTE.Debugger.Go(bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 218
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 219
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.ToModeString(dbgDebugMode)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 219
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 219
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 223
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "EnvDTE.Debugger.StepOver(bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 223
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 225
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "EnvDTE.Debugger.StepInto(bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 225
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 227
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "EnvDTE.Debugger.StepOut(bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 227
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.RequireBreakMode(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 231
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 234
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CStackFrame\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 238
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 240
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke(Action)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 244
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Action\u003CEnvDTE.Debugger\u003E.Invoke(Debugger)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 244
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 245
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.ToModeString(dbgDebugMode)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 245
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 245
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 251
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 254
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 258
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 260
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke(Action)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 269
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "EnvDTE.DTE.ExecuteCommand(string,string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 269
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 270
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.ToModeString(dbgDebugMode)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 270
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 270
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 276
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 279
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 283
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 285
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke(Action)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 289
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "EnvDTE.Debugger.Stop(bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 289
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 290
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.ToModeString(dbgDebugMode)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 290
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 290
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 296
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "string.IsNullOrWhiteSpace(string?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 296
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 298
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 302
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "int.TryParse(string?,out int)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 302
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 304
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 308
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 311
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CBreakpoints\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 315
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "EnvDTE.Breakpoints.Add(string,string,int,int,string,dbgBreakpointConditionType,string,string,int,string,int,dbgHitCountType)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 315
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "EnvDTE.Breakpoints.Item(object)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 318
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 321
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Runtime.InteropServices.Marshal.ReleaseComObject(object)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 325
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Runtime.InteropServices.Marshal.ReleaseComObject(object)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 330
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 338
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 341
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CBreakpoints\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 346
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Collections.Generic.List\u003Cobject\u003E.Add(object)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 353
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Runtime.InteropServices.Marshal.ReleaseComObject(object)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 357
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Runtime.InteropServices.Marshal.ReleaseComObject(object)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 363
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 366
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 372
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 373
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 374
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 378
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "string.IsNullOrWhiteSpace(string?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 385
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 387
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "int.TryParse(string?,out int)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 391
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 393
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 400
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 403
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CBreakpoints\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 412
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Collections.Generic.List\u003CEnvDTE.Breakpoint\u003E.Add(Breakpoint)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 417
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Runtime.InteropServices.Marshal.ReleaseComObject(object)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 422
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "string.Equals(string?,string?,StringComparison)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 429
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke(Action)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 431
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "EnvDTE.Breakpoint.Delete()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 431
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Runtime.InteropServices.Marshal.ReleaseComObject(object)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 437
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 443
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 447
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 453
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "int.TryParse(string?,out int)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 453
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 455
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 460
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "int.TryParse(string?,out int)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 462
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 464
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 469
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 472
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Diagnostics.Stopwatch.StartNew()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 476
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.GetStatusSnapshot(DTE)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 484
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 487
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 493
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Threading.Thread.Sleep(int)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 497
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Math.Min(int,int)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 497
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Math.Max(long,long)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 497
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 503
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.DteLocator.FindDte(string?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 504
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 509
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 515
+    },
+    {
+      "type": "calls",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CBreakpoint\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 535
+    },
+    {
+      "type": "uses",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 64
+    },
+    {
+      "type": "uses",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Collections.Generic.List\u003Cobject\u003E",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 126
+    },
+    {
+      "type": "uses",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Collections.Generic.List\u003Cobject\u003E",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 152
+    },
+    {
+      "type": "uses",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Collections.Generic.List\u003Cobject\u003E",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 345
+    },
+    {
+      "type": "uses",
+      "sourceId": "Program.\u003CMain\u003E$(string[])",
+      "targetId": "System.Collections.Generic.List\u003CEnvDTE.Breakpoint\u003E",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 411
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.DebuggerStatus(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 83
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.DebuggerStatus(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 86
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.DebuggerStatus(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "Verbs.GetStatusSnapshot(DTE)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 90
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.DebuggerStatus(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 91
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.GetStatusSnapshot(DTE)",
+      "targetId": "Verbs.ToModeString(dbgDebugMode)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 97
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.GetStatusSnapshot(DTE)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 97
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.GetStatusSnapshot(DTE)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 102
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.GetStatusSnapshot(DTE)",
+      "targetId": "Verbs.TryGetLastHitLocation(Debugger)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 104
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.GetCallStack(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "Verbs.RequireBreakMode(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 112
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.GetCallStack(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 115
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.GetCallStack(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CThread\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 119
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.GetCallStack(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 122
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.GetCallStack(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CStackFrames\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 127
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.GetCallStack(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "System.Collections.Generic.List\u003Cobject\u003E.Add(object)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 129
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.GetCallStack(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 132
+    },
+    {
+      "type": "uses",
+      "sourceId": "Verbs.GetCallStack(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "System.Collections.Generic.List\u003Cobject\u003E",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 126
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.GetLocals(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "Verbs.RequireBreakMode(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 138
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.GetLocals(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 141
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.GetLocals(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CStackFrame\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 145
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.GetLocals(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 148
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.GetLocals(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CExpressions\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 153
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.GetLocals(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "System.Collections.Generic.List\u003Cobject\u003E.Add(object)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 155
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.GetLocals(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 158
+    },
+    {
+      "type": "uses",
+      "sourceId": "Verbs.GetLocals(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "System.Collections.Generic.List\u003Cobject\u003E",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 152
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.GetExceptionInfo(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "Verbs.RequireBreakMode(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 164
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.GetExceptionInfo(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 167
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.GetExceptionInfo(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CStackFrame\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 171
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.GetExceptionInfo(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 174
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.GetExceptionInfo(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CExpressions\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 179
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.GetExceptionInfo(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 190
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.GetExceptionInfo(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 194
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.Continue(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 200
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.Continue(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 203
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.Continue(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 207
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.Continue(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 213
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.Continue(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke(Action)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 218
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.Continue(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "EnvDTE.Debugger.Go(bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 218
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.Continue(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 219
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.Continue(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "Verbs.ToModeString(dbgDebugMode)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 219
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.Continue(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 219
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.StepOver(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 223
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.StepOver(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "EnvDTE.Debugger.StepOver(bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 223
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.StepInto(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 225
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.StepInto(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "EnvDTE.Debugger.StepInto(bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 225
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.StepOut(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 227
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.StepOut(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "EnvDTE.Debugger.StepOut(bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 227
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
+      "targetId": "Verbs.RequireBreakMode(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 231
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 234
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CStackFrame\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 238
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 240
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke(Action)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 244
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
+      "targetId": "System.Action\u003CEnvDTE.Debugger\u003E.Invoke(Debugger)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 244
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 245
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
+      "targetId": "Verbs.ToModeString(dbgDebugMode)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 245
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.Step(Dictionary\u003Cstring, string\u003E,Action\u003CDebugger\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 245
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.StartDebugging(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 251
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.StartDebugging(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 254
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.StartDebugging(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 258
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.StartDebugging(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 260
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.StartDebugging(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke(Action)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 269
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.StartDebugging(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "EnvDTE.DTE.ExecuteCommand(string,string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 269
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.StartDebugging(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 270
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.StartDebugging(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "Verbs.ToModeString(dbgDebugMode)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 270
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.StartDebugging(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 270
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.StopDebugging(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 276
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.StopDebugging(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 279
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.StopDebugging(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 283
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.StopDebugging(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 285
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.StopDebugging(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke(Action)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 289
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.StopDebugging(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "EnvDTE.Debugger.Stop(bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 289
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.StopDebugging(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 290
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.StopDebugging(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "Verbs.ToModeString(dbgDebugMode)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 290
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.StopDebugging(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 290
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SetBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 296
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SetBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "string.IsNullOrWhiteSpace(string?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 296
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SetBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 298
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SetBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 302
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SetBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "int.TryParse(string?,out int)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 302
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SetBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 304
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SetBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 308
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SetBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 311
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SetBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CBreakpoints\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 315
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SetBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "EnvDTE.Breakpoints.Add(string,string,int,int,string,dbgBreakpointConditionType,string,string,int,string,int,dbgHitCountType)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 315
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SetBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "EnvDTE.Breakpoints.Item(object)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 318
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SetBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 321
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SetBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "System.Runtime.InteropServices.Marshal.ReleaseComObject(object)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 325
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.SetBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "System.Runtime.InteropServices.Marshal.ReleaseComObject(object)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 330
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.ListBreakpoints(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 338
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.ListBreakpoints(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 341
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.ListBreakpoints(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CBreakpoints\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 346
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.ListBreakpoints(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "System.Collections.Generic.List\u003Cobject\u003E.Add(object)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 353
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.ListBreakpoints(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "System.Runtime.InteropServices.Marshal.ReleaseComObject(object)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 357
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.ListBreakpoints(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "System.Runtime.InteropServices.Marshal.ReleaseComObject(object)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 363
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.ListBreakpoints(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 366
+    },
+    {
+      "type": "uses",
+      "sourceId": "Verbs.ListBreakpoints(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "System.Collections.Generic.List\u003Cobject\u003E",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 345
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.RemoveBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 372
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.RemoveBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 373
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.RemoveBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 374
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.RemoveBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 378
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.RemoveBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "string.IsNullOrWhiteSpace(string?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 385
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.RemoveBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 387
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.RemoveBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "int.TryParse(string?,out int)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 391
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.RemoveBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 393
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.RemoveBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 400
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.RemoveBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 403
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.RemoveBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CBreakpoints\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 412
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.RemoveBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "System.Collections.Generic.List\u003CEnvDTE.Breakpoint\u003E.Add(Breakpoint)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 417
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.RemoveBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "System.Runtime.InteropServices.Marshal.ReleaseComObject(object)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 422
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.RemoveBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "string.Equals(string?,string?,StringComparison)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 429
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.RemoveBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke(Action)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 431
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.RemoveBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "EnvDTE.Breakpoint.Delete()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 431
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.RemoveBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "System.Runtime.InteropServices.Marshal.ReleaseComObject(object)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 437
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.RemoveBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 443
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.RemoveBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 447
+    },
+    {
+      "type": "uses",
+      "sourceId": "Verbs.RemoveBreakpoint(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "System.Collections.Generic.List\u003CEnvDTE.Breakpoint\u003E",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 411
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.WaitForBreak(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 453
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.WaitForBreak(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "int.TryParse(string?,out int)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 453
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.WaitForBreak(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 455
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.WaitForBreak(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 460
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.WaitForBreak(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "int.TryParse(string?,out int)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 462
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.WaitForBreak(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 464
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.WaitForBreak(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 469
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.WaitForBreak(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 472
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.WaitForBreak(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "System.Diagnostics.Stopwatch.StartNew()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 476
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.WaitForBreak(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "Verbs.GetStatusSnapshot(DTE)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 484
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.WaitForBreak(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteSuccess(object,bool)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 487
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.WaitForBreak(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.JsonOutput.WriteError(string,string,object?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 493
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.WaitForBreak(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "System.Threading.Thread.Sleep(int)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 497
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.WaitForBreak(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "System.Math.Min(int,int)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 497
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.WaitForBreak(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "System.Math.Max(long,long)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 497
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "System.Collections.Generic.Dictionary\u003Cstring, string\u003E.TryGetValue(string,out string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 503
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.DteLocator.FindDte(string?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 504
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.RequireBreakMode(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "Verbs.ResolveDte(Dictionary\u003Cstring, string\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 509
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.RequireBreakMode(Dictionary\u003Cstring, string\u003E)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CdbgDebugMode\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 515
+    },
+    {
+      "type": "calls",
+      "sourceId": "Verbs.TryGetLastHitLocation(Debugger)",
+      "targetId": "AgentDebugToolkit.Debugger.VisualStudio.ComRetry.Invoke\u00601(Func\u003CBreakpoint\u003E)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\Program.cs",
+      "line": 535
     }
   ]
 }

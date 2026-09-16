@@ -48,16 +48,21 @@ the terminal buffer, not a native console-window capture.
 
 ## Implemented command surfaces
 
-- **UI Automation:** `attach`, `list-windows`, `inspect`, `click`, `type`, `get-text`, and
-  `wait-for-element`.
-- **Visual Studio debugger:** status, stack, locals, exception, continue, stepping, start, and
-  stop verbs.
-- **Console automation:** `launch`, `read-screen`, `send-text`, `send-keys`, `wait-for-text`,
-  `is-running`, and `stop`.
+- **UI Automation (`agentdebug-ui`):** `attach`, `list-windows`, `inspect`, `click`, `type`,
+  `get-text`, `wait-for-element`, `wait-for-window-change`, `wait-for-process-responding`,
+  `delay`, `set-context`, `read-visible-text`, `screenshot`, `activate`, `send-keys`,
+  `submit-chat-message`, `find-first`, and `find-all`.
+- **Visual Studio debugger (`agentdebug-vs`):** `debugger-status`, `get-callstack`, `get-locals`,
+  `get-exception-info`, `continue`, `step-over`/`step-into`/`step-out`, `start-debugging`,
+  `stop-debugging`, `set-breakpoint`, `list-breakpoints`, `remove-breakpoint`, and
+  `wait-for-break`.
+- **Console automation (`agentdebug-console`):** `launch`, `read-screen`, `send-text`,
+  `send-keys`, `wait-for-text`, `is-running`, and `stop`.
 
 See [docs/CLI_CONTRACT.md](docs/CLI_CONTRACT.md) for exact options, JSON payloads, and error
 codes. See [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) for current phase status
-and validation boundaries.
+and validation boundaries. See [docs/KNOWN_OPEN_FINDINGS.md](docs/KNOWN_OPEN_FINDINGS.md) for a
+user-curated log of findings surfaced during development (all currently resolved).
 
 ## Using the toolkit from an agent
 
