@@ -273,6 +273,42 @@ internal static class UiaHelper
     }
 
     /// <summary>
+    /// Synthetic right-click at the element's bounding-rect center. Unlike <see cref="Click"/>,
+    /// no UIA pattern is attempted first — right-click's usual purpose (opening a context menu)
+    /// isn't expressed via InvokePattern/TogglePattern, so this goes straight to the synthetic
+    /// mechanism.
+    /// </summary>
+    public static string RightClick(AutomationElement element)
+    {
+        var r = element.Current.BoundingRectangle;
+        var cx = (int)(r.X + r.Width / 2);
+        var cy = (int)(r.Y + r.Height / 2);
+        NativeMethods.RightClick(cx, cy);
+        return "synthetic-right-click";
+    }
+
+    /// <summary>
+    /// Attempts InvokePattern first (same as <see cref="Click"/>); falls back to two rapid
+    /// synthetic left-clicks at the element's bounding-rect center, within the OS double-click
+    /// time.
+    /// </summary>
+    public static string DoubleClick(AutomationElement element)
+    {
+        if (element.TryGetCurrentPattern(InvokePattern.Pattern, out var invokeObj)
+            && invokeObj is InvokePattern invoke)
+        {
+            invoke.Invoke();
+            return "pattern";
+        }
+
+        var r = element.Current.BoundingRectangle;
+        var cx = (int)(r.X + r.Width / 2);
+        var cy = (int)(r.Y + r.Height / 2);
+        NativeMethods.DoubleClick(cx, cy);
+        return "synthetic-double-click";
+    }
+
+    /// <summary>
     /// Attempts ValuePattern first; falls back to click-to-focus + synthetic keyboard input.
     /// </summary>
     public static string Type(AutomationElement element, string text)

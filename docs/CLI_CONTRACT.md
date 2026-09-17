@@ -6,6 +6,27 @@ Exit code 0 = success, non-zero = failure (with `"error"`/`"message"` fields pop
 This document covers Phases 1-4 verbs (see `IMPLEMENTATION_PLAN.md`). Extend this file as new
 verbs are added in later phases — do not silently diverge from what's documented here.
 
+## DPI awareness (all coordinates)
+
+**Fixed 2026-09-17:** `agentdebug-ui.exe` now declares per-monitor-v2 DPI awareness
+(`SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)`, falling back to the
+legacy per-process `SetProcessDPIAware` on pre-Windows-10-1703 systems) once at process startup,
+before any window/coordinate work happens. Previously the process was DPI-unaware, so Windows
+silently virtualized every coordinate it observed or produced (UIA `BoundingRectangle`,
+`GetWindowRect`, and the `SetCursorPos`/synthetic-input targets computed from them) against a
+scaled ("low-res") virtual desktop — self-consistent on a single-monitor 100%-scale setup, but
+inconsistent/inaccurate on scaled or multi-monitor displays, and the root cause of `click`/`type`/
+`drag` landing on the wrong element on such systems.
+
+**This is a coordinate-semantics change for every verb that reports or consumes screen
+coordinates** — `inspect`'s `ElementInfo.BoundingRectangle`, `list-windows`' `WindowInfo`,
+`click`/`type`/`drag`'s target math, `screenshot`'s captured region, etc. all now report/consume
+**real physical pixel coordinates** instead of DPI-virtualized ones. No schema field changed (no
+new "dpi" or "scale" property was added), only the numeric values' meaning on any display that
+isn't at 100% scale. A caller that was compensating for the old virtualized values (e.g.
+independently re-scaling coordinates before comparing them against its own physical-pixel
+measurements) should stop doing so.
+
 ## Common types
 
 ### Selector
@@ -115,6 +136,85 @@ Resolves the element via selector (scoped to `--scopeHwnd` if given, else `--hwn
   appearing) should use `wait-for-element`/`wait-for-window-change` afterward rather than reading
   this field.
 - Failure: `element-not-found` if selector resolves to nothing.
+
+### `right-click --hwnd <h> --strategy <s> --value <v> [--scopeHwnd <h2>]`
+Resolves the element via selector (same scoping/error semantics as `click`), then performs a
+synthetic right mouse click at its `BoundingRectangle` center via `SendInput`
+(`MOUSEEVENTF_RIGHTDOWN`/`MOUSEEVENTF_RIGHTUP`). Unlike `click`, no UIA pattern is attempted
+first — a right-click's usual purpose (opening a context menu) isn't expressed via
+`InvokePattern`/`TogglePattern`, so this goes straight to the synthetic mechanism.
+- Success: `{ "success": true, "method": "synthetic-right-click", "elementFound": ElementInfo }`
+- `elementFound` reflects the element's state as resolved **before** the right-click is invoked,
+  same pre-action-state rule as `click`.
+- Failure: `element-not-found` if selector resolves to nothing, `window-not-responding`.
+
+### `double-click --hwnd <h> --strategy <s> --value <v> [--scopeHwnd <h2>]`
+Resolves the element via selector (same scoping/error semantics as `click`). Attempts
+`InvokePattern` first (same as `click`); falls back to two rapid synthetic left-clicks at the
+element's `BoundingRectangle` center, using a shorter button-hold time per click (10ms) than a
+standalone `click` (50ms) and an inter-click delay budgeted so the total down-to-down round trip
+stays safely under the OS-configured double-click time (`GetDoubleClickTime`) — roughly half of
+it, after subtracting both clicks' hold time — so Windows/the target app recognizes it as a
+double-click rather than two independent single clicks, even on systems with a short
+custom-configured threshold. Unlike `click`, `TogglePattern` is not attempted as a fallback (a
+double-click semantically differs from a single toggle).
+- Success: `{ "success": true, "method": "pattern" | "synthetic-double-click", "elementFound": ElementInfo }`
+- `elementFound` reflects the element's state as resolved **before** the double-click is invoked,
+  same pre-action-state rule as `click`.
+- Failure: `element-not-found` if selector resolves to nothing, `window-not-responding`.
+
+### `drag --hwnd <h> --strategy <s> --value <v> (--targetStrategy <s> --targetValue <v> | --targetX <n> --targetY <n>) [--scopeHwnd <h2>] [--steps <n>] [--durationMs <n>]`
+Resolves the source element via selector (scoped to `--scopeHwnd` if given, else `--hwnd`, same
+as `click`), then performs a synthetic mouse drag from that element's `BoundingRectangle` center
+to a destination — either another selector-resolved element's center, or explicit screen
+coordinates.
+- Destination is mutually exclusive: exactly one of `--targetStrategy`/`--targetValue` or
+  `--targetX`/`--targetY` must be given. Both given or neither given fails `invalid-argument`
+  before any element resolution is attempted.
+- `--targetStrategy`/`--targetValue`: same `Selector` semantics as `--strategy`/`--value`
+  (resolved against the same scope — `--scopeHwnd` if given, else `--hwnd`).
+- `--targetX`/`--targetY`: absolute screen coordinates (same frame as `BoundingRectangle`,
+  consistent with how the underlying synthetic click/drag input already uses screen coords).
+- `--steps` (default `15`): number of interpolated intermediate mouse-move points between source
+  and target. Must be a positive integer no greater than `1000` (bounds the maximum work done by
+  a single invocation); values outside this range fail `invalid-argument`.
+- `--durationMs` (default `300`): total time spent moving through the interpolated points,
+  divided evenly across `--steps` (i.e. `durationMs / steps` sleep between each move). Must be a
+  non-negative integer; a negative value fails `invalid-argument`. `0` performs all intermediate
+  moves with no delay between them.
+- Mechanism: `SetCursorPos` to the source center, a `SendInput`-issued `MOUSEEVENTF_LEFTDOWN`,
+  `--steps` interpolated `SetCursorPos` moves toward the target spread across `--durationMs`
+  (some drag targets only recognize a drag if they observe intermediate mouse-move events rather
+  than an instantaneous jump), then a `SendInput`-issued `MOUSEEVENTF_LEFTUP` at the target.
+  Mouse button events go through `SendInput` (the modern, non-deprecated Win32 input-injection
+  API) rather than the legacy `mouse_event` — cursor *movement* still uses `SetCursorPos`, which
+  is not deprecated. Unlike `click`, there is no UIA pattern-based path attempted first —
+  `DragPattern`/`DropTargetPattern` are rarely implemented by real controls, so this verb goes
+  straight to the synthetic mechanism `click` only falls back to.
+- Success: `{ "success": true, "method": "synthetic-drag", "elementFound": ElementInfo, "target": { "x": n, "y": n } }`
+- `elementFound` reflects the source element's state as resolved **before** the drag is invoked,
+  same pre-action-state rule as `click`.
+- Failure: `invalid-argument` (missing/conflicting target args, non-integer `--targetX`/
+  `--targetY`, non-positive `--steps`, or negative `--durationMs`), `element-not-found` (source or
+  target selector resolves to nothing), `window-not-responding`.
+
+### `move-mouse (--hwnd <h> --strategy <s> --value <v> | --x <n> --y <n>) [--scopeHwnd <h2>]`
+Moves the cursor to an absolute screen position via `SetCursorPos`, without pressing any mouse
+button. Destination is mutually exclusive: exactly one of `--strategy`/`--value` (resolved to
+that element's `BoundingRectangle` center, same selector/scope semantics as `click`/`drag`'s
+source) or `--x`/`--y` (explicit absolute screen coordinates) must be given.
+- Unlike `drag`, there is no separate "source" element — the selector form here plays the role
+  `drag`'s target selector plays, just as the sole destination for a plain cursor move.
+- Success: `{ "success": true, "x": n, "y": n }` (the resolved/given destination coordinates).
+- Failure: `invalid-argument` (missing/conflicting destination args, non-integer `--x`/`--y`, or
+  the underlying selector validation failures), `element-not-found` (selector form only),
+  `window-not-responding` (selector form only — the `--x`/`--y` form never resolves a window and
+  cannot produce this error).
+
+### `get-cursor-pos`
+Returns the current cursor position via `GetCursorPos`. Takes no arguments — no window/element
+resolution involved.
+- Success: `{ "success": true, "x": n, "y": n }`.
 
 ### `type --hwnd <h> --strategy <s> --value <v> --text <input> [--scopeHwnd <h2>] [--verify] [--paste]`
 Resolves element, attempts `ValuePattern.SetValue`, falls back to click-to-focus + synthetic

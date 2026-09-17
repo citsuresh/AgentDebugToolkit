@@ -296,6 +296,7 @@ with or changing the target UI.
 - OCR/template-image fallback for fully non-UIA-exposed custom controls, if Phase 3's C1FlexGrid
   spot-check or other findings show a real need.
 
+
 ## Phase 20 — Breakpoint verbs & wait-for-break (implemented, 2026-09-15)
 
 **Motivation:** driving a "UI Debug Map" skill (click a UI element in a target app, correlate the
@@ -335,6 +336,61 @@ state instead of echoing input (Part A); `remove-breakpoint`'s file-path match i
 case-insensitive, and `Breakpoint`/`Breakpoints` COM RCWs obtained in `list-breakpoints`/
 `remove-breakpoint` are explicitly released via `Marshal.ReleaseComObject`, consistent with the
 Phase 17 `DteLocator` COM-cleanup convention (Part B).
+
+
+## Phase 21 — DPI-aware pointer input: drag, right-click, double-click, move-mouse, get-cursor-pos (implemented, 2026-09-17)
+
+**Motivation:** `agentdebug-ui` had no drag-and-drop primitive, no right-click/double-click verbs,
+and no way to move the cursor or query its position without also clicking. Additionally, the
+existing synthetic input path (`click`/`type`'s fallback) had a real bug: the process was
+DPI-unaware, so Windows silently virtualized the screen coordinates it read from UIA
+(`BoundingRectangle`) and wrote via `SetCursorPos`/the legacy `mouse_event` API against a scaled
+virtual desktop — inaccurate on any display that isn't at 100% scale, and the root cause of
+clicks/types landing on the wrong element on such systems.
+
+**Implemented scope:**
+- **DPI awareness (Part A):** declares per-monitor-v2 DPI awareness
+  (`SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)`, falling back to
+  the legacy per-process `SetProcessDPIAware` on pre-Windows-10-1703 systems) once at process
+  startup, before any window/coordinate work happens. Logs a warning to stderr if both calls fail.
+  This is a coordinate-semantics change for every verb that reports/consumes screen coordinates —
+  see `docs/CLI_CONTRACT.md`'s "DPI awareness" section for the full explanation.
+- **SendInput migration (Part B):** mouse button events (`Click`, `Drag`, and the new
+  `RightClick`/`DoubleClick`) now go through `SendInput` instead of the deprecated `mouse_event`.
+  Cursor movement still uses `SetCursorPos` (not deprecated).
+- **`drag` verb** — `drag --hwnd <h> --strategy <s> --value <v> (--targetStrategy <s>
+  --targetValue <v> | --targetX <n> --targetY <n>) [--scopeHwnd <h2>] [--steps <n>]
+  [--durationMs <n>]`. Synthetic mouse drag from a selector-resolved source element to either
+  another selector-resolved element or explicit coordinates, with configurable interpolation
+  step count (default 15, max 1000) and total duration (default 300ms).
+- **`move-mouse` verb** — `move-mouse (--hwnd <h> --strategy <s> --value <v> | --x <n> --y <n>)
+  [--scopeHwnd <h2>]`. Moves the cursor without clicking.
+- **`get-cursor-pos` verb** — returns the current cursor position; no arguments.
+- **`right-click` verb** — `right-click --hwnd <h> --strategy <s> --value <v> [--scopeHwnd <h2>]`.
+  No UIA pattern attempted (right-click semantics aren't expressed via `InvokePattern`/
+  `TogglePattern`); goes straight to a synthetic right-click.
+- **`double-click` verb** — `double-click --hwnd <h> --strategy <s> --value <v>
+  [--scopeHwnd <h2>]`. Tries `InvokePattern` first (like `click`), else two rapid synthetic
+  left-clicks timed against the OS-configured double-click threshold (`GetDoubleClickTime`).
+
+See `docs/CLI_CONTRACT.md` for the full JSON contract of each verb, and its "DPI awareness"
+section for the coordinate-semantics change.
+
+**Execution:** implemented following the Pre-Build Decomposition → implement → Regression Audit →
+review → commit discipline used since Phase 15, broken into 8 parts (A: DPI awareness, B: SendInput
+migration, C: drag's `--steps`/`--durationMs`, D: `move-mouse`, E: `get-cursor-pos`, F:
+`right-click`, G: `double-click`, H: this doc update + README). Regression Audit findings applied
+during implementation: Part A — a diagnostic stderr warning was added for the case where both the
+per-monitor-v2 and legacy DPI-awareness calls fail, and `docs/CLI_CONTRACT.md` gained a dedicated
+section explaining the physical-vs-virtualized coordinate semantics change; Part C — `--steps` is
+capped at 1000 to bound worst-case loop duration; Parts D/E — `NativeMethods.GetCursorPos()`'s
+P/Invoke was renamed to `GetCursorPosNative` (matching this file's existing wrapper-naming
+convention) and its failure now throws rather than silently returning a fabricated `(0,0)`, and
+`docs/CLI_CONTRACT.md` was clarified that `move-mouse`'s `window-not-responding`/`element-not-found`
+errors only apply to its selector form, not its `--x`/`--y` form; Part G — `DoubleClick`'s per-click
+button-hold time was shortened and its inter-click delay is now budgeted against the full OS
+double-click threshold (rather than only the inter-click gap), so it stays reliable even on systems
+with a very short custom-configured double-click time.
 
 
 ## Phase 9 — Reliable interaction primitives (proposed scope, not yet implemented)

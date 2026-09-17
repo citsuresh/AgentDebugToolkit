@@ -4,6 +4,26 @@ using AgentDebugToolkit.Core;
 using AgentDebugToolkit.Core.Models;
 using AgentDebugToolkit.UiAutomation.Cli;
 
+// Declare per-monitor DPI awareness before any window/coordinate work happens: without this,
+// Windows silently virtualizes coordinates for a DPI-unaware process against a scaled ("low-res")
+// virtual desktop, so SetCursorPos/mouse_event/SendInput screen coordinates computed from a real
+// UIA BoundingRectangle land in the wrong place on scaled displays. Must run before any window is
+// created or any DPI-sensitive API is touched, so this happens first, ahead of the STA dispatch
+// below. Falls back to the older per-process (not per-monitor) SetProcessDPIAware on systems where
+// SetProcessDpiAwarenessContext/the V2 context constant isn't available (pre-Windows 10 1703).
+if (!NativeMethods.TrySetPerMonitorDpiAwareness() && !NativeMethods.SetProcessDPIAware())
+{
+    // Both the modern per-monitor-v2 API and the legacy per-process fallback failed to declare
+    // DPI awareness. This is non-fatal (the process still runs), but silently continuing would
+    // reproduce the exact "coordinates land in the wrong place on scaled displays" bug this
+    // feature exists to fix, with no diagnostic trail. Write to stderr (not JsonOutput -- this
+    // isn't a verb result, and no verb has been dispatched yet) so it's visible without breaking
+    // stdout's JSON-only contract for callers that parse it.
+    Console.Error.WriteLine(
+        "Warning: failed to declare DPI awareness (both SetProcessDpiAwarenessContext and " +
+        "SetProcessDPIAware failed); screen coordinates may be inaccurate on scaled displays.");
+}
+
 // Top-level statements do not automatically apply [STAThread]; the process defaults to MTA
 // unless explicitly marked. Clipboard access (System.Windows.Forms.Clipboard, used by --paste)
 // requires STA and throws InvalidOperationException otherwise — discovered via live validation
@@ -46,6 +66,16 @@ try
             return Verbs.Inspect(opts);
         case "click":
             return Verbs.Click(opts);
+        case "drag":
+            return Verbs.Drag(opts);
+        case "move-mouse":
+            return Verbs.MoveMouse(opts);
+        case "get-cursor-pos":
+            return Verbs.GetCursorPos(opts);
+        case "right-click":
+            return Verbs.RightClick(opts);
+        case "double-click":
+            return Verbs.DoubleClick(opts);
         case "type":
             return Verbs.Type(opts);
         case "get-text":
@@ -433,6 +463,229 @@ internal static class Verbs
         var info = UiaHelper.ToElementInfo(element, includeChildren: false, maxDepth: 0);
         var method = UiaHelper.Click(element);
         JsonOutput.WriteSuccess(new { method, elementFound = info });
+        return 0;
+    }
+
+    public static int RightClick(Dictionary<string, string> opts)
+    {
+        var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
+        if (errorCode is not null)
+        {
+            JsonOutput.WriteError(errorCode!, error!);
+            return 1;
+        }
+
+        if (!NativeMethods.IsResponding(windowHwnd, timeoutMs: 250))
+        {
+            JsonOutput.WriteError("window-not-responding", "The target window is not responding.");
+            return 1;
+        }
+
+        var (element, elementErrorCode, elementError) = ResolveElement(windowHwnd, opts);
+        if (element is null)
+        {
+            JsonOutput.WriteError(elementErrorCode!, elementError!);
+            return 1;
+        }
+
+        // Same pre-action-state capture rule as Click/Drag.
+        var info = UiaHelper.ToElementInfo(element, includeChildren: false, maxDepth: 0);
+        var method = UiaHelper.RightClick(element);
+        JsonOutput.WriteSuccess(new { method, elementFound = info });
+        return 0;
+    }
+
+    public static int DoubleClick(Dictionary<string, string> opts)
+    {
+        var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
+        if (errorCode is not null)
+        {
+            JsonOutput.WriteError(errorCode!, error!);
+            return 1;
+        }
+
+        if (!NativeMethods.IsResponding(windowHwnd, timeoutMs: 250))
+        {
+            JsonOutput.WriteError("window-not-responding", "The target window is not responding.");
+            return 1;
+        }
+
+        var (element, elementErrorCode, elementError) = ResolveElement(windowHwnd, opts);
+        if (element is null)
+        {
+            JsonOutput.WriteError(elementErrorCode!, elementError!);
+            return 1;
+        }
+
+        // Same pre-action-state capture rule as Click/Drag.
+        var info = UiaHelper.ToElementInfo(element, includeChildren: false, maxDepth: 0);
+        var method = UiaHelper.DoubleClick(element);
+        JsonOutput.WriteSuccess(new { method, elementFound = info });
+        return 0;
+    }
+
+    public static int Drag(Dictionary<string, string> opts)
+    {
+        var hasTargetSelector = opts.ContainsKey("targetStrategy") || opts.ContainsKey("targetValue");
+        var hasTargetCoords = opts.ContainsKey("targetX") || opts.ContainsKey("targetY");
+
+        if (hasTargetSelector == hasTargetCoords)
+        {
+            // Both given or neither given -- exactly one target form is required, mirroring the
+            // documented mutual-exclusivity contract (same style as remove-breakpoint's
+            // --all vs --file/--line check in agentdebug-vs).
+            JsonOutput.WriteError("invalid-argument",
+                "Exactly one of --targetStrategy/--targetValue or --targetX/--targetY is required.");
+            return 1;
+        }
+
+        var steps = 15;
+        if (opts.TryGetValue("steps", out var stepsText))
+        {
+            // Upper-bounded to prevent an unreasonably long-running/CPU-bound loop from a caller
+            // passing a huge --steps value (each step is a SetCursorPos call with no cancellation
+            // -- with a small/zero --durationMs this would otherwise busy-loop for a very long
+            // time with no way for the caller to bound or cancel it).
+            if (!int.TryParse(stepsText, out steps) || steps is <= 0 or > 1000)
+            {
+                JsonOutput.WriteError("invalid-argument", "--steps must be a positive integer no greater than 1000.");
+                return 1;
+            }
+        }
+
+        var durationMs = 300;
+        if (opts.TryGetValue("durationMs", out var durationText))
+        {
+            if (!int.TryParse(durationText, out durationMs) || durationMs < 0)
+            {
+                JsonOutput.WriteError("invalid-argument", "--durationMs must be a non-negative integer.");
+                return 1;
+            }
+        }
+
+        var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
+        if (errorCode is not null)
+        {
+            JsonOutput.WriteError(errorCode, error!);
+            return 1;
+        }
+
+        if (!NativeMethods.IsResponding(windowHwnd, timeoutMs: 250))
+        {
+            JsonOutput.WriteError("window-not-responding", "The target window is not responding.");
+            return 1;
+        }
+
+        var (element, elementErrorCode, elementError) = ResolveElement(windowHwnd, opts);
+        if (element is null)
+        {
+            JsonOutput.WriteError(elementErrorCode!, elementError!);
+            return 1;
+        }
+
+        int targetX, targetY;
+        if (hasTargetSelector)
+        {
+            var (targetElement, targetErrorCode, targetError) = ResolveElement(
+                windowHwnd, opts, strategyKey: "targetStrategy", valueKey: "targetValue");
+            if (targetElement is null)
+            {
+                JsonOutput.WriteError(targetErrorCode!, targetError!);
+                return 1;
+            }
+
+            var tr = targetElement.Current.BoundingRectangle;
+            targetX = (int)(tr.X + tr.Width / 2);
+            targetY = (int)(tr.Y + tr.Height / 2);
+        }
+        else
+        {
+            if (!opts.TryGetValue("targetX", out var xText) || !int.TryParse(xText, out targetX)
+                || !opts.TryGetValue("targetY", out var yText) || !int.TryParse(yText, out targetY))
+            {
+                JsonOutput.WriteError("invalid-argument", "--targetX and --targetY must both be valid integers.");
+                return 1;
+            }
+        }
+
+        // Capture elementFound BEFORE invoking the drag, not after -- same call-ordering rule as
+        // Click: the drag can change the element's state or move it, so reading it afterward
+        // would report the drag's own aftereffect rather than the pre-drag target.
+        var info = UiaHelper.ToElementInfo(element, includeChildren: false, maxDepth: 0);
+        var r = element.Current.BoundingRectangle;
+        var sourceX = (int)(r.X + r.Width / 2);
+        var sourceY = (int)(r.Y + r.Height / 2);
+
+        NativeMethods.Drag(sourceX, sourceY, targetX, targetY, steps, durationMs);
+
+        JsonOutput.WriteSuccess(new { method = "synthetic-drag", elementFound = info, target = new { x = targetX, y = targetY } });
+        return 0;
+    }
+
+    /// <summary>
+    /// Moves the cursor to an absolute screen position without pressing any mouse button.
+    /// Supports the same selector-or-coordinates destination form as drag's target, for
+    /// consistency, plus a plain --x/--y form is also accepted directly (no --strategy needed)
+    /// since there's no "source" element to resolve here, unlike drag.
+    /// </summary>
+    public static int MoveMouse(Dictionary<string, string> opts)
+    {
+        var hasSelector = opts.ContainsKey("strategy") || opts.ContainsKey("value");
+        var hasCoords = opts.ContainsKey("x") || opts.ContainsKey("y");
+
+        if (hasSelector == hasCoords)
+        {
+            JsonOutput.WriteError("invalid-argument",
+                "Exactly one of --strategy/--value or --x/--y is required.");
+            return 1;
+        }
+
+        int x, y;
+        if (hasSelector)
+        {
+            var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
+            if (errorCode is not null)
+            {
+                JsonOutput.WriteError(errorCode, error!);
+                return 1;
+            }
+
+            if (!NativeMethods.IsResponding(windowHwnd, timeoutMs: 250))
+            {
+                JsonOutput.WriteError("window-not-responding", "Target window is not responding.");
+                return 1;
+            }
+
+            var (element, elementErrorCode, elementError) = ResolveElement(windowHwnd, opts);
+            if (element is null)
+            {
+                JsonOutput.WriteError(elementErrorCode!, elementError!);
+                return 1;
+            }
+
+            var r = element.Current.BoundingRectangle;
+            x = (int)(r.X + r.Width / 2);
+            y = (int)(r.Y + r.Height / 2);
+        }
+        else
+        {
+            if (!opts.TryGetValue("x", out var xText) || !int.TryParse(xText, out x)
+                || !opts.TryGetValue("y", out var yText) || !int.TryParse(yText, out y))
+            {
+                JsonOutput.WriteError("invalid-argument", "--x and --y must both be valid integers.");
+                return 1;
+            }
+        }
+
+        NativeMethods.SetCursorPos(x, y);
+        JsonOutput.WriteSuccess(new { x, y });
+        return 0;
+    }
+
+    public static int GetCursorPos(Dictionary<string, string> opts)
+    {
+        var (x, y) = NativeMethods.GetCursorPos();
+        JsonOutput.WriteSuccess(new { x, y });
         return 0;
     }
 
@@ -1383,7 +1636,7 @@ internal static class Verbs
     }
 
     private static (AutomationElement? element, string? errorCode, string? error) ResolveElement(
-        IntPtr windowHwnd, Dictionary<string, string> opts)
+        IntPtr windowHwnd, Dictionary<string, string> opts, string strategyKey = "strategy", string valueKey = "value")
     {
         // --scopeHwnd, when given, narrows the search to that element (and its subtree) instead
         // of the primary --hwnd/session-context window -- e.g. a specific pane/panel handle
@@ -1405,28 +1658,28 @@ internal static class Verbs
             var scopeElement = UiaHelper.FindWindowByHwnd($"0x{scopeHwnd.ToInt64():X}");
             return scopeElement is null
                 ? (null, "element-not-found", $"No scope element found for scopeHwnd '0x{scopeHwnd.ToInt64():X}'.")
-                : ResolveElement(scopeElement, opts);
+                : ResolveElement(scopeElement, opts, strategyKey, valueKey);
         }
 
         var scope = UiaHelper.FindWindowByHwnd($"0x{windowHwnd.ToInt64():X}");
         return scope is null
             ? (null, "element-not-found", $"No window found for hwnd '0x{windowHwnd.ToInt64():X}'.")
-            : ResolveElement(scope, opts);
+            : ResolveElement(scope, opts, strategyKey, valueKey);
     }
 
     private static (AutomationElement? element, string? errorCode, string? error) ResolveElement(
-        AutomationElement scope, Dictionary<string, string> opts)
+        AutomationElement scope, Dictionary<string, string> opts, string strategyKey = "strategy", string valueKey = "value")
     {
-        opts.TryGetValue("strategy", out var strategyText);
+        opts.TryGetValue(strategyKey, out var strategyText);
         if (!UiaHelper.TryParseImplementedSelectorStrategy(strategyText, out var strategy, out var strategyError))
         {
             return (null, "invalid-argument",
-                $"--strategy is required and {strategyError}");
+                $"--{strategyKey} is required and {strategyError}");
         }
 
-        if (!opts.TryGetValue("value", out var value))
+        if (!opts.TryGetValue(valueKey, out var value))
         {
-            return (null, "invalid-argument", "--value is required.");
+            return (null, "invalid-argument", $"--{valueKey} is required.");
         }
 
         var selector = new Selector { Strategy = strategy, Value = value };

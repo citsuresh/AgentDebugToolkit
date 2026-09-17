@@ -48,10 +48,11 @@ the terminal buffer, not a native console-window capture.
 
 ## Implemented command surfaces
 
-- **UI Automation (`agentdebug-ui`):** `attach`, `list-windows`, `inspect`, `click`, `type`,
-  `get-text`, `wait-for-element`, `wait-for-window-change`, `wait-for-process-responding`,
-  `delay`, `set-context`, `read-visible-text`, `screenshot`, `activate`, `send-keys`,
-  `submit-chat-message`, `find-first`, and `find-all`.
+- **UI Automation (`agentdebug-ui`):** `attach`, `list-windows`, `inspect`, `click`, `right-click`,
+  `double-click`, `drag`, `move-mouse`, `get-cursor-pos`, `type`, `get-text`, `wait-for-element`,
+  `wait-for-window-change`, `wait-for-process-responding`, `delay`, `set-context`,
+  `read-visible-text`, `screenshot`, `activate`, `send-keys`, `submit-chat-message`, `find-first`,
+  and `find-all`.
 - **Visual Studio debugger (`agentdebug-vs`):** `debugger-status`, `get-callstack`, `get-locals`,
   `get-exception-info`, `continue`, `step-over`/`step-into`/`step-out`, `start-debugging`,
   `stop-debugging`, `set-breakpoint`, `list-breakpoints`, `remove-breakpoint`, and
