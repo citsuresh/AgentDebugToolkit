@@ -27,7 +27,19 @@
     Max time to poll before giving up and reporting STATE=TIMEOUT. Default 480 (8 min).
 
 .PARAMETER PollIntervalSeconds
-    Delay between polls. Default 12.
+    Initial delay between polls, in seconds. Default 12. The script uses adaptive backoff (see
+    -PollBackoffMultiplier / -MaxPollIntervalSeconds): each invocation starts at this short
+    interval (since the caller typically just sent a response and the agent may finish or hit
+    its next prompt quickly) and gradually increases the wait between polls the longer it stays
+    in the same non-terminal state, up to -MaxPollIntervalSeconds. Each new invocation of this
+    script (e.g. after you've answered a prompt) naturally resets back to this short interval.
+
+.PARAMETER MaxPollIntervalSeconds
+    Upper bound the adaptive poll interval is allowed to grow to. Default 60, or the initial
+    -PollIntervalSeconds when that is larger and this parameter is not explicitly supplied.
+
+.PARAMETER PollBackoffMultiplier
+    Growth factor applied to the poll interval after each non-terminal poll. Default 1.4.
 
 .PARAMETER MaxDepth
     --maxDepth passed to `inspect`. Default 20.
@@ -61,6 +73,10 @@ param(
 
     [int]$PollIntervalSeconds = 12,
 
+    [int]$MaxPollIntervalSeconds = 60,
+
+    [double]$PollBackoffMultiplier = 1.4,
+
     [int]$MaxDepth = 20,
 
     [switch]$AsJson,
@@ -70,6 +86,26 @@ param(
 
 # The inherited DOTNET_ROOT from VS breaks agentdebug-ui.exe; always clear it.
 Remove-Item Env:DOTNET_ROOT -ErrorAction SilentlyContinue
+
+if ($PollIntervalSeconds -le 0) {
+    throw "-PollIntervalSeconds must be a positive integer."
+}
+
+if ($MaxPollIntervalSeconds -le 0) {
+    throw "-MaxPollIntervalSeconds must be a positive integer."
+}
+
+if ($MaxPollIntervalSeconds -lt $PollIntervalSeconds) {
+    if ($PSBoundParameters.ContainsKey('MaxPollIntervalSeconds')) {
+        throw "-MaxPollIntervalSeconds must be greater than or equal to -PollIntervalSeconds."
+    }
+
+    $MaxPollIntervalSeconds = $PollIntervalSeconds
+}
+
+if ([double]::IsNaN($PollBackoffMultiplier) -or [double]::IsInfinity($PollBackoffMultiplier) -or $PollBackoffMultiplier -lt 1) {
+    throw "-PollBackoffMultiplier must be a finite number greater than or equal to 1."
+}
 
 if (-not (Test-Path $ExePath)) {
     throw "agentdebug-ui.exe not found at '$ExePath'. Pass -ExePath explicitly."
@@ -90,12 +126,26 @@ function Get-AllNodes {
     return $all
 }
 
+function Get-SleepMilliseconds {
+    param(
+        [int]$RequestedMilliseconds,
+        [datetime]$Deadline
+    )
+
+    $remainingMilliseconds = [Math]::Max(0, [int](($Deadline - (Get-Date)).TotalMilliseconds))
+    return [Math]::Min($RequestedMilliseconds, $remainingMilliseconds)
+}
+
 $start = Get-Date
 $deadline = $start.AddSeconds($TimeoutSeconds)
 $lastMessageCount = -1
 $lastMessageText = $null
 $stableIdlePolls = 0
 $pollNum = 0
+# Adaptive backoff: start short (a response was likely just sent, so the agent may finish or
+# hit its next prompt quickly) and grow towards MaxPollIntervalSeconds the longer we stay in a
+# non-terminal state. Resets to PollIntervalSeconds on each fresh invocation of this script.
+$currentInterval = $PollIntervalSeconds
 
 while ((Get-Date) -lt $deadline) {
     $pollNum++
@@ -111,8 +161,12 @@ while ((Get-Date) -lt $deadline) {
     }
 
     if (-not $data -or -not $data.root) {
-        Write-Host "[poll #$pollNum] inspect returned no parseable data; sleeping ${PollIntervalSeconds}s..." -ForegroundColor Yellow
-        Start-Sleep -Seconds $PollIntervalSeconds
+        $sleepMilliseconds = Get-SleepMilliseconds -RequestedMilliseconds ($currentInterval * 1000) -Deadline $deadline
+        Write-Host "[poll #$pollNum] inspect returned no parseable data; sleeping $([Math]::Round($sleepMilliseconds / 1000, 3))s..." -ForegroundColor Yellow
+        if ($sleepMilliseconds -gt 0) {
+            Start-Sleep -Milliseconds $sleepMilliseconds
+        }
+        $currentInterval = [Math]::Min($MaxPollIntervalSeconds, [Math]::Ceiling($currentInterval * $PollBackoffMultiplier))
         continue
     }
 
@@ -186,8 +240,12 @@ while ((Get-Date) -lt $deadline) {
         $stableIdlePolls = 0
     }
 
-    Write-Host "[poll #$pollNum] no new terminal state; sleeping ${PollIntervalSeconds}s..." -ForegroundColor DarkGray
-    Start-Sleep -Seconds $PollIntervalSeconds
+    $sleepMilliseconds = Get-SleepMilliseconds -RequestedMilliseconds ($currentInterval * 1000) -Deadline $deadline
+    Write-Host "[poll #$pollNum] no new terminal state; sleeping $([Math]::Round($sleepMilliseconds / 1000, 3))s (next: $([Math]::Min($MaxPollIntervalSeconds, [Math]::Ceiling($currentInterval * $PollBackoffMultiplier)))s)..." -ForegroundColor DarkGray
+    if ($sleepMilliseconds -gt 0) {
+        Start-Sleep -Milliseconds $sleepMilliseconds
+    }
+    $currentInterval = [Math]::Min($MaxPollIntervalSeconds, [Math]::Ceiling($currentInterval * $PollBackoffMultiplier))
 }
 
 $result = [PSCustomObject]@{
