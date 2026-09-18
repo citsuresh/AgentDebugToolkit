@@ -81,6 +81,11 @@ automation pattern through `click` or `type`; those verbs use synthetic input on
 fallback. Persisted context is a convenience, not a navigation model: the calling agent must
 select the intended window and provide selectors for each action.
 
+`list-windows` and `attach` include visible owned native dialogs, such as a WPF
+`MessageBox.Show(...)` window (`#32770`). Pass the returned dialog HWND to `inspect`, `screenshot`,
+`get-text`, or `click` to inspect it or invoke a named button, for example
+`click --hwnd <dialog-hwnd> --strategy Name --value Yes`.
+
 For console automation, call `launch` once, then use `read-screen`, `send-text`/`send-keys`, and
 `wait-for-text` through the persisted broker session. Call `is-running` to obtain target status
 and its exit code, then call `stop` when the session is finished. Treat
