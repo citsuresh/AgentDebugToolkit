@@ -41,3 +41,14 @@ remains simple and independently deployable from the UI Automation and Visual St
 **Alternatives considered:** Keeping all state in each public invocation — rejected because it
 would lose the target's terminal state and output stream. Adding a dependency on the other CLI
 projects — rejected to keep console automation isolated from their process/UIA/EnvDTE concerns.
+
+## 2026-09-18 — Win32 is the authoritative desktop-window enumerator
+
+**Decision:** Enumerate visible windows for a target process through Win32 `EnumWindows`, then use
+their HWNDs as the UIA roots for interaction.
+
+**Rationale:** UIA's desktop-child tree can omit owned native dialogs, including WPF
+`MessageBox.Show` windows (`#32770`), while `EnumWindows` returns them reliably.
+
+**Alternatives considered:** Retaining UIA `TreeScope.Children` enumeration — rejected because it
+cannot surface these dialogs for discovery, screenshots, or button interaction.

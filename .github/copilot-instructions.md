@@ -1,4 +1,4 @@
-<!-- project-memory-management-graph: skill-version=10 -->
+<!-- project-memory-management-graph: skill-version=11 -->
 # Copilot Instructions
 
 ## Persistent Project Memory

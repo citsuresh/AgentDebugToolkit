@@ -4,31 +4,25 @@
 
 ## Current Focus
 
-Phase 21 added DPI-aware pointer input to `agentdebug-ui`: `drag`, `move-mouse`,
-`get-cursor-pos`, `right-click`, and `double-click`. It declares per-monitor-v2 DPI awareness
-at startup (with legacy fallback), uses `SendInput` for mouse buttons, bounds drag work, and
-documents the physical-pixel coordinate semantics. Live Notepad validation found and fixed the
-renamed `GetCursorPos` P/Invoke's missing `EntryPoint`; the selector form of `move-mouse` now
-returns `window-not-responding` before UIA lookup. Committed and pushed as `2f38beb`.
-
-`tools/Watch-CopilotChat.ps1` now uses capped adaptive polling backoff: it starts at
-`-PollIntervalSeconds`, grows by `-PollBackoffMultiplier`, and caps at
-`-MaxPollIntervalSeconds`. Validation rejects invalid/non-finite parameters, preserves legacy
-larger initial intervals when no max is explicitly supplied, and sleeps only within the remaining
-timeout budget. Committed and pushed as `1bb1505`.
+`agentdebug-ui` now enumerates visible top-level windows via Win32 `EnumWindows`, including owned
+native dialogs such as WPF `MessageBox.Show` (`#32770`). The returned HWND works with existing
+`inspect`, `get-text`, and `click` verbs; live WindowWorks validation confirmed clicking `Yes`
+closed the Property Inspector confirmation and applied the write. Committed and pushed as
+`c5db97a`.
 
 ## Open Tasks / Known Issues
 
-None from this session. `docs/KNOWN_OPEN_FINDINGS.md` has no unresolved entries.
+The `isModal` field still treats ownership as modal state, so owned modeless windows are
+misclassified; this is deferred to future multi-window/dialog-awareness work.
 
 ## Recently Changed Files
 
-- `src/AgentDebugToolkit.UiAutomation.Cli/Program.cs` -- Phase 21 verb dispatch, DPI startup,
-  selector/coordinate handling, and `move-mouse` responsiveness check (`2f38beb`).
-- `src/AgentDebugToolkit.UiAutomation.Cli/NativeMethods.cs` -- DPI, `SendInput`, cursor query,
-  drag, right-click, and double-click native helpers (`2f38beb`).
-- `src/AgentDebugToolkit.UiAutomation.Cli/UiaHelper.cs` -- right-click and double-click helpers
-  (`2f38beb`).
-- `docs/CLI_CONTRACT.md`, `docs/IMPLEMENTATION_PLAN.md`, `README.md` -- Phase 21 contract and
-  command-surface documentation (`2f38beb`).
-- `tools/Watch-CopilotChat.ps1` -- adaptive polling backoff and validation (`1bb1505`).
+- `src/AgentDebugToolkit.UiAutomation.Cli/NativeMethods.cs` -- `EnumWindows` discovery and native
+  title/class metadata (`c5db97a`).
+- `src/AgentDebugToolkit.UiAutomation.Cli/UiaHelper.cs` -- Win32-backed `WindowInfo` creation
+  (`c5db97a`).
+- `src/AgentDebugToolkit.UiAutomation.Cli/Program.cs`, `docs/CLI_CONTRACT.md`, and
+  `docs/VALIDATION_FINDINGS.md` -- owned-dialog integration, contract, and validation (`c5db97a`).
+- `.github/copilot-instructions.md`, `docs/CODE_SUMMARY.md`, `docs/DESIGN_DECISIONS.md`,
+  `docs/KEY_FLOWS.md`, `docs/full-graph.json`, and `docs/project-dependencies.json` -- refreshed
+  for project-memory-management-graph skill v11.
