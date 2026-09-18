@@ -15,6 +15,15 @@ The toolkit must support both, with graceful fallback.
 
 ## Specific findings
 
+0. **Owned native WPF MessageBox dialogs (validated 2026-09-18):**
+   - A live WPF window displaying `MessageBox.Show(owner, ..., YesNo)` creates a visible native
+     `#32770` window in the owner process. UIA's desktop `TreeScope.Children` query did not return
+     that dialog, while Win32 `EnumWindows` did.
+   - `agentdebug-ui list-windows --pid <pid>` now returns the dialog's HWND, title, `#32770` class,
+     owner HWND, modal/foreground state, and bounds through Win32 enumeration.
+   - The returned HWND worked with `inspect`, `get-text --strategy Name --value Yes`, and
+     `click --strategy Name --value Yes`; the click invoked the button and closed the dialog.
+
 1. **Menu/list screens (e.g., main Tools menu, device-type list, workflow step list):**
    - Every element reports `ControlType.Pane`, generic `ClassName`
 	 (`WindowsForms10.Window.8.app.0...`).

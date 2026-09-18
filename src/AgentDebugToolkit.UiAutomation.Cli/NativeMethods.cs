@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace AgentDebugToolkit.UiAutomation.Cli;
 
@@ -100,6 +101,23 @@ internal static class NativeMethods
     [DllImport("user32.dll")]
     public static extern bool IsWindowVisible(IntPtr hWnd);
 
+    private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int GetWindowTextLength(IntPtr hWnd);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
+
     [DllImport("user32.dll")]
     public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
@@ -124,6 +142,37 @@ internal static class NativeMethods
     public const uint GW_OWNER = 4;
     public const uint SMTO_ABORTIFHUNG = 0x0002;
     public const uint WM_NULL = 0x0000;
+
+    public static List<IntPtr> EnumerateVisibleTopLevelWindows(int pid)
+    {
+        var windows = new List<IntPtr>();
+        EnumWindows((hwnd, _) =>
+        {
+            GetWindowThreadProcessId(hwnd, out var windowPid);
+            if (windowPid == (uint)pid && IsWindowVisible(hwnd))
+            {
+                windows.Add(hwnd);
+            }
+
+            return true;
+        }, IntPtr.Zero);
+        return windows;
+    }
+
+    public static string GetWindowTitle(IntPtr hwnd)
+    {
+        var length = GetWindowTextLength(hwnd);
+        var text = new StringBuilder(length + 1);
+        GetWindowText(hwnd, text, text.Capacity);
+        return text.ToString();
+    }
+
+    public static string GetWindowClassName(IntPtr hwnd)
+    {
+        var className = new StringBuilder(256);
+        GetClassName(hwnd, className, className.Capacity);
+        return className.ToString();
+    }
 
     // --- DPI awareness -----------------------------------------------------------------
     // Declaring per-monitor-v2 DPI awareness (falling back to the legacy per-process API on

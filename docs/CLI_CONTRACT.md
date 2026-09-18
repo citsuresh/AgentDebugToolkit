@@ -59,11 +59,15 @@ measurements) should stop doing so.
 ```
 (`ownerHwnd`/`isModal` fields added in Phase 4; omit or default false/null before then.)
 
+`list-windows` and `attach` enumerate visible top-level windows through Win32 `EnumWindows`, not
+only UIA desktop-tree children. This includes owned native dialogs such as WPF
+`MessageBox.Show(...)` windows (class `#32770`), returned with their owner handle and modal flag.
+The returned HWND can be passed directly to `inspect`, `screenshot`, `click`, and `get-text`;
+for example, `click --hwnd <message-box-hwnd> --strategy Name --value Yes`.
+
 `boundingRect` is omitted entirely (not emitted as JSON `null`, per `JsonOutput`'s default
-null-field-omission behavior) when UIA reports a non-finite (`NaN`/`Infinity`) bounding rectangle
-for the window — this can legitimately occur for offscreen, virtualized, or not-yet-realized
-elements. Callers must treat a missing `boundingRect` key as "bounds unavailable", not as an
-error.
+null-field-omission behavior) when Win32 `GetWindowRect` cannot read the window bounds. Callers
+must treat a missing `boundingRect` key as "bounds unavailable", not as an error.
 
 ### ElementInfo (used by `inspect`, `read-visible-text`)
 ```json
@@ -91,7 +95,8 @@ throwing. `inspect` remains successful in this case; only the affected element(s
 
 ### `attach --process <name>`
 Resolves a running process by exact name match (no `.exe` suffix assumed either way — match
-flexibly). Persists session context.
+flexibly). Persists session context and returns every visible top-level window owned by the
+process, including owned native dialogs.
 - **Fixed 2026-09-15:** a trailing `.exe` suffix on `--process` (e.g. `--process Fdm.exe`) is now
   stripped (case-insensitively) before matching against `Process.ProcessName` (which never includes
   it). Previously this silently produced `process-not-found` despite the "match flexibly" contract
@@ -107,7 +112,8 @@ flexibly). Persists session context.
   docs/KNOWN_OPEN_FINDINGS.md for the original finding.
 
 ### `list-windows [--pid <n>]`
-Uses context pid if `--pid` omitted.
+Uses context pid if `--pid` omitted. Returns every visible top-level window belonging to that
+process, including owned native dialogs such as `#32770` MessageBox windows.
 - Success: `{ "success": true, "windows": [WindowInfo, ...] }`
 
 ### `inspect --hwnd <h> [--maxDepth <n>] [--screenshot true|false]`

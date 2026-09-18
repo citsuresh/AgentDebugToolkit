@@ -202,10 +202,11 @@ internal static class Verbs
     }
 
     /// <summary>
-    /// Snapshots the target process's top-level window set, polls until it is stable (unchanged)
-    /// for <paramref name="settleMs"/> (default 300) consecutive milliseconds, or <c>--timeoutMs</c>
-    /// elapses. "Stable" is determined by comparing hwnd sets between polls; a window closing and a
-    /// different one opening within the same tick still counts as a change worth re-settling on.
+    /// Snapshots the target process's visible top-level window set (including owned dialogs), polls
+    /// until it is stable (unchanged) for <paramref name="settleMs"/> (default 300) consecutive
+    /// milliseconds, or <c>--timeoutMs</c> elapses. "Stable" is determined by comparing hwnd sets
+    /// between polls; a window closing and a different one opening within the same tick still counts
+    /// as a change worth re-settling on.
     /// </summary>
     public static int WaitForWindowChange(Dictionary<string, string> opts)
     {
@@ -1733,7 +1734,7 @@ internal static class Verbs
         var windows = UiaHelper.ListTopLevelWindows(pid.Value);
         if (windows.Count == 0)
         {
-            return (IntPtr.Zero, "stale-context", $"No top-level windows found for pid {pid.Value}.");
+            return (IntPtr.Zero, "stale-context", $"No visible top-level windows found for pid {pid.Value}.");
         }
 
         var foregroundWindows = windows.Where(window => window.IsForeground).ToList();

@@ -25,44 +25,34 @@ internal static class UiaHelper
 {
     public static List<WindowInfo> ListTopLevelWindows(int pid)
     {
-        var result = new List<WindowInfo>();
-        var cond = new PropertyCondition(AutomationElement.ProcessIdProperty, pid);
-        var root = AutomationElement.RootElement;
         var foreground = NativeMethods.GetForegroundWindow();
-
-        AutomationElementCollection windows;
-        try
-        {
-            windows = root.FindAll(TreeScope.Children, cond);
-        }
-        catch
-        {
-            return result;
-        }
-
-        foreach (AutomationElement win in windows)
-        {
-            result.Add(ToWindowInfo(win, foreground));
-        }
-
-        return result;
+        return NativeMethods.EnumerateVisibleTopLevelWindows(pid)
+            .Select(hwnd => ToWindowInfo(hwnd, pid, foreground))
+            .ToList();
     }
 
-    private static WindowInfo ToWindowInfo(AutomationElement el, IntPtr foreground)
+    private static WindowInfo ToWindowInfo(IntPtr hwnd, int pid, IntPtr foreground)
     {
-        var hwnd = (IntPtr)el.Current.NativeWindowHandle;
         var ownerHwnd = NativeMethods.GetWindow(hwnd, NativeMethods.GW_OWNER);
-        var r = el.Current.BoundingRectangle;
+        var hasBounds = NativeMethods.GetWindowRect(hwnd, out var bounds);
         return new WindowInfo
         {
             Hwnd = $"0x{hwnd.ToInt64():X}",
-            Title = el.Current.Name,
-            ClassName = el.Current.ClassName,
-            Pid = el.Current.ProcessId,
+            Title = NativeMethods.GetWindowTitle(hwnd),
+            ClassName = NativeMethods.GetWindowClassName(hwnd),
+            Pid = pid,
             OwnerHwnd = ownerHwnd != IntPtr.Zero ? $"0x{ownerHwnd.ToInt64():X}" : null,
             IsModal = ownerHwnd != IntPtr.Zero,
             IsForeground = hwnd == foreground,
-            BoundingRect = SafeRect(r)
+            BoundingRect = hasBounds
+                ? new Rect
+                {
+                    X = bounds.Left,
+                    Y = bounds.Top,
+                    Width = bounds.Right - bounds.Left,
+                    Height = bounds.Bottom - bounds.Top
+                }
+                : null
         };
     }
 
