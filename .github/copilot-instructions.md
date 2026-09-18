@@ -67,6 +67,16 @@ memory plus a Roslyn-based code knowledge graph.
   this only if the first prompt is clearly self-contained and unrelated to this codebase
   (e.g. general syntax/language questions, IDE/tool questions, or generic advice not
   requiring project context). If in doubt, run it — it is a cheap check.
+- If a change in this repo implies the `ui-debug-map` or `agent-orchestrator` Copilot skill needs
+  updating (new verb, changed CLI contract, new gotcha discovered, etc.), edit the versioned copy
+  at `C:\MyFiles\Git\Visual-Studio-Copilot-Skills\<skill-name>\SKILL.md` — never edit
+  `C:\Users\sveluswa\.copilot\skills\<skill-name>\SKILL.md` directly. The global `.copilot\skills`
+  copy is the installed/active copy Copilot actually loads at runtime; it is not version controlled
+  and should only ever be updated by running `Install-Skills.ps1` from the repo, after the repo
+  change has been reviewed and committed — never edited in place.
+- After editing the repo copy, stop and show the diff for review before doing anything else. Do not
+  run `Install-Skills.ps1` unless explicitly asked to — that is the user's call after reviewing the
+  skill change separately from the AgentDebugToolkit change that triggered it.
 
 ## Response Guidelines
 
