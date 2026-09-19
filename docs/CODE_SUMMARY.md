@@ -27,8 +27,8 @@ graph LR
 
 | Symbol | File | Responsibility |
 |---|---|---|
-| `Program` / `Verbs` (top-level) | `Program.cs` | Entry point; parses `--key value` args and dispatches UI Automation verbs |
-| `UiaHelper` | `UiaHelper.cs` | Enumerates visible top-level/owned windows through Win32, and wraps UIA calls to resolve selectors, build `ElementInfo` trees, perform click/type (pattern-based, falling back to synthetic input), and send keys |
+| `Program` / `Verbs` (top-level) | `Program.cs` | Entry point; parses `--key value` args and dispatches UI Automation verbs, including virtualized grid-cell edits |
+| `UiaHelper` | `UiaHelper.cs` | Enumerates visible top-level/owned windows through Win32; resolves selectors and virtualized grid rows/cells/editors; builds `ElementInfo` trees; and performs pattern-based or synthetic interaction |
 | `SessionContext` | `SessionContext.cs` | Persists the "current" pid to a temp JSON file so subsequent CLI invocations (separate processes) can omit `--pid` after `attach` |
 | `ScreenshotHelper` | `ScreenshotHelper.cs` | Captures a PNG screenshot of an element's bounding rect to local app data |
 | `NativeMethods` | `NativeMethods.cs` | P/Invoke user32 helpers for Win32 window enumeration/metadata, synthetic mouse/keyboard input, and window queries; primary interaction mechanism since target apps often support no UIA patterns |

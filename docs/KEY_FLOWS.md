@@ -10,6 +10,8 @@ Program.Verbs.Click -> Program.Verbs.ResolveElement -> UiaHelper.FindWindowByHwn
 
 Program.Verbs.Type -> Program.Verbs.ResolveElement -> UiaHelper.ResolveSelector -> UiaHelper.Type (ValuePattern, falls back to NativeMethods.Click + NativeMethods.SendText)
 
+Program.Verbs.SetGridCell -> UiaHelper.ResolveGridCell -> UiaHelper.ResolveGridEditor -> UiaHelper.Type -> UiaHelper.Click (optional Apply)
+
 ConsoleVerbs.Launch -> StartBroker -> BrokerProgram.Run -> ConPtySession -> named-pipe broker session
 
 ConsoleVerbs.SendText/WaitForText/ReadScreen/Stop -> BrokerClient.SendRequest -> BrokerProgram.ServeConnectionAsync -> TerminalBuffer/ConPtySession

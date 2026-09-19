@@ -24,6 +24,17 @@ The toolkit must support both, with graceful fallback.
    - The returned HWND worked with `inspect`, `get-text --strategy Name --value Yes`, and
      `click --strategy Name --value Yes`; the click invoked the button and closed the dialog.
 
+0. **Virtualized WPF DataGrid editor resolution (validated 2026-09-19):**
+   - WindowWorks' `PropertyDataGrid` exposes `GridPattern`, `TablePattern`, `ItemContainerPattern`,
+     and `ScrollPattern`. Rows expose `SelectionItemPattern`/`ScrollItemPattern`; cells expose
+     `GridItemPattern`/`TableItemPattern`/`ValuePattern`.
+   - `style.display` is exposed by a property cell in a `DataGridRow`; its editable value is a
+     sibling cell at UIA column index 1 whose descendant `TextBox` has an empty Name and supports
+     `ValuePattern`. The in-cell `Apply` button supports `InvokePattern`.
+   - `set-grid-cell` independently completed a `display:none`/`display:block` round trip through
+     virtualization: it resolved the row/cell/editor by UIA, set text through `ValuePattern`, and
+     invoked Apply through `InvokePattern`, without using screen coordinates.
+
 1. **Menu/list screens (e.g., main Tools menu, device-type list, workflow step list):**
    - Every element reports `ControlType.Pane`, generic `ClassName`
 	 (`WindowsForms10.Window.8.app.0...`).

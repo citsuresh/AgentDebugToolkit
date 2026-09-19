@@ -386,6 +386,27 @@ Reads current `Name` or `ValuePattern.Value` (whichever is more appropriate/avai
 resolved element.
 - Success: `{ "success": true, "text": "10.176.100.248" }`
 
+### `set-grid-cell --hwnd <h> --gridStrategy <s> --gridValue <v> --rowStrategy <s> --rowValue <v> --columnIndex <n> --text <input> [--editorControlType Edit|ComboBox|CheckBox] [--applyStrategy <s> --applyValue <v>]`
+Edits a cell in a UIA `DataGrid` without relying on a previously captured screen coordinate.
+`--gridStrategy`/`--gridValue` locate the grid; `--rowStrategy`/`--rowValue` locate a descendant
+within the requested row; `--columnIndex` selects the sibling cell by its `GridItemPattern` column.
+For virtualized grids, the search starts at the top and re-queries realized rows after each
+incremental scroll until the requested row is found or the grid cannot scroll further.
+
+The resolved cell is brought into view, then its descendant editor of `--editorControlType`
+(default `Edit`) is focused. If the editor is not realized, the cell is selected/focused and
+double-clicked at its freshly read bounding rectangle before the editor lookup is retried. `Edit`
+and `ComboBox` text is set through `ValuePattern` when available; otherwise it falls back to a
+synthetic click using the editor's freshly read bounding rectangle followed by keyboard input.
+`CheckBox` requires `--text true|false` and sets that state through `TogglePattern`. `--applyStrategy`/
+`--applyValue`, when supplied together, resolve and invoke an action element inside the same cell
+after editing.
+
+- Success: `{ "success": true, "row": { ... }, "cell": { ... }, "editor": { ... }, "editorMethod": "pattern" | "synthetic-keyboard", "applyMethod": "pattern" | "synthetic-click" | null }`
+- Failure: `invalid-argument` for invalid/missing selectors, column index, editor control type, or
+  incomplete Apply selector; `element-not-found` when the grid, row/cell, editor, or Apply element
+  cannot be resolved; `window-not-responding` when the target window cannot be probed.
+
 ---
 
 ## Phase 2 verbs

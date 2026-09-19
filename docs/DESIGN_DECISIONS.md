@@ -52,3 +52,14 @@ their HWNDs as the UIA roots for interaction.
 
 **Alternatives considered:** Retaining UIA `TreeScope.Children` enumeration — rejected because it
 cannot surface these dialogs for discovery, screenshots, or button interaction.
+
+## 2026-09-19 — UIA grid patterns over persisted DataGrid coordinates
+
+**Decision:** `set-grid-cell` identifies virtualized grid rows by a stable descendant selector and
+cells by `GridItemPattern` column, then resolves the realized in-cell editor.
+
+**Rationale:** Virtualization and reflow make coordinates captured by a prior inspection unstable.
+UIA scroll, selection, grid, value, and invoke patterns provide a current, structural path.
+
+**Alternatives considered:** Coordinate-based grid clicking — rejected because it was flaky in
+live WindowWorks validation and cannot reliably distinguish a cell from its in-place editor.

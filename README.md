@@ -50,7 +50,7 @@ the terminal buffer, not a native console-window capture.
 
 - **UI Automation (`agentdebug-ui`):** `attach`, `list-windows`, `inspect`, `click`, `right-click`,
   `double-click`, `drag`, `move-mouse`, `get-cursor-pos`, `type`, `get-text`, `wait-for-element`,
-  `wait-for-window-change`, `wait-for-process-responding`, `delay`, `set-context`,
+  `set-grid-cell`, `wait-for-window-change`, `wait-for-process-responding`, `delay`, `set-context`,
   `read-visible-text`, `screenshot`, `activate`, `send-keys`, `submit-chat-message`, `find-first`,
   and `find-all`.
 - **Visual Studio debugger (`agentdebug-vs`):** `debugger-status`, `get-callstack`, `get-locals`,
@@ -85,6 +85,10 @@ select the intended window and provide selectors for each action.
 `MessageBox.Show(...)` window (`#32770`). Pass the returned dialog HWND to `inspect`, `screenshot`,
 `get-text`, or `click` to inspect it or invoke a named button, for example
 `click --hwnd <dialog-hwnd> --strategy Name --value Yes`.
+
+For virtualized WPF `DataGrid` controls, use `set-grid-cell` with the grid selector, a descendant
+row-value selector, and the UIA column index. It re-queries rows while scrolling and edits the
+realized cell editor without depending on a saved screen coordinate.
 
 For console automation, call `launch` once, then use `read-screen`, `send-text`/`send-keys`, and
 `wait-for-text` through the persisted broker session. Call `is-running` to obtain target status

@@ -23,6 +23,18 @@ internal sealed class ClipboardUnavailableException : Exception
 /// </summary>
 internal static class UiaHelper
 {
+    internal sealed class GridCellResolution
+    {
+        public GridCellResolution(AutomationElement row, AutomationElement cell)
+        {
+            Row = row;
+            Cell = cell;
+        }
+
+        public AutomationElement Row { get; }
+        public AutomationElement Cell { get; }
+    }
+
     public static List<WindowInfo> ListTopLevelWindows(int pid)
     {
         var foreground = NativeMethods.GetForegroundWindow();
@@ -193,6 +205,187 @@ internal static class UiaHelper
             _ => throw new NotSupportedException(
                 $"Selector strategy '{selector.Strategy}' is not implemented.")
         };
+    }
+
+    /// <summary>
+    /// Finds a DataGrid row containing a matching descendant, then selects one of its cells by the
+    /// stable UIA GridItemPattern column index. The search starts from the top when the grid can
+    /// scroll and re-queries after every scroll because virtualized rows can be re-realized.
+    /// </summary>
+    public static GridCellResolution? ResolveGridCell(
+        AutomationElement grid, Selector rowSelector, int columnIndex)
+    {
+        if (!grid.TryGetCurrentPattern(GridPattern.Pattern, out _))
+        {
+            return null;
+        }
+
+        var scroll = grid.TryGetCurrentPattern(ScrollPattern.Pattern, out var scrollObject)
+            ? scrollObject as ScrollPattern
+            : null;
+
+        if (scroll is null || !scroll.Current.VerticallyScrollable)
+        {
+            return FindGridCellInRealizedRows(grid, rowSelector, columnIndex);
+        }
+
+        scroll.SetScrollPercent(ScrollPattern.NoScroll, 0);
+        while (true)
+        {
+            var result = FindGridCellInRealizedRows(grid, rowSelector, columnIndex);
+            if (result is not null)
+            {
+                ScrollCellIntoView(result.Cell);
+                return FindGridCellInRealizedRows(grid, rowSelector, columnIndex);
+            }
+
+            var verticalPercentBeforeScroll = scroll.Current.VerticalScrollPercent;
+            if (verticalPercentBeforeScroll >= 100)
+            {
+                break;
+            }
+
+            scroll.Scroll(ScrollAmount.NoAmount, ScrollAmount.SmallIncrement);
+            if (scroll.Current.VerticalScrollPercent <= verticalPercentBeforeScroll)
+            {
+                break;
+            }
+        }
+
+        return null;
+    }
+
+    public static AutomationElement? ResolveGridEditor(AutomationElement cell, ControlType editorControlType)
+    {
+        ScrollCellIntoView(cell);
+        var editor = cell.FindFirst(
+            TreeScope.Descendants,
+            new PropertyCondition(AutomationElement.ControlTypeProperty, editorControlType));
+        if (editor is not null)
+        {
+            return editor;
+        }
+
+        if (cell.TryGetCurrentPattern(SelectionItemPattern.Pattern, out var selectionItemObject)
+            && selectionItemObject is SelectionItemPattern selectionItem)
+        {
+            selectionItem.Select();
+        }
+
+        cell.SetFocus();
+        var bounds = cell.Current.BoundingRectangle;
+        NativeMethods.DoubleClick(
+            (int)(bounds.X + bounds.Width / 2),
+            (int)(bounds.Y + bounds.Height / 2));
+        Thread.Sleep(50);
+
+        return cell.FindFirst(
+            TreeScope.Descendants,
+            new PropertyCondition(AutomationElement.ControlTypeProperty, editorControlType));
+    }
+
+    public static bool TrySetChecked(AutomationElement element, bool target)
+    {
+        if (!element.TryGetCurrentPattern(TogglePattern.Pattern, out var toggleObject)
+            || toggleObject is not TogglePattern toggle)
+        {
+            return false;
+        }
+
+        var desired = target ? ToggleState.On : ToggleState.Off;
+        if (toggle.Current.ToggleState != desired)
+        {
+            toggle.Toggle();
+        }
+
+        return toggle.Current.ToggleState == desired;
+    }
+
+    public static bool TryParseGridEditorControlType(
+        string? text, out ControlType editorControlType, out string error)
+    {
+        switch (text?.Trim())
+        {
+            case "Edit":
+                editorControlType = ControlType.Edit;
+                error = string.Empty;
+                return true;
+            case "ComboBox":
+                editorControlType = ControlType.ComboBox;
+                error = string.Empty;
+                return true;
+            case "CheckBox":
+                editorControlType = ControlType.CheckBox;
+                error = string.Empty;
+                return true;
+            default:
+                editorControlType = null!;
+                error = "must be one of: Edit, ComboBox, CheckBox.";
+                return false;
+        }
+    }
+
+    private static GridCellResolution? FindGridCellInRealizedRows(
+        AutomationElement grid, Selector rowSelector, int columnIndex)
+    {
+        foreach (AutomationElement match in ResolveSelectorAll(grid, rowSelector))
+        {
+            var row = FindContainingDataGridRow(match, grid);
+            if (row is null)
+            {
+                continue;
+            }
+
+            var cell = FindGridCellByColumn(row, columnIndex);
+            if (cell is not null)
+            {
+                return new GridCellResolution(row, cell);
+            }
+        }
+
+        return null;
+    }
+
+    private static AutomationElement? FindContainingDataGridRow(AutomationElement element, AutomationElement grid)
+    {
+        var current = element;
+        while (current is not null && !current.Equals(grid))
+        {
+            if (current.Current.ControlType == ControlType.DataItem
+                && current.Current.ClassName == "DataGridRow")
+            {
+                return current;
+            }
+
+            current = TreeWalker.RawViewWalker.GetParent(current);
+        }
+
+        return null;
+    }
+
+    private static AutomationElement? FindGridCellByColumn(AutomationElement row, int columnIndex)
+    {
+        var cells = row.FindAll(TreeScope.Children, Condition.TrueCondition);
+        foreach (AutomationElement cell in cells)
+        {
+            if (cell.TryGetCurrentPattern(GridItemPattern.Pattern, out var gridItemObject)
+                && gridItemObject is GridItemPattern gridItem
+                && gridItem.Current.Column == columnIndex)
+            {
+                return cell;
+            }
+        }
+
+        return null;
+    }
+
+    private static void ScrollCellIntoView(AutomationElement cell)
+    {
+        if (cell.TryGetCurrentPattern(ScrollItemPattern.Pattern, out var scrollItemObject)
+            && scrollItemObject is ScrollItemPattern scrollItem)
+        {
+            scrollItem.ScrollIntoView();
+        }
     }
 
     public static ElementInfo ToElementInfo(AutomationElement el, bool includeChildren, int maxDepth, int depth = 0)

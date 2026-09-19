@@ -78,6 +78,8 @@ try
             return Verbs.DoubleClick(opts);
         case "type":
             return Verbs.Type(opts);
+        case "set-grid-cell":
+            return Verbs.SetGridCell(opts);
         case "get-text":
             return Verbs.GetText(opts);
         case "wait-for-element":
@@ -828,6 +830,158 @@ internal static class Verbs
         {
             JsonOutput.WriteSuccess(new { method });
         }
+        return 0;
+    }
+
+    /// <summary>
+    /// Locates a virtualized grid row by one of its descendant values, selects a cell by UIA column
+    /// index, and sets its realized editor without relying on a previously observed screen position.
+    /// </summary>
+    public static int SetGridCell(Dictionary<string, string> opts)
+    {
+        if (!opts.TryGetValue("text", out var text))
+        {
+            JsonOutput.WriteError("invalid-argument", "--text is required.");
+            return 1;
+        }
+
+        if (!TryParseNamedSelector(opts, "grid", out var gridSelector, out var gridSelectorError))
+        {
+            JsonOutput.WriteError("invalid-argument", gridSelectorError!);
+            return 1;
+        }
+
+        if (!TryParseNamedSelector(opts, "row", out var rowSelector, out var rowSelectorError))
+        {
+            JsonOutput.WriteError("invalid-argument", rowSelectorError!);
+            return 1;
+        }
+
+        if (!opts.TryGetValue("columnIndex", out var columnIndexText)
+            || !int.TryParse(columnIndexText, out var columnIndex)
+            || columnIndex < 0)
+        {
+            JsonOutput.WriteError("invalid-argument", "--columnIndex is required and must be a non-negative integer.");
+            return 1;
+        }
+
+        var editorControlTypeText = opts.TryGetValue("editorControlType", out var suppliedEditorControlType)
+            ? suppliedEditorControlType
+            : "Edit";
+        if (!UiaHelper.TryParseGridEditorControlType(
+                editorControlTypeText, out var editorControlType, out var editorControlTypeError))
+        {
+            JsonOutput.WriteError("invalid-argument", $"--editorControlType {editorControlTypeError}");
+            return 1;
+        }
+
+        var hasApplyStrategy = opts.ContainsKey("applyStrategy");
+        var hasApplyValue = opts.ContainsKey("applyValue");
+        if (hasApplyStrategy != hasApplyValue)
+        {
+            JsonOutput.WriteError(
+                "invalid-argument",
+                "--applyStrategy and --applyValue must both be supplied, or neither.");
+            return 1;
+        }
+
+        Selector? applySelector = null;
+        if (hasApplyStrategy
+            && !TryParseNamedSelector(opts, "apply", out applySelector, out var applySelectorError))
+        {
+            JsonOutput.WriteError("invalid-argument", applySelectorError!);
+            return 1;
+        }
+
+        var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
+        if (errorCode is not null)
+        {
+            JsonOutput.WriteError(errorCode, error!);
+            return 1;
+        }
+
+        if (!NativeMethods.IsResponding(windowHwnd, timeoutMs: 250))
+        {
+            JsonOutput.WriteError("window-not-responding", "The target window is not responding.");
+            return 1;
+        }
+
+        var window = UiaHelper.FindWindowByHwnd($"0x{windowHwnd.ToInt64():X}");
+        if (window is null)
+        {
+            JsonOutput.WriteError("element-not-found", $"No window found for hwnd '0x{windowHwnd.ToInt64():X}'.");
+            return 1;
+        }
+
+        var grid = UiaHelper.ResolveSelector(window, gridSelector);
+        if (grid is null)
+        {
+            JsonOutput.WriteError("element-not-found", "No grid found for the supplied grid selector.");
+            return 1;
+        }
+
+        var resolution = UiaHelper.ResolveGridCell(grid, rowSelector, columnIndex);
+        if (resolution is null)
+        {
+            JsonOutput.WriteError(
+                "element-not-found",
+                $"No grid cell was found for row selector [{rowSelector.Strategy}] '{rowSelector.Value}' and column {columnIndex}.");
+            return 1;
+        }
+
+        var editor = UiaHelper.ResolveGridEditor(resolution.Cell, editorControlType);
+        if (editor is null)
+        {
+            JsonOutput.WriteError(
+                "element-not-found",
+                $"No {editorControlTypeText} editor was found in grid column {columnIndex}.");
+            return 1;
+        }
+
+        editor.SetFocus();
+        var row = ToElementSummary(resolution.Row);
+        var cell = ToElementSummary(resolution.Cell);
+        var editorInfo = ToElementSummary(editor);
+        string editorMethod;
+        if (editorControlType == ControlType.CheckBox)
+        {
+            if (!bool.TryParse(text, out var isChecked))
+            {
+                JsonOutput.WriteError("invalid-argument", "--text must be true or false for a CheckBox editor.");
+                return 1;
+            }
+
+            if (!UiaHelper.TrySetChecked(editor, isChecked))
+            {
+                JsonOutput.WriteError(
+                    "element-not-found",
+                    "The resolved CheckBox editor does not support TogglePattern.");
+                return 1;
+            }
+
+            editorMethod = "pattern";
+        }
+        else
+        {
+            editorMethod = UiaHelper.Type(editor, text);
+        }
+
+        string? applyMethod = null;
+        if (applySelector is not null)
+        {
+            var applyElement = UiaHelper.ResolveSelector(resolution.Cell, applySelector);
+            if (applyElement is null)
+            {
+                JsonOutput.WriteError("element-not-found", "No apply element was found in the resolved grid cell.");
+                return 1;
+            }
+
+            applyMethod = UiaHelper.Click(applyElement);
+        }
+
+        JsonOutput.WriteSuccess(
+            new { row, cell, editor = editorInfo, editorMethod, applyMethod },
+            preserveNullFields: true);
         return 0;
     }
 
@@ -1582,6 +1736,31 @@ internal static class Verbs
         }
 
         return (strategy, value, null, null);
+    }
+
+    private static bool TryParseNamedSelector(
+        Dictionary<string, string> opts, string prefix, out Selector selector, out string? error)
+    {
+        selector = new Selector();
+        error = null;
+
+        var strategyKey = $"{prefix}Strategy";
+        var valueKey = $"{prefix}Value";
+        opts.TryGetValue(strategyKey, out var strategyText);
+        if (!UiaHelper.TryParseImplementedSelectorStrategy(strategyText, out var strategy, out var strategyError))
+        {
+            error = $"--{strategyKey} is required and {strategyError}";
+            return false;
+        }
+
+        if (!opts.TryGetValue(valueKey, out var value))
+        {
+            error = $"--{valueKey} is required.";
+            return false;
+        }
+
+        selector = new Selector { Strategy = strategy, Value = value };
+        return true;
     }
 
     /// <summary>
