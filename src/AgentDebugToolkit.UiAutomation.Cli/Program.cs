@@ -111,6 +111,16 @@ try
             return 1;
     }
 }
+catch (ForegroundActivationException)
+{
+    JsonOutput.WriteError("foreground-activation-failed", "The target window is no longer foreground.");
+    return 1;
+}
+catch (InputInjectionException ex)
+{
+    JsonOutput.WriteError("input-injection-failed", ex.Message);
+    return 1;
+}
 catch (Exception ex)
 {
     JsonOutput.WriteError("unhandled-exception", ex.Message);
@@ -458,6 +468,12 @@ internal static class Verbs
             return 1;
         }
 
+        if (!EnsureElementForeground(element, windowHwnd))
+        {
+            JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
+            return 1;
+        }
+
         // Capture elementFound BEFORE invoking the click, not after: UiaHelper.Click() can change
         // the element's state (e.g. IsEnabled, IsOffscreen, or even cause it to disappear as a
         // direct result of the click), so reading it afterward would report the click's
@@ -491,6 +507,12 @@ internal static class Verbs
             return 1;
         }
 
+        if (!EnsureElementForeground(element, windowHwnd))
+        {
+            JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
+            return 1;
+        }
+
         // Same pre-action-state capture rule as Click/Drag.
         var info = UiaHelper.ToElementInfo(element, includeChildren: false, maxDepth: 0);
         var method = UiaHelper.RightClick(element);
@@ -517,6 +539,12 @@ internal static class Verbs
         if (element is null)
         {
             JsonOutput.WriteError(elementErrorCode!, elementError!);
+            return 1;
+        }
+
+        if (!EnsureElementForeground(element, windowHwnd))
+        {
+            JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
             return 1;
         }
 
@@ -583,6 +611,12 @@ internal static class Verbs
         if (element is null)
         {
             JsonOutput.WriteError(elementErrorCode!, elementError!);
+            return 1;
+        }
+
+        if (!EnsureElementForeground(element, windowHwnd))
+        {
+            JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
             return 1;
         }
 
@@ -666,6 +700,12 @@ internal static class Verbs
                 return 1;
             }
 
+            if (!EnsureElementForeground(element, windowHwnd))
+            {
+                JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
+                return 1;
+            }
+
             var r = element.Current.BoundingRectangle;
             x = (int)(r.X + r.Width / 2);
             y = (int)(r.Y + r.Height / 2);
@@ -719,6 +759,12 @@ internal static class Verbs
         if (element is null)
         {
             JsonOutput.WriteError(elementErrorCode!, elementError!);
+            return 1;
+        }
+
+        if (!EnsureElementForeground(element, windowHwnd))
+        {
+            JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
             return 1;
         }
 
@@ -929,12 +975,24 @@ internal static class Verbs
             return 1;
         }
 
+        if (!EnsureElementForeground(resolution.Cell, windowHwnd))
+        {
+            JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
+            return 1;
+        }
+
         var editor = UiaHelper.ResolveGridEditor(resolution.Cell, editorControlType);
         if (editor is null)
         {
             JsonOutput.WriteError(
                 "element-not-found",
                 $"No {editorControlTypeText} editor was found in grid column {columnIndex}.");
+            return 1;
+        }
+
+        if (!EnsureElementForeground(editor, windowHwnd))
+        {
+            JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
             return 1;
         }
 
@@ -1082,6 +1140,17 @@ internal static class Verbs
             return 1;
         }
 
+        var focusModeText = opts.TryGetValue("focusMode", out var suppliedFocusMode)
+            ? suppliedFocusMode
+            : "set-focus";
+        if (!TryParseKeyFocusMode(focusModeText, out var focusMode))
+        {
+            JsonOutput.WriteError(
+                "invalid-argument",
+                "--focusMode must be one of: set-focus, click, none.");
+            return 1;
+        }
+
         var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
         if (errorCode is not null)
         {
@@ -1102,9 +1171,17 @@ internal static class Verbs
             return 1;
         }
 
+        if (!EnsureElementForeground(element, windowHwnd))
+        {
+            JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
+            return 1;
+        }
+
         try
         {
-            UiaHelper.SendKeys(element, keys);
+            var focusMethod = UiaHelper.SendKeys(element, keys, focusMode);
+            JsonOutput.WriteSuccess(new { sent = true, focusMethod });
+            return 0;
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or FormatException)
         {
@@ -1115,8 +1192,6 @@ internal static class Verbs
             return 1;
         }
 
-        JsonOutput.WriteSuccess(new { sent = true });
-        return 0;
     }
 
     public static int GetText(Dictionary<string, string> opts)
@@ -1492,6 +1567,14 @@ internal static class Verbs
             return 1;
         }
 
+        if (!EnsureElementForeground(inputElement, windowHwnd))
+        {
+            JsonOutput.WriteError(
+                "foreground-activation-failed", "Could not bring the target window to the foreground.",
+                new { step = "resolve-input" });
+            return 1;
+        }
+
         // Reject embedded newlines only for the synthetic-keyboard path -- same guard as the
         // standalone type verb (this composite verb calls UiaHelper.Type directly rather than
         // Verbs.Type, so the check is duplicated here rather than inherited; see that verb's
@@ -1602,7 +1685,7 @@ internal static class Verbs
             var keys = hasSubmitKeys ? submitKeys! : "{ENTER}";
             try
             {
-                UiaHelper.SendKeys(inputElement, keys);
+                UiaHelper.SendKeys(inputElement, keys, UiaHelper.KeyFocusMode.None);
             }
             catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or FormatException)
             {
@@ -1736,6 +1819,25 @@ internal static class Verbs
         }
 
         return (strategy, value, null, null);
+    }
+
+    private static bool TryParseKeyFocusMode(string text, out UiaHelper.KeyFocusMode focusMode)
+    {
+        switch (text)
+        {
+            case "set-focus":
+                focusMode = UiaHelper.KeyFocusMode.SetFocus;
+                return true;
+            case "click":
+                focusMode = UiaHelper.KeyFocusMode.Click;
+                return true;
+            case "none":
+                focusMode = UiaHelper.KeyFocusMode.None;
+                return true;
+            default:
+                focusMode = default;
+                return false;
+        }
     }
 
     private static bool TryParseNamedSelector(
@@ -1883,6 +1985,53 @@ internal static class Verbs
         }
 
         return ResolveDiscoveredWindow($"0x{windowHwnd.ToInt64():X}");
+    }
+
+    private static bool EnsureTargetWindowForeground(IntPtr targetHwnd)
+    {
+        var targetRoot = NativeMethods.GetAncestor(targetHwnd, NativeMethods.GA_ROOT);
+        if (targetRoot == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        if (NativeMethods.GetForegroundWindow() == targetRoot)
+        {
+            NativeMethods.SetExpectedForegroundWindow(targetRoot);
+            return true;
+        }
+
+        if (!NativeMethods.SetForegroundWindow(targetRoot))
+        {
+            return false;
+        }
+
+        const int timeoutMs = 250;
+        const int pollMs = 25;
+        for (var elapsedMs = 0; elapsedMs < timeoutMs; elapsedMs += pollMs)
+        {
+            if (NativeMethods.GetForegroundWindow() == targetRoot)
+            {
+                NativeMethods.SetExpectedForegroundWindow(targetRoot);
+                return true;
+            }
+
+            Thread.Sleep(pollMs);
+        }
+
+        var isForeground = NativeMethods.GetForegroundWindow() == targetRoot;
+        if (isForeground)
+        {
+            NativeMethods.SetExpectedForegroundWindow(targetRoot);
+        }
+
+        return isForeground;
+    }
+
+    private static bool EnsureElementForeground(AutomationElement element, IntPtr fallbackHwnd)
+    {
+        var elementHwnd = new IntPtr(element.Current.NativeWindowHandle);
+        return EnsureTargetWindowForeground(elementHwnd != IntPtr.Zero ? elementHwnd : fallbackHwnd);
     }
 
     private static (IntPtr windowHwnd, string? errorCode, string? error) ResolveWindowHwnd(

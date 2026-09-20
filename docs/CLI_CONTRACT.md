@@ -86,8 +86,21 @@ throwing. `inspect` remains successful in this case; only the affected element(s
 ```json
 { "success": false, "error": "element-not-found" | "stale-context" | "ambiguous-process" |
   "ambiguous-window" | "timeout" | "process-not-responding" | "window-not-responding" |
-  "invalid-argument" | "session-context-write-failed", "message": "human readable detail" }
+  "foreground-activation-failed" | "input-injection-failed" | "invalid-argument" |
+  "session-context-write-failed",
+  "message": "human readable detail" }
 ```
+
+State-changing UI verbs (`click`, `right-click`, `double-click`, `drag`, selector-based
+`move-mouse`, `type`, `set-grid-cell`, `send-keys`, and `submit-chat-message`) verify that the
+target top-level window is foreground before sending input. If it is not foreground, they request
+activation and wait briefly for Windows to confirm it. They fail with
+`foreground-activation-failed` rather than risking input in another foreground application when
+Windows denies activation. Synthetic keyboard input rechecks foreground between independently
+dispatched key units; if focus changes mid-sequence, it stops before the next unit and reports
+`foreground-activation-failed`. The original target can therefore receive a partial sequence, but
+the remaining input is not sent to the newly foreground application. Read-only verbs do not change
+activation.
 
 ---
 
@@ -580,19 +593,28 @@ fall back to `--pid`/persisted session context.
   `stale-context` result from `activate` should be treated as "could not activate this time," not
   as evidence the window/session is invalid.
 
-### `send-keys --hwnd <h> --strategy <s> --value <v> --keys <SendKeys syntax>`
-Companion to `type` for input `type` cannot express. `type`'s underlying `SendText` always
-escapes `SendKeys` special characters (`+^%~(){}[]`) so literal input text is never
-misinterpreted as `SendKeys` syntax — this means `type` has no way to send key combinations like
+### `send-keys --hwnd <h> --strategy <s> --value <v> --keys <SendKeys syntax> [--focusMode set-focus|click|none]`
+Companion to `type` for input `type` cannot express. `type` sends literal Unicode keyboard input,
+so literal text is never interpreted as `SendKeys` syntax — this means `type` has no way to send key combinations like
 `Ctrl+A`, `Delete`, or `Enter` as actual key presses. `send-keys` instead accepts and passes
 through **unescaped** `SendKeys.SendWait` syntax via `--keys` (e.g. `--keys "^a"` for Ctrl+A,
 `--keys "{DELETE}"`, `--keys "{ENTER}"`). Element-scoped, consistent with `click`/`type`: resolves
 the window and element via the same `--hwnd`/`--strategy`/`--value` selector mechanism, checks
-`IsResponding` up front, then click-to-focuses the element (same as `type`'s fallback path)
-before sending the raw key sequence. There is no UIA-pattern fast path (unlike `type`'s
-`ValuePattern` attempt) since there is no pattern equivalent for raw key-combination input —
-`send-keys` always uses synthetic keyboard input.
-- Success: `{ "success": true, "sent": true }`
+`IsResponding` up front, then applies `--focusMode` before sending the raw key sequence:
+`set-focus` (default) calls UIA `SetFocus()` without a mouse event; `click` preserves the former
+synthetic center-click behavior for controls that require physical mouse focus; and `none` leaves
+focus unchanged for callers that already established it. `set-focus` avoids custom controls whose
+mouse handlers change selection before a navigation key can be delivered. There is no UIA-pattern
+fast path for the raw key sequence itself (unlike `type`'s `ValuePattern` attempt), so
+`send-keys` always uses synthetic keyboard input. Like other state-changing verbs, it first
+ensures the target top-level window is foreground; this prevents `SendKeys.SendWait` from
+delivering keys to another application. It rechecks foreground before every ordinary key, braced
+key, or shortcut it dispatches. Explicit parenthesized modifier groups and braced repeat
+expressions remain one grouped SendKeys operation. If foreground changes mid-sequence, the command
+stops with `foreground-activation-failed` before the next independently dispatched key unit; the
+target may therefore receive a partial sequence, but remaining keys are not sent to the new
+foreground application.
+- Success: `{ "success": true, "sent": true, "focusMethod": "set-focus" | "click" | "none" }`
 - Failure: `invalid-argument` if `--keys` is missing/empty, or if `--keys` is not valid `SendKeys`
   syntax (e.g. an unbalanced `{` or an unrecognized key name like `{FOO}` — `SendKeys.SendWait`
   throws for these; `send-keys` catches this and reports it as `invalid-argument` with the

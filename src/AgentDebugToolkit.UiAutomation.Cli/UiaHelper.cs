@@ -23,6 +23,13 @@ internal sealed class ClipboardUnavailableException : Exception
 /// </summary>
 internal static class UiaHelper
 {
+    public enum KeyFocusMode
+    {
+        SetFocus,
+        Click,
+        None,
+    }
+
     internal sealed class GridCellResolution
     {
         public GridCellResolution(AutomationElement row, AutomationElement cell)
@@ -598,26 +605,32 @@ internal static class UiaHelper
 
         SetClipboardTextWithRetry(text, excludeFromHistoryAndSync: true);
 
-        var r = element.Current.BoundingRectangle;
-        var cx = (int)(r.X + r.Width / 2);
-        var cy = (int)(r.Y + r.Height / 2);
-        NativeMethods.Click(cx, cy);
-        Thread.Sleep(100);
-        NativeMethods.SendKeysRaw("^v");
-        Thread.Sleep(100);
-
         bool? restored = null;
-        if (hadOriginalContent)
+        try
         {
-            try
+            var r = element.Current.BoundingRectangle;
+            var cx = (int)(r.X + r.Width / 2);
+            var cy = (int)(r.Y + r.Height / 2);
+            NativeMethods.Click(cx, cy);
+            Thread.Sleep(100);
+            NativeMethods.SendKeysRaw("^v");
+            Thread.Sleep(100);
+        }
+        finally
+        {
+            if (hadOriginalContent)
             {
-                SetClipboardDataWithRetry(originalData!);
-                restored = true;
-            }
-            catch (ClipboardUnavailableException)
-            {
-                // Best-effort restore only — the paste itself already succeeded above.
-                restored = false;
+                try
+                {
+                    SetClipboardDataWithRetry(originalData!);
+                    restored = true;
+                }
+                catch (ClipboardUnavailableException)
+                {
+                    // Best-effort restore only — the paste itself already succeeded above or
+                    // input was safely aborted before it could be delivered.
+                    restored = false;
+                }
             }
         }
 
@@ -714,10 +727,11 @@ internal static class UiaHelper
     }
 
     /// <summary>
-    /// Click-to-focus the element, then send raw/unescaped SendKeys syntax (e.g. "^a" for Ctrl+A,
-    /// "{DELETE}", "{ENTER}"). Always uses synthetic keyboard input — there is no UIA pattern
-    /// equivalent for key-combination input like there is for literal text (ValuePattern), so
-    /// unlike <see cref="Type"/> this has no pattern-based fast path.
+    /// Focuses the element according to <paramref name="focusMode"/>, then sends raw/unescaped
+    /// SendKeys syntax (e.g. "^a" for Ctrl+A, "{DELETE}", "{ENTER}"). UIA SetFocus is the default
+    /// because a synthetic mouse click can trigger custom controls' mouse-selection behavior before
+    /// the requested key is sent. Always uses synthetic keyboard input — there is no UIA pattern
+    /// equivalent for key-combination input like there is for literal text (ValuePattern).
     /// </summary>
     /// <exception cref="ArgumentException">
     /// Thrown (by the underlying SendKeys.SendWait) if <paramref name="keys"/> is not valid
@@ -725,14 +739,35 @@ internal static class UiaHelper
     /// translate this to a clean invalid-argument response rather than letting it propagate as an
     /// unhandled exception.
     /// </exception>
-    public static void SendKeys(AutomationElement element, string keys)
+    public static string SendKeys(AutomationElement element, string keys, KeyFocusMode focusMode)
     {
-        var r = element.Current.BoundingRectangle;
-        var cx = (int)(r.X + r.Width / 2);
-        var cy = (int)(r.Y + r.Height / 2);
-        NativeMethods.Click(cx, cy);
-        Thread.Sleep(100);
+        switch (focusMode)
+        {
+            case KeyFocusMode.SetFocus:
+                element.SetFocus();
+                Thread.Sleep(100);
+                break;
+            case KeyFocusMode.Click:
+                var r = element.Current.BoundingRectangle;
+                var cx = (int)(r.X + r.Width / 2);
+                var cy = (int)(r.Y + r.Height / 2);
+                NativeMethods.Click(cx, cy);
+                Thread.Sleep(100);
+                break;
+            case KeyFocusMode.None:
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(focusMode));
+        }
+
         NativeMethods.SendKeysRaw(keys);
+        return focusMode switch
+        {
+            KeyFocusMode.SetFocus => "set-focus",
+            KeyFocusMode.Click => "click",
+            KeyFocusMode.None => "none",
+            _ => throw new ArgumentOutOfRangeException(nameof(focusMode))
+        };
     }
 
     // Bounds for read-visible-text traversal: mirrors inspect's existing default maxDepth (8) and

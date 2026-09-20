@@ -3,6 +3,22 @@ using System.Text;
 
 namespace AgentDebugToolkit.UiAutomation.Cli;
 
+internal sealed class ForegroundActivationException : Exception
+{
+    public ForegroundActivationException()
+        : base("The target window is no longer foreground.")
+    {
+    }
+}
+
+internal sealed class InputInjectionException : Exception
+{
+    public InputInjectionException(string message)
+        : base(message)
+    {
+    }
+}
+
 /// <summary>
 /// P/Invoke helpers for synthetic input and window queries. See docs/VALIDATION_FINDINGS.md
 /// for why synthetic input (rather than UIA InvokePattern/ValuePattern) is the primary
@@ -10,8 +26,11 @@ namespace AgentDebugToolkit.UiAutomation.Cli;
 /// </summary>
 internal static class NativeMethods
 {
-    [DllImport("user32.dll")]
-    public static extern bool SetCursorPos(int x, int y);
+    [ThreadStatic]
+    private static IntPtr expectedForegroundWindow;
+
+    [DllImport("user32.dll", EntryPoint = "SetCursorPos", SetLastError = true)]
+    private static extern bool SetCursorPosNative(int x, int y);
 
     [DllImport("user32.dll", EntryPoint = "GetCursorPos")]
     private static extern bool GetCursorPosNative(out POINT lpPoint);
@@ -51,7 +70,17 @@ internal static class NativeMethods
     private struct INPUT
     {
         public uint type;
+        public INPUTUNION union;
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    private struct INPUTUNION
+    {
+        [FieldOffset(0)]
         public MOUSEINPUT mi;
+
+        [FieldOffset(0)]
+        public KEYBDINPUT ki;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -65,13 +94,26 @@ internal static class NativeMethods
         public IntPtr dwExtraInfo;
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    private struct KEYBDINPUT
+    {
+        public ushort wVk;
+        public ushort wScan;
+        public uint dwFlags;
+        public uint time;
+        public IntPtr dwExtraInfo;
+    }
+
     private const uint INPUT_MOUSE = 0;
+    private const uint INPUT_KEYBOARD = 1;
+    private const uint KEYEVENTF_KEYUP = 0x0002;
+    private const uint KEYEVENTF_UNICODE = 0x0004;
 
     private static void SendMouseInput(uint dwFlags)
     {
         var inputs = new INPUT[1];
         inputs[0].type = INPUT_MOUSE;
-        inputs[0].mi = new MOUSEINPUT
+        inputs[0].union.mi = new MOUSEINPUT
         {
             dx = 0,
             dy = 0,
@@ -81,7 +123,12 @@ internal static class NativeMethods
             dwExtraInfo = IntPtr.Zero,
         };
 
-        SendInput(1, inputs, Marshal.SizeOf<INPUT>());
+        var sent = SendInput(1, inputs, Marshal.SizeOf<INPUT>());
+        if (sent != 1)
+        {
+            throw new InputInjectionException(
+                $"SendInput accepted {sent} of 1 mouse events (Win32 error {Marshal.GetLastWin32Error()}).");
+        }
     }
 
     [DllImport("user32.dll")]
@@ -94,6 +141,9 @@ internal static class NativeMethods
 
     [DllImport("user32.dll")]
     public static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr GetAncestor(IntPtr hWnd, uint gaFlags);
 
     [DllImport("user32.dll")]
     public static extern IntPtr GetWindow(IntPtr hWnd, uint uCmd);
@@ -140,6 +190,7 @@ internal static class NativeMethods
     public const uint MOUSEEVENTF_RIGHTDOWN = 0x0008;
     public const uint MOUSEEVENTF_RIGHTUP = 0x0010;
     public const uint GW_OWNER = 4;
+    public const uint GA_ROOT = 2;
     public const uint SMTO_ABORTIFHUNG = 0x0002;
     public const uint WM_NULL = 0x0000;
 
@@ -207,20 +258,39 @@ internal static class NativeMethods
         }
     }
 
+    public static void SetExpectedForegroundWindow(IntPtr targetHwnd)
+    {
+        expectedForegroundWindow = GetAncestor(targetHwnd, GA_ROOT);
+    }
+
+    public static void EnsureExpectedForegroundWindow()
+    {
+        if (expectedForegroundWindow != IntPtr.Zero
+            && GetForegroundWindow() != expectedForegroundWindow)
+        {
+            throw new ForegroundActivationException();
+        }
+    }
+
+    public static bool SetCursorPos(int x, int y)
+    {
+        EnsureExpectedForegroundWindow();
+        MoveCursorOrThrow(x, y);
+        return true;
+    }
+
     public static void Click(int x, int y)
     {
-        SetCursorPos(x, y);
-        SendMouseInput(MOUSEEVENTF_LEFTDOWN);
-        Thread.Sleep(50);
-        SendMouseInput(MOUSEEVENTF_LEFTUP);
+        EnsureExpectedForegroundWindow();
+        MoveCursorOrThrow(x, y);
+        SendCheckedMouseButtonPair(MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP, holdMs: 50);
     }
 
     public static void RightClick(int x, int y)
     {
-        SetCursorPos(x, y);
-        SendMouseInput(MOUSEEVENTF_RIGHTDOWN);
-        Thread.Sleep(50);
-        SendMouseInput(MOUSEEVENTF_RIGHTUP);
+        EnsureExpectedForegroundWindow();
+        MoveCursorOrThrow(x, y);
+        SendCheckedMouseButtonPair(MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP, holdMs: 50);
     }
 
     [DllImport("user32.dll")]
@@ -238,20 +308,18 @@ internal static class NativeMethods
     /// </summary>
     public static void DoubleClick(int x, int y)
     {
+        EnsureExpectedForegroundWindow();
         const int clickHoldMs = 10;
         var threshold = (int)GetDoubleClickTime();
         var interClickDelayMs = Math.Max(0, (threshold - 2 * clickHoldMs) / 2);
 
-        SetCursorPos(x, y);
-        SendMouseInput(MOUSEEVENTF_LEFTDOWN);
-        Thread.Sleep(clickHoldMs);
-        SendMouseInput(MOUSEEVENTF_LEFTUP);
+        MoveCursorOrThrow(x, y);
+        SendCheckedMouseButtonPair(MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP, clickHoldMs);
 
         Thread.Sleep(interClickDelayMs);
 
-        SendMouseInput(MOUSEEVENTF_LEFTDOWN);
-        Thread.Sleep(clickHoldMs);
-        SendMouseInput(MOUSEEVENTF_LEFTUP);
+        EnsureExpectedForegroundWindow();
+        SendCheckedMouseButtonPair(MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP, clickHoldMs);
     }
 
     /// <summary>
@@ -263,30 +331,42 @@ internal static class NativeMethods
     /// </summary>
     public static void Drag(int sourceX, int sourceY, int targetX, int targetY, int steps, int durationMs)
     {
-        SetCursorPos(sourceX, sourceY);
+        EnsureExpectedForegroundWindow();
+        MoveCursorOrThrow(sourceX, sourceY);
         SendMouseInput(MOUSEEVENTF_LEFTDOWN);
-
-        var delayPerStep = steps > 0 ? durationMs / steps : 0;
-        for (var i = 1; i <= steps; i++)
+        try
         {
-            var x = sourceX + (targetX - sourceX) * i / steps;
-            var y = sourceY + (targetY - sourceY) * i / steps;
-            SetCursorPos(x, y);
-            if (delayPerStep > 0)
+            var delayPerStep = steps > 0 ? durationMs / steps : 0;
+            for (var i = 1; i <= steps; i++)
             {
-                Thread.Sleep(delayPerStep);
+                EnsureExpectedForegroundWindow();
+                var x = sourceX + (targetX - sourceX) * i / steps;
+                var y = sourceY + (targetY - sourceY) * i / steps;
+                MoveCursorOrThrow(x, y);
+                if (delayPerStep > 0)
+                {
+                    Thread.Sleep(delayPerStep);
+                }
             }
-        }
 
-        SetCursorPos(targetX, targetY);
-        SendMouseInput(MOUSEEVENTF_LEFTUP);
+            EnsureExpectedForegroundWindow();
+            MoveCursorOrThrow(targetX, targetY);
+        }
+        finally
+        {
+            // A button-up must always follow a dispatched button-down, even if focus changed
+            // while dragging; otherwise the system can be left believing the button is held.
+            SendMouseInput(MOUSEEVENTF_LEFTUP);
+        }
     }
 
     public static void SendText(string text)
     {
-        // SendKeys is the simplest reliable way to inject text into a focused control
-        // from a console app; escape SendKeys special characters first.
-        System.Windows.Forms.SendKeys.SendWait(EscapeSendKeys(text));
+        foreach (var character in text)
+        {
+            EnsureExpectedForegroundWindow();
+            SendUnicodeCharacter(character);
+        }
     }
 
     /// <summary>
@@ -298,25 +378,163 @@ internal static class NativeMethods
     /// </summary>
     public static void SendKeysRaw(string keys)
     {
-        System.Windows.Forms.SendKeys.SendWait(keys);
+        foreach (var keyUnit in SplitSendKeysUnits(keys))
+        {
+            EnsureExpectedForegroundWindow();
+            System.Windows.Forms.SendKeys.SendWait(keyUnit);
+        }
     }
 
-    private static string EscapeSendKeys(string text)
+    /// <summary>
+    /// Splits a raw SendKeys expression into independently dispatchable units. This allows
+    /// foreground validation before each ordinary key, braced key, or shortcut rather than only
+    /// before an entire sequence. Parenthesized modifier groups and braced repeat expressions stay
+    /// intact because their grammar deliberately represents one grouped SendKeys operation.
+    /// </summary>
+    private static IEnumerable<string> SplitSendKeysUnits(string keys)
     {
-        var special = "+^%~(){}[]";
-        var sb = new System.Text.StringBuilder();
-        foreach (var c in text)
+        for (var index = 0; index < keys.Length;)
         {
-            if (special.IndexOf(c) >= 0)
+            var start = index;
+            while (index < keys.Length && IsModifier(keys[index]))
             {
-                sb.Append('{').Append(c).Append('}');
+                index++;
+            }
+
+            if (index == keys.Length)
+            {
+                throw new ArgumentException("A modifier must be followed by a key.");
+            }
+
+            if (keys[index] == '(')
+            {
+                var depth = 0;
+                do
+                {
+                    if (keys[index] == '(')
+                    {
+                        depth++;
+                    }
+                    else if (keys[index] == ')')
+                    {
+                        depth--;
+                    }
+                    else if (keys[index] == '{')
+                    {
+                        index = FindBracedTokenEnd(keys, index);
+                        continue;
+                    }
+
+                    index++;
+                }
+                while (index < keys.Length && depth > 0);
+
+                if (depth != 0)
+                {
+                    throw new ArgumentException("Unbalanced parenthesis in SendKeys syntax.");
+                }
+            }
+            else if (keys[index] == '{')
+            {
+                index = FindBracedTokenEnd(keys, index);
             }
             else
             {
-                sb.Append(c);
+                index++;
             }
+
+            yield return keys[start..index];
         }
-        return sb.ToString();
+    }
+
+    private static bool IsModifier(char key) => key is '+' or '^' or '%';
+
+    private static int FindBracedTokenEnd(string keys, int start)
+    {
+        // {}} is SendKeys' escaped literal closing brace. It is the only braced form whose first
+        // closing brace is part of the token rather than its terminator.
+        if (start + 2 < keys.Length && keys[start + 1] == '}' && keys[start + 2] == '}')
+        {
+            return start + 3;
+        }
+
+        var closeBrace = keys.IndexOf('}', start + 1);
+        if (closeBrace < 0)
+        {
+            throw new ArgumentException("Unbalanced brace in SendKeys syntax.");
+        }
+
+        return closeBrace + 1;
+    }
+
+    private static void SendUnicodeCharacter(char character)
+    {
+        var inputs = new[]
+        {
+            CreateUnicodeKeyboardInput(character, KEYEVENTF_UNICODE),
+            CreateUnicodeKeyboardInput(character, KEYEVENTF_UNICODE | KEYEVENTF_KEYUP),
+        };
+        var sent = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<INPUT>());
+        if (sent != (uint)inputs.Length)
+        {
+            if (sent == 1)
+            {
+                TrySendUnicodeKeyUp(character);
+            }
+
+            throw new InputInjectionException(
+                $"SendInput accepted {sent} of {inputs.Length} Unicode keyboard events (Win32 error {Marshal.GetLastWin32Error()}).");
+        }
+    }
+
+    private static INPUT CreateUnicodeKeyboardInput(char character, uint flags)
+    {
+        return new INPUT
+        {
+            type = INPUT_KEYBOARD,
+            union = new INPUTUNION
+            {
+                ki = new KEYBDINPUT
+                {
+                    wVk = 0,
+                    wScan = character,
+                    dwFlags = flags,
+                    time = 0,
+                    dwExtraInfo = IntPtr.Zero,
+                },
+            },
+        };
+    }
+
+    private static void TrySendUnicodeKeyUp(char character)
+    {
+        var input = new[] { CreateUnicodeKeyboardInput(character, KEYEVENTF_UNICODE | KEYEVENTF_KEYUP) };
+        _ = SendInput(1, input, Marshal.SizeOf<INPUT>());
+    }
+
+    private static void MoveCursorOrThrow(int x, int y)
+    {
+        if (!SetCursorPosNative(x, y))
+        {
+            throw new InputInjectionException($"SetCursorPos failed (Win32 error {Marshal.GetLastWin32Error()}).");
+        }
+    }
+
+    private static void SendCheckedMouseButtonPair(uint downFlag, uint upFlag, int holdMs)
+    {
+        EnsureExpectedForegroundWindow();
+        SendMouseInput(downFlag);
+        try
+        {
+            Thread.Sleep(holdMs);
+            EnsureExpectedForegroundWindow();
+        }
+        finally
+        {
+            // Do not re-check here: releasing a button already sent down is cleanup, not a new
+            // target interaction, and must occur even after foreground verification fails.
+            SendMouseInput(upFlag);
+        }
     }
 
     public static bool IsResponding(IntPtr hwnd, uint timeoutMs)
