@@ -365,8 +365,34 @@ internal static class Verbs
                                 return true;
                             }
 
-                            ComRetry.Invoke(() => dte.Debugger.CurrentStackFrame = candidate);
+                            try
+                            {
+                                ComRetry.Invoke(() => dte.Debugger.CurrentStackFrame = candidate);
+                            }
+                            catch (COMException setEx)
+                            {
+                                // "Element not found" (0x80070490) from this specific setter has
+                                // been reproduced live as a race, not a permanent per-thread
+                                // limitation: the debuggee can spontaneously leave break mode
+                                // between RequireBreakMode's check above and this call (confirmed
+                                // via debugger-status flipping to "run" with no continue/step ever
+                                // issued by the caller), which invalidates the StackFrame RCW just
+                                // enumerated. Re-check CurrentMode now so the caller gets a specific,
+                                // actionable reason instead of a raw COMException/HRESULT.
+                                if (ComRetry.Invoke(() => dte.Debugger.CurrentMode) != dbgDebugMode.dbgBreakMode)
+                                {
+                                    resultError = (
+                                        "frame-selection-stale",
+                                        $"select-frame could not select frame {index} ('{candidateFunctionName}') because the debugger left break mode " +
+                                        "(the process resumed) between enumerating frames and applying the selection. Call break-all again and retry select-frame.");
+                                    return true;
+                                }
 
+                                resultError = (
+                                    "frame-selection-failed",
+                                    $"select-frame could not select frame {index} ('{candidateFunctionName}'): {DescribeComFailure(setEx)}");
+                                return true;
+                            }
                             // Re-read CurrentStackFrame immediately after the set, the same way
                             // SelectThread verifies CurrentThread above: StackFrame has no stable
                             // id to compare, so function name + a presence check is the best

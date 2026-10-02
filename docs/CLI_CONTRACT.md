@@ -1136,6 +1136,20 @@ every call rather than cached.
   re-reading `Debugger.CurrentStackFrame` back immediately returns null — same defense-in-depth
   read-back confirmation as `select-thread`, for the same reason (observed live that the
   assignment does not always "stick").
+- Failure: `{ "success": false, "error": "frame-selection-stale", "message": "..." }` if setting
+  `Debugger.CurrentStackFrame` itself throws a `COMException` AND a re-check of
+  `Debugger.CurrentMode` immediately afterward shows the debugger has left break mode. Live-isolated
+  root cause: the debuggee can spontaneously resume and re-pause (e.g. an enabled breakpoint
+  elsewhere in frequently-executed/background code firing) between enumerating `StackFrames` and
+  applying the selection, invalidating the just-enumerated `StackFrame` COM object out from under
+  the call — this previously surfaced as a raw `unhandled-exception`/`COMException("Element not
+  found.", 0x80070490)` instead of a clear, actionable error. This is the same staleness condition
+  described in the note below, just reached via a different code path (a mid-call race instead of a
+  pause that occurred before the call started) — retry via `break-all` then `select-frame` again.
+- Failure: `{ "success": false, "error": "frame-selection-failed", "message": "..." }` if setting
+  `Debugger.CurrentStackFrame` throws any other `COMException` not covered by the
+  `frame-selection-stale` case above — the message is a human-readable HRESULT translation (reusing
+  `evaluate`'s `DescribeComFailure` helper) rather than the raw exception text.
 - Failure: same `not-in-break-mode` / `com-busy-retry-exhausted` errors as other verbs.
 - **Staleness note**: a successful `select-frame`/`select-thread` selection is only valid until the
   next continue/step/break. If a new pause occurs between selecting and a later `get-locals`/
@@ -1143,7 +1157,11 @@ every call rather than cached.
   `no-stack-frame` (or `not-in-break-mode` if the process is no longer paused at all) — this is
   expected behavior, not a bug; there is currently no separate staleness/generation signal in the
   success response, so callers must re-select after every new pause rather than assuming a prior
-  selection still applies.
+  selection still applies. If a pause/resume cycle happens *during* a `select-frame` call itself
+  (rather than between calls), it now surfaces as `frame-selection-stale` instead of a raw
+  `COMException` (see above) — live-confirmed this is not specific to any particular thread (e.g.
+  not a WPF-dispatcher-thread limitation): it reproduces on any thread whenever an enabled
+  breakpoint elsewhere is actively firing, and disappears once the firing breakpoint is removed.
 
 ### `evaluate --expression <text> [--allowSideEffects] [--solution <name>]`
 Evaluates `--expression` against the currently selected stack frame (`Debugger.CurrentStackFrame`
