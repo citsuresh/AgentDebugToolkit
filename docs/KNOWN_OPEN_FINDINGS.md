@@ -257,6 +257,62 @@ a breakpoint, not because the race was fixed, but because nothing was triggering
 `docs/CLI_CONTRACT.md` with the new `frame-selection-stale`/`frame-selection-failed` error codes.
 
 
+## select-frame cannot target frames behind native/managed transitions (0x80070490) — MITIGATED (specific error returned)
+
+- **First seen:** 2026-10-02
+- **Last seen:** 2026-10-02
+- **Occurrences:** 1
+- **Mitigated:** 2026-10-02 (same session, follow-up investigation after the entry above)
+
+**Description:** distinct from the mid-call resume race entry above. Live-tested against a real
+21-frame WPF stack trace (frames 0-1 managed, 2-12 collapsed `"[External Code]"`, 13-14 native
+&lt;-&gt; managed transition pseudo-frames, 15-19 the WinForms message loop, 20 = `Program.Main`,
+the outermost managed frame) with the debugger confirmed to remain in break mode for the entire
+test (ruling out the resume race): two distinct failure shapes were found for frame indices that
+sit inside this native/managed transition region.
+- `select-frame --index 20` (`Program.Main`, the outermost managed frame, reached only through the
+  message-loop/native region) reliably throws `COMException(0x80070490, "Element not found")` —
+  reproduced repeatedly while polling `debugger-status` showed `"break"` the whole time.
+- `select-frame --index 3` (a shallow `"[External Code]"` position, `FunctionName` reported as
+  `System.Windows.Threading.ExceptionWrapper.TryCatchWhen`) reports success, but a follow-up
+  `get-locals`/`evaluate` returns `Program.Main`'s locals instead of the requested frame's —
+  confirmed directly via a standalone EnvDTE probe that `Debugger.CurrentStackFrame` after the
+  "successful" set actually resolves to `Program.Main` (`FunctionName`/`Module` both differ from
+  what was requested), not the frame that was asked for.
+
+**Root cause, isolated via a standalone EnvDTE probe against the live session (bypassing this
+CLI's own code to rule out a bug in it) plus reading `SelectFrame`/`GetLocals` in
+`Program.cs`:** EnvDTE's `StackFrames` enumeration exposes a distinct `FunctionName` per position
+even for frames inside a native/managed transition region, but the underlying native debug-engine
+object is not independently settable as `Debugger.CurrentStackFrame` for every such position.
+Setting it either throws (deeper/outermost positions, e.g. index 20) or silently resolves to a
+different, usually the nearest outer managed, frame (shallower positions, e.g. index 3) instead of
+failing. `GetLocals`/`Evaluate` were confirmed to read `Debugger.CurrentStackFrame` directly with
+no separate frame-resolution logic of their own — the wrong data they return is a faithful
+reflection of what EnvDTE actually bound, not a separate bug in `get-locals`/`evaluate`.
+
+**Fix applied:** `select-frame`'s post-set read-back now compares both `FunctionName` and `Module`
+of `Debugger.CurrentStackFrame` against the frame that was requested, instead of only checking for
+null. A mismatch now returns a new error code, `frame-selection-mismatch`, naming both the
+requested and the actually-bound frame. The `frame-selection-failed` message (for the throwing
+case) was also enriched to say explicitly that this is a known EnvDTE limitation when the debugger
+is confirmed still in break mode, rather than implying a retry might succeed. **This is a
+mitigation, not a fix for the underlying limitation**: there is no known way to make every frame in
+a native/managed transition region independently settable from this tool's side — EnvDTE itself
+does not expose one. What changed is that both failure shapes are now reported clearly (naming the
+real frame actually bound, where applicable) instead of a raw HRESULT or a silently wrong result.
+
+**Verification:** rebuilt clean (0 warnings/errors), reproduced against the live WindowWorks repro
+with the debugger confirmed in break mode throughout: `select-frame --index 20` now returns the
+enriched `frame-selection-failed` message; `select-frame --index 3` now returns
+`frame-selection-mismatch` naming `Program.Main`/the app's own assembly as the frame actually
+bound; a correctly-selectable frame (`--index 1`) still succeeds and `get-locals` still returns its
+own correct locals afterward. Debugger state was restored to frame 0 after testing. Updated
+`docs/CLI_CONTRACT.md` with the new `frame-selection-mismatch` error code and the enriched
+`frame-selection-failed` explanation, and `vs-debug/SKILL.md` (bumped to skill version 4) in the
+separate `Visual-Studio-Copilot-Skills` repo.
+
+
 ## Root nuget.config's `<clear/>` is solution-wide, not scoped to the new project — RESOLVED
 
 - **First seen:** 2026-09-14

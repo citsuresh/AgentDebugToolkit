@@ -365,20 +365,32 @@ internal static class Verbs
                                 return true;
                             }
 
+                            // Cache Module alongside FunctionName for the same reason: this is a
+                            // second, independent signal (live-confirmed to diverge together with
+                            // FunctionName when EnvDTE silently rebinds CurrentStackFrame -- see the
+                            // read-back check below) used to make the post-set mismatch comparison
+                            // resistant to two different frames coincidentally sharing a function name
+                            // (e.g. recursion), which FunctionName alone cannot rule out. Module is
+                            // preferred over Language here because Language reads back "Unknown" for
+                            // most non-pure-managed/External Code frames (not useful to distinguish
+                            // them), whereas Module reliably differs across the assemblies involved in
+                            // a native/managed transition region.
+                            var candidateModule = ComRetry.Invoke(() => candidate.Module);
+
                             try
                             {
                                 ComRetry.Invoke(() => dte.Debugger.CurrentStackFrame = candidate);
                             }
                             catch (COMException setEx)
                             {
-                                // "Element not found" (0x80070490) from this specific setter has
-                                // been reproduced live as a race, not a permanent per-thread
-                                // limitation: the debuggee can spontaneously leave break mode
-                                // between RequireBreakMode's check above and this call (confirmed
-                                // via debugger-status flipping to "run" with no continue/step ever
-                                // issued by the caller), which invalidates the StackFrame RCW just
-                                // enumerated. Re-check CurrentMode now so the caller gets a specific,
-                                // actionable reason instead of a raw COMException/HRESULT.
+                                // "Element not found" (0x80070490) from this specific setter has two
+                                // confirmed-live, distinct root causes:
+                                //  1. A genuine race: the debuggee spontaneously leaves break mode
+                                //     between RequireBreakMode's check above and this call (confirmed
+                                //     via debugger-status flipping to "run" with no continue/step ever
+                                //     issued by the caller), invalidating the StackFrame RCW just
+                                //     enumerated. Re-check CurrentMode now so the caller gets a
+                                //     specific, actionable reason instead of a raw COMException/HRESULT.
                                 if (ComRetry.Invoke(() => dte.Debugger.CurrentMode) != dbgDebugMode.dbgBreakMode)
                                 {
                                     resultError = (
@@ -388,16 +400,49 @@ internal static class Verbs
                                     return true;
                                 }
 
+                                //  2. A permanent, per-stack-shape EnvDTE limitation: live-isolated by
+                                //     reproducing this same throw repeatedly while debugger-status stayed
+                                //     in break mode the whole time (ruling out cause 1 above). It occurs
+                                //     for frame positions inside a native/managed transition region of the
+                                //     call stack (e.g. collapsed "[External Code]" frames between a
+                                //     WinForms/WPF message loop and managed code, and the outermost managed
+                                //     frame beyond that region, such as Program.Main) -- EnvDTE's
+                                //     StackFrames enumeration exposes a FunctionName per position there,
+                                //     but the underlying native debug-engine object is not independently
+                                //     settable as CurrentStackFrame for every such position. There is no
+                                //     known workaround from this side; this is reported as-is rather than
+                                //     retried, since retrying will fail identically.
                                 resultError = (
                                     "frame-selection-failed",
-                                    $"select-frame could not select frame {index} ('{candidateFunctionName}'): {DescribeComFailure(setEx)}");
+                                    $"select-frame could not select frame {index} ('{candidateFunctionName}'): {DescribeComFailure(setEx)}. " +
+                                    "If the debugger is still in break mode (ruling out a resume race), this frame likely sits inside a " +
+                                    "native/managed transition region of the call stack that EnvDTE cannot make current directly -- this is " +
+                                    "a known EnvDTE limitation, not a transient failure; select a different frame index instead of retrying.");
                                 return true;
                             }
                             // Re-read CurrentStackFrame immediately after the set, the same way
                             // SelectThread verifies CurrentThread above: StackFrame has no stable
-                            // id to compare, so function name + a presence check is the best
-                            // available confirmation that the assignment actually took effect
-                            // rather than being silently dropped/ignored by VS's internal state.
+                            // id to compare, so function name is the best available confirmation
+                            // that the assignment actually took effect rather than being silently
+                            // dropped/ignored by VS's internal state.
+                            //
+                            // Live-confirmed failure mode this guards against: for stack shapes with
+                            // collapsed "[External Code]"/native-transition positions, EnvDTE's
+                            // setter can report success while silently rebinding CurrentStackFrame to
+                            // a *different* frame than the one requested (observed live: selecting an
+                            // "[External Code]" position at a shallow index silently bound to the
+                            // outermost managed frame, e.g. Program.Main, instead -- a presence-only
+                            // check here would have let get-locals/evaluate silently operate against
+                            // the wrong frame's data). Comparing FunctionName AND Module together
+                            // catches this: live-confirmed the two diverge together on a silent
+                            // rebind (e.g. 'TryCatchWhen' in WindowsBase.dll vs. 'Program.Main' in the
+                            // app's own assembly), and requiring both to match rules out the one
+                            // scenario FunctionName alone could false-pass -- two distinct frames
+                            // that happen to share a function name (e.g. recursion), which would
+                            // almost certainly still differ by Module unless literally the same
+                            // recursive call. This is still not a perfect identity check (StackFrame
+                            // exposes no stable id/handle at all), but it is the strongest signal
+                            // this interop surface offers.
                             var confirmedFrame = ComRetry.Invoke(() => dte.Debugger.CurrentStackFrame);
                             try
                             {
@@ -407,6 +452,22 @@ internal static class Verbs
                                         "frame-selection-not-applied",
                                         $"select-frame set Debugger.CurrentStackFrame to frame {index} ('{candidateFunctionName}'), " +
                                         "but reading it back afterward returned no current stack frame.");
+                                    return true;
+                                }
+
+                                var confirmedFunctionName = ComRetry.Invoke(() => confirmedFrame.FunctionName);
+                                var confirmedModule = ComRetry.Invoke(() => confirmedFrame.Module);
+                                var functionMatches = string.Equals(confirmedFunctionName, candidateFunctionName, StringComparison.Ordinal);
+                                var moduleMatches = string.Equals(confirmedModule, candidateModule, StringComparison.OrdinalIgnoreCase);
+                                if (!functionMatches || !moduleMatches)
+                                {
+                                    resultError = (
+                                        "frame-selection-mismatch",
+                                        $"select-frame requested frame {index} ('{candidateFunctionName}' in '{candidateModule}'), but reading " +
+                                        $"Debugger.CurrentStackFrame back afterward shows '{confirmedFunctionName}' in '{confirmedModule}' instead. " +
+                                        "This EnvDTE stack shape (native/managed transition region) does not expose a " +
+                                        "distinct settable frame at this index -- select a different index, or use the " +
+                                        $"frame actually bound ('{confirmedFunctionName}') if that is the intended target.");
                                     return true;
                                 }
 

@@ -1149,7 +1149,36 @@ every call rather than cached.
 - Failure: `{ "success": false, "error": "frame-selection-failed", "message": "..." }` if setting
   `Debugger.CurrentStackFrame` throws any other `COMException` not covered by the
   `frame-selection-stale` case above — the message is a human-readable HRESULT translation (reusing
-  `evaluate`'s `DescribeComFailure` helper) rather than the raw exception text.
+  `evaluate`'s `DescribeComFailure` helper) rather than the raw exception text. **Known EnvDTE
+  limitation** (live-isolated, not a transient failure): for stack shapes with a native/managed
+  transition region (e.g. a WinForms/WPF message loop between managed frames, collapsed
+  `"[External Code]"` positions, and the outermost managed frame beyond that region such as
+  `Program.Main`), this setter can throw `COMException(0x80070490, "Element not found")`
+  reproducibly for certain `--index` values while the debugger stays in break mode the whole time
+  (confirmed by re-checking `Debugger.CurrentMode` immediately after the throw — this rules out the
+  `frame-selection-stale` race above). There is no known workaround from this side; EnvDTE does not
+  expose a settable `CurrentStackFrame` for every position in this region. The error message says so
+  explicitly so callers don't retry expecting a different result. `evaluate`/`get-locals` remain
+  fully usable on frames outside this region (e.g. the innermost managed frames of the thread), and
+  on the boundary frame closest to managed code, which correctly returns `frame-not-managed`/0
+  locals instead of this error (see below).
+- Failure: `{ "success": false, "error": "frame-selection-mismatch", "message": "..." }` if setting
+  `Debugger.CurrentStackFrame` reports success, but re-reading it back afterward shows a different
+  `FunctionName` or `Module` than the one requested at `--index`. **Known EnvDTE limitation**, same
+  root cause as `frame-selection-failed` above: live-confirmed that for some positions inside the
+  native/managed transition region, EnvDTE's setter does not throw, but silently rebinds
+  `CurrentStackFrame` to a different frame — observed live selecting a shallow `"[External Code]"`
+  index (`FunctionName='TryCatchWhen'`, `Module=WindowsBase.dll`) to silently bind to the outermost
+  managed frame instead (`FunctionName='Program.Main'`, `Module` the app's own assembly), which would
+  have made `get-locals`/`evaluate` silently return Main's data under the requested index's name
+  without this check. The message names both the requested and the actually-bound function/module so
+  a caller can decide whether to use the frame that was actually bound instead. This check requires
+  both `FunctionName` and `Module` to match (`StackFrame` has no stable id) — comparing both rather
+  than `FunctionName` alone rules out the one scenario `FunctionName` could false-pass on (two
+  distinct frames sharing a function name, e.g. recursion), since those would almost always still
+  differ by `Module` unless it's the same recursive call. `Language` was considered but rejected for
+  this comparison since it reads back `"Unknown"` for most non-pure-managed frames, which would not
+  usefully distinguish them.
 - Failure: same `not-in-break-mode` / `com-busy-retry-exhausted` errors as other verbs.
 - **Staleness note**: a successful `select-frame`/`select-thread` selection is only valid until the
   next continue/step/break. If a new pause occurs between selecting and a later `get-locals`/
