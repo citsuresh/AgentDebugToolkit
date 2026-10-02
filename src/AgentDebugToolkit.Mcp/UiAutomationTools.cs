@@ -136,7 +136,7 @@ public sealed class UiAutomationTools
         => RunAsync(BuildArgs("get-cursor-pos"), null, cancellationToken);
 
     [McpServerTool(Name = "ui_type", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false),
-     Description("Resolves an element and types text into it (ValuePattern, falling back to click-to-focus plus synthetic keyboard input, or clipboard paste). Changes target application state.")]
+     Description("Resolves an element and types text into it (ValuePattern, falling back to click-to-focus plus synthetic keyboard input, or clipboard paste). When ValuePattern is used (method: \"pattern\"), this REPLACES the control's entire existing value and typically leaves the caret at position 0, not at the end. To append instead, use ui_send_keys (send ^{END} first to move the caret to the end). Changes target application state.")]
     public Task<ToolInvocationResult> Type(
         [Description("Window handle to resolve the selector against.")] string hwnd,
         [Description("Selector strategy: Name or AutomationId.")] string strategy,
@@ -266,7 +266,7 @@ public sealed class UiAutomationTools
         => RunAsync(BuildArgs("activate", ("--hwnd", hwnd)), null, cancellationToken);
 
     [McpServerTool(Name = "ui_send_keys", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false),
-     Description("Sends raw, unescaped SendKeys syntax (e.g. key combinations like Ctrl+A, Delete, Enter) to the resolved element. Changes target application state; can trigger unintended actions if the syntax is wrong for the control.")]
+     Description("Sends raw, unescaped SendKeys syntax (e.g. '^a', '{DELETE}', '{ENTER}', '^{END}') to the resolved element at its CURRENT caret position. focusMode set-focus only establishes focus and does not move the caret; click performs a synthetic click that may reposition the caret depending on the control (unverified). To append after ui_type (which can leave the caret at position 0), send ^{END} first. Newlines from {ENTER} may read back as \"\\r\" in RichEdit-style controls. Changes target application state; can trigger unintended actions if the syntax is wrong for the control.")]
     public Task<ToolInvocationResult> SendKeys(
         [Description("Window handle to resolve the selector against.")] string hwnd,
         [Description("Selector strategy: Name or AutomationId.")] string strategy,

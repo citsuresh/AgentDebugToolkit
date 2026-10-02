@@ -238,6 +238,13 @@ resolution involved.
 ### `type --hwnd <h> --strategy <s> --value <v> --text <input> [--scopeHwnd <h2>] [--verify] [--paste]`
 Resolves element, attempts `ValuePattern.SetValue`, falls back to click-to-focus + synthetic
 keyboard input.
+- **`ValuePattern.SetValue` (`method: "pattern"`) always REPLACES the control's entire existing
+  value** — it is not an insert/append at the caret. This replace-whole-value behavior is
+  inherent to `ValuePattern.SetValue`. The caret position afterward is control-dependent: live
+  validation against Notepad's WinUI RichEdit "Text editor" control (2026-10-02) showed the
+  caret left at position 0, not at the end of the new text, so a following `send-keys` call
+  types at the start of the document unless the caller first moves the caret (e.g. `send-keys
+  --keys "^{END}"`).
 - Success: `{ "success": true, "method": "pattern" | "synthetic-keyboard" | "clipboard-paste" }`
   (`clipboardRestored: true|false|null` is also included when `method == "clipboard-paste"` — see
   the tri-state explanation under `--paste` below).
@@ -598,12 +605,17 @@ Companion to `type` for input `type` cannot express. `type` sends literal Unicod
 so literal text is never interpreted as `SendKeys` syntax — this means `type` has no way to send key combinations like
 `Ctrl+A`, `Delete`, or `Enter` as actual key presses. `send-keys` instead accepts and passes
 through **unescaped** `SendKeys.SendWait` syntax via `--keys` (e.g. `--keys "^a"` for Ctrl+A,
-`--keys "{DELETE}"`, `--keys "{ENTER}"`). Element-scoped, consistent with `click`/`type`: resolves
+`--keys "{DELETE}"`, `--keys "{ENTER}"`, `--keys "^{END}"` for Ctrl+End). Element-scoped, consistent with `click`/`type`: resolves
 the window and element via the same `--hwnd`/`--strategy`/`--value` selector mechanism, checks
 `IsResponding` up front, then applies `--focusMode` before sending the raw key sequence:
 `set-focus` (default) calls UIA `SetFocus()` without a mouse event; `click` preserves the former
 synthetic center-click behavior for controls that require physical mouse focus; and `none` leaves
-focus unchanged for callers that already established it. `set-focus` avoids custom controls whose
+focus unchanged for callers that already established it. **`set-focus` only establishes focus and
+does not move the caret (verified on Notepad's RichEdit control); `click` performs a synthetic
+click that may reposition the caret depending on the control (unverified).** Keys are sent at
+whatever caret position the control ends up in (e.g. position 0 if a preceding `type` call used
+`ValuePattern.SetValue`, which resets to the start — see the `type` verb above). To append after
+such a `type` call, send `^{END}` first. `set-focus` avoids custom controls whose
 mouse handlers change selection before a navigation key can be delivered. There is no UIA-pattern
 fast path for the raw key sequence itself (unlike `type`'s `ValuePattern` attempt), so
 `send-keys` always uses synthetic keyboard input. Like other state-changing verbs, it first

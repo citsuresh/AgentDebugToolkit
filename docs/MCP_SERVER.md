@@ -198,6 +198,19 @@ MCP client can grant/prompt approval per tool rather than per call:
 | `ui_find_first` | `find-first` | Read-only |
 | `ui_find_all` | `find-all` | Read-only |
 
+### UI gotchas
+
+- **`ui_type` replaces, it doesn't append.** When the target supports `ValuePattern` (`method:
+  "pattern"`), `ui_type` replaces the control's entire existing value and can leave the caret at
+  position 0 rather than at the end (observed live against Notepad's WinUI RichEdit control).
+- **`ui_send_keys` types at the current caret; `focusMode` doesn't move it (except possibly
+  `click`).** `focusMode: "set-focus"` (default) only establishes focus and does not move the
+  caret (verified on Notepad's RichEdit control); `focusMode: "click"` performs a synthetic click
+  that may reposition the caret depending on the control (unverified). To append after a
+  `ui_type` call, send `^{END}` first. `keys` accepts unescaped `SendKeys` syntax (`{ENTER}`,
+  `{DELETE}`, `^a`, `^{END}`, etc.); `{ENTER}`'s newline may read back as `"\r"` in RichEdit-style
+  controls.
+
 ### Console automation tools (`ConsoleTools`, wrapping `agentdebug-console.exe`; opt-in via `--tools console`)
 
 **Highest risk group — read the warnings below before enabling.** Not registered unless
