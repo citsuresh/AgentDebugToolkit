@@ -172,7 +172,7 @@ public sealed class VsDebuggerTools
         CancellationToken cancellationToken = default)
         => RunAsync(BuildArgs("attach-process", solution, ("--pid", pid.ToString())), null, cancellationToken);
 
-    [McpServerTool(Name = "vs_break_all", ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false),
+    [McpServerTool(Name = "vs_break_all", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false),
      Description("Breaks all threads in the target debuggee process (not just the current thread). Changes debugger state.")]
     public Task<ToolInvocationResult> BreakAll(
         [Description("PID of the target debuggee process (must already be under an active debug session).")] int pid,
@@ -180,7 +180,7 @@ public sealed class VsDebuggerTools
         CancellationToken cancellationToken = default)
         => RunAsync(BuildArgs("break-all", solution, ("--pid", pid.ToString())), null, cancellationToken);
 
-    [McpServerTool(Name = "vs_detach", ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false),
+    [McpServerTool(Name = "vs_detach", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false),
      Description("Detaches the debugger from the target debuggee process without terminating it (Process.Detach, not Debugger.Stop). The debuggee keeps running afterward.")]
     public Task<ToolInvocationResult> Detach(
         [Description("PID of the target debuggee process (must already be under an active debug session).")] int pid,
@@ -204,7 +204,7 @@ public sealed class VsDebuggerTools
         => RunAsync(BuildArgs("select-thread", solution, ("--threadId", threadId.ToString())), null, cancellationToken);
 
     [McpServerTool(Name = "vs_select_frame", ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false),
-     Description("Selects a stack frame (0-based, innermost-first) within the currently selected thread so subsequent get-locals/evaluate calls operate on it. Selection is only valid until the next continue/step/break. Changes debugger selection state, not the debuggee's execution.")]
+     Description("Selects a stack frame (0-based, innermost-first) within the currently selected thread so subsequent get-locals/evaluate calls operate on it. Selection is only valid until the next continue/step/break. Changes debugger selection state, not the debuggee's execution. Error codes: frame-index-out-of-range (index beyond frame count); frame-not-managed (External Code or native frame); frame-selection-stale (debuggee resumed mid-call — clear any firing breakpoints and retry); frame-selection-failed (e.g. 0x80070490 in native/managed-transition regions — known EnvDTE limitation, do not retry); frame-selection-mismatch (EnvDTE silently bound a different frame than requested; message names both). After any failed select-frame, re-select a known-good frame (usually index 0 if managed) and confirm with vs_get_callstack before trusting vs_get_locals or vs_evaluate.")]
     public Task<ToolInvocationResult> SelectFrame(
         [Description("0-based frame index within the selected thread's call stack (frame 0 = innermost/current).")] int index,
         [Description("Optional solution file name (without extension) to disambiguate which running devenv.exe instance to use.")] string? solution = null,

@@ -182,16 +182,16 @@ public sealed class UiAutomationTools
             ("--applyStrategy", applyStrategy), ("--applyValue", applyValue)), null, cancellationToken);
 
     [McpServerTool(Name = "ui_wait_for_window_change", ReadOnly = true, Destructive = false, OpenWorld = false),
-     Description("Polls the target process's window set until it is stable for settleMs milliseconds, or timeoutMs elapses. Read-only (observational), but blocks for up to timeoutMs.")]
+     Description("Polls the target process's window set until it is stable for settleMs milliseconds, or timeoutMs elapses. Read-only (observational), but blocks for up to timeoutMs. Optional pid; uses the session context pid if omitted, matching ui_list_windows.")]
     public Task<ToolInvocationResult> WaitForWindowChange(
-        [Description("PID of the target process (uses session context if your CLI build falls back to it, but pid is required by this tool's signature).")] int pid,
         [Description("Maximum time to wait, in milliseconds. Capped at 120000 for this tool.")] int timeoutMs,
+        [Description("Optional pid of the target process; uses the session context pid if omitted.")] int? pid = null,
         [Description("Consecutive milliseconds the window set must be unchanged to be considered settled (default 300).")] int? settleMs = null,
         CancellationToken cancellationToken = default)
     {
         const int MaxWaitMs = 120_000;
         var cappedTimeoutMs = Math.Clamp(timeoutMs, 0, MaxWaitMs);
-        var args = BuildArgs("wait-for-window-change", ("--pid", pid.ToString()), ("--timeoutMs", cappedTimeoutMs.ToString()), ("--settleMs", settleMs?.ToString()));
+        var args = BuildArgs("wait-for-window-change", ("--pid", pid?.ToString()), ("--timeoutMs", cappedTimeoutMs.ToString()), ("--settleMs", settleMs?.ToString()));
         return RunAsync(args, cappedTimeoutMs + 10_000, cancellationToken);
     }
 

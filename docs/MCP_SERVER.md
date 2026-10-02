@@ -59,6 +59,17 @@ the server build output fallback), so you can see exactly what was tried.
 
 ## Safety split
 
+**Annotation criteria:**
+- `readOnlyHint: true` — no state change anywhere (not the debuggee, not the debugger session,
+  not disk).
+- `destructiveHint: true` — changes the live debuggee, ends/starts a debug session, or otherwise
+  can't be undone by a single follow-up call. **Documented exception:** the normal
+  execution-control loop (`vs_continue`, `vs_step_over`/`vs_step_into`/`vs_step_out`) resumes the
+  debuggee but is kept `destructiveHint: false` by decision — see below.
+- Selection-only tools (`vs_select_thread`, `vs_select_frame`) are `readOnlyHint: false` (they do
+  change debugger state) but `destructiveHint: false` (the change is just which thread/frame
+  subsequent calls target, trivially reversible by selecting again).
+
 Side-effecting operations are kept as **separate tools** from their read-only counterparts, so an
 MCP client can grant/prompt approval per tool rather than per call:
 
@@ -81,15 +92,21 @@ MCP client can grant/prompt approval per tool rather than per call:
   - **Destructive** (`destructiveHint: true`): `vs_start_debugging` (launches a new debuggee
     process), `vs_stop_debugging` (terminates the debuggee, unlike `vs_detach`),
     `vs_set_breakpoint`/`vs_remove_breakpoint` (change debugger state), `vs_attach_process`
-    (attaches the debugger to a live process), `vs_execute_statement` (unsafe/side-effecting
+    (attaches the debugger to a live process), `vs_break_all` (forces every thread in the
+    debuggee to stop), `vs_detach` (ends the debug session's monitoring of the process, even
+    though the process itself keeps running), `vs_execute_statement` (unsafe/side-effecting
     evaluation), and every state-changing `agentdebug-ui` verb that acts on the target
     application (`ui_click`, `ui_right_click`, `ui_double_click`, `ui_drag`, `ui_type`,
     `ui_set_grid_cell`, `ui_activate`, `ui_send_keys`, `ui_submit_chat_message`).
-  - Debugger **selection-only** changes that don't themselves alter debuggee execution or cause
-    data loss (`vs_continue`, `vs_step_over`/`vs_step_into`/`vs_step_out`, `vs_break_all`,
-    `vs_detach`, `vs_select_thread`, `vs_select_frame`, `ui_attach`, `ui_set_context`,
-    `ui_move_mouse`) are marked `readOnlyHint: false` but `destructiveHint: false` — they change
-    state, but not in a way that destroys data or terminates a process.
+  - Debugger **selection-only** tools (`vs_select_thread`, `vs_select_frame`, `ui_attach`,
+    `ui_set_context`, `ui_move_mouse`) are marked `readOnlyHint: false` but `destructiveHint: false`
+    — they only change which thread/frame/target subsequent calls use, not in a way that destroys
+    data or terminates a process.
+  - **Execution-control** tools (`vs_continue`, `vs_step_over`/`vs_step_into`/`vs_step_out`) are
+    also marked `readOnlyHint: false` but `destructiveHint: false`, **by decision, not because they
+    lack effect** — they do resume the debuggee. They are the normal debugging loop, and requiring
+    per-step approval would be impractical. Clients that want tighter control should require
+    approval for these tools explicitly rather than relying on `destructiveHint`.
 
 ## Tool list
 
@@ -112,8 +129,8 @@ MCP client can grant/prompt approval per tool rather than per call:
 | `vs_remove_breakpoint` | `remove-breakpoint` | Destructive (changes debugger state) |
 | `vs_wait_for_break` | `wait-for-break` | Read-only; `timeoutMs` capped at 120000 |
 | `vs_attach_process` | `attach-process` | Destructive (attaches debugger to a live process) |
-| `vs_break_all` | `break-all` | |
-| `vs_detach` | `detach` | Debuggee keeps running afterward |
+| `vs_break_all` | `break-all` | Destructive (forces every thread in the debuggee to stop) |
+| `vs_detach` | `detach` | Destructive (ends debug session monitoring); debuggee keeps running afterward |
 | `vs_list_threads` | `list-threads` | Read-only |
 | `vs_select_thread` | `select-thread` | |
 | `vs_select_frame` | `select-frame` | Selection only valid until next continue/step/break |
