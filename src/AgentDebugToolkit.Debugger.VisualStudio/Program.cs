@@ -43,6 +43,20 @@ try
             return Verbs.RemoveBreakpoint(opts);
         case "wait-for-break":
             return Verbs.WaitForBreak(opts);
+        case "attach-process":
+            return Verbs.AttachProcess(opts);
+        case "break-all":
+            return Verbs.BreakAll(opts);
+        case "detach":
+            return Verbs.Detach(opts);
+        case "list-threads":
+            return Verbs.ListThreads(opts);
+        case "select-thread":
+            return Verbs.SelectThread(opts);
+        case "select-frame":
+            return Verbs.SelectFrame(opts);
+        case "evaluate":
+            return Verbs.Evaluate(opts);
         default:
             JsonOutput.WriteError("invalid-argument", $"Unknown verb '{verb}'.");
             return 1;
@@ -101,7 +115,8 @@ internal static class Verbs
 
         if (ComRetry.Invoke(() => dte.Debugger.CurrentMode) == dbgDebugMode.dbgBreakMode)
         {
-            (activeDocument, activeLine) = TryGetLastHitLocation(dte.Debugger);
+            var debugger = ComRetry.Invoke(() => dte.Debugger);
+            (activeDocument, activeLine) = TryGetLastHitLocation(debugger);
         }
 
         return (mode, activeDocument, activeLine);
@@ -124,10 +139,10 @@ internal static class Verbs
         }
 
         var frames = new List<object>();
-        foreach (StackFrame frame in ComRetry.Invoke(() => thread.StackFrames))
+        ComRetry.ForEach<StackFrame>(ComRetry.Invoke(() => thread.StackFrames), frame =>
         {
-            frames.Add(new { function = frame.FunctionName });
-        }
+            frames.Add(new { function = ComRetry.Invoke(() => frame.FunctionName) });
+        });
 
         JsonOutput.WriteSuccess(new { frames });
         return 0;
@@ -150,13 +165,462 @@ internal static class Verbs
         }
 
         var locals = new List<object>();
-        foreach (Expression local in ComRetry.Invoke(() => stackFrame.Locals))
+        ComRetry.ForEach<Expression>(ComRetry.Invoke(() => stackFrame.Locals), local =>
         {
-            locals.Add(new { name = local.Name, value = local.Value, type = local.Type });
-        }
+            locals.Add(new
+            {
+                name = ComRetry.Invoke(() => local.Name),
+                value = ComRetry.Invoke(() => local.Value),
+                type = ComRetry.Invoke(() => local.Type),
+            });
+        });
 
         JsonOutput.WriteSuccess(new { locals });
         return 0;
+    }
+
+    public static int ListThreads(Dictionary<string, string> opts)
+    {
+        var (dte, errorCode, error) = RequireBreakMode(opts);
+        if (dte is null)
+        {
+            JsonOutput.WriteError(errorCode!, error!);
+            return 1;
+        }
+
+        var program = ComRetry.Invoke(() => dte.Debugger.CurrentProgram);
+        if (program is null)
+        {
+            JsonOutput.WriteError("no-current-program", "The debugger has no current program (debuggee) to enumerate threads from.");
+            return 1;
+        }
+
+        try
+        {
+            var threads = new List<object>();
+            var threadsCollection = ComRetry.Invoke(() => program.Threads);
+            try
+            {
+                ComRetry.ForEach<EnvDTE.Thread>(threadsCollection, thread =>
+                {
+                    try
+                    {
+                        var id = ComRetry.Invoke(() => thread.ID);
+                        var name = ComRetry.Invoke(() => thread.Name);
+                        threads.Add(new { id, name });
+                    }
+                    finally
+                    {
+                        Marshal.ReleaseComObject(thread);
+                    }
+                });
+            }
+            finally
+            {
+                Marshal.ReleaseComObject(threadsCollection);
+            }
+
+            JsonOutput.WriteSuccess(new { threads });
+            return 0;
+        }
+        finally
+        {
+            Marshal.ReleaseComObject(program);
+        }
+    }
+
+    public static int SelectThread(Dictionary<string, string> opts)
+    {
+        if (!opts.TryGetValue("threadId", out var threadIdText) || !int.TryParse(threadIdText, out var threadId))
+        {
+            JsonOutput.WriteError("invalid-argument", "--threadId is required and must be an integer.");
+            return 1;
+        }
+
+        var (dte, errorCode, error) = RequireBreakMode(opts);
+        if (dte is null)
+        {
+            JsonOutput.WriteError(errorCode!, error!);
+            return 1;
+        }
+
+        var (thread, selectError) = ResolveThreadById(dte, threadId);
+        if (thread is null)
+        {
+            JsonOutput.WriteError(selectError!.Value.code, selectError.Value.message);
+            return 1;
+        }
+
+        try
+        {
+            // Debugger.CurrentThread is documented as a settable property (not just a read-only
+            // reflection of whatever EnvDTE/the IDE's UI last focused) -- this call actually
+            // changes which thread subsequent get-locals/get-callstack/evaluate calls operate on.
+            ComRetry.Invoke(() => dte.Debugger.CurrentThread = thread);
+
+            // Cache ID/Name once via ComRetry: every later reference to them re-uses this
+            // already-retried value rather than re-reading bare COM properties, which could
+            // surface a transient busy HRESULT as an unwrapped COMException.
+            var threadId2 = ComRetry.Invoke(() => thread.ID);
+            var threadName = ComRetry.Invoke(() => thread.Name);
+
+            // Re-read CurrentThread immediately after the set rather than trusting the assignment
+            // blindly: EnvDTE's property setter does its own COM marshaling/AddRef on the object
+            // passed in, so releasing our own RCW for `thread` right after the set (see finally
+            // below) is safe -- but if VS's internal state didn't actually adopt the selection
+            // (e.g. a stale/mismatched thread reference, or an internal state transition raced
+            // the call), silently reporting success here would let a caller trust a selection
+            // that never took effect. Fail loudly instead of guessing.
+            var confirmed = ComRetry.Invoke(() => dte.Debugger.CurrentThread);
+            try
+            {
+                var confirmedId = confirmed is null ? (int?)null : ComRetry.Invoke(() => confirmed.ID);
+                if (confirmed is null || confirmedId != threadId2)
+                {
+                    JsonOutput.WriteError(
+                        "thread-selection-not-applied",
+                        $"select-thread set Debugger.CurrentThread to thread {threadId2}, but reading it back afterward did not confirm the selection (got {(confirmedId?.ToString() ?? "null")}).");
+                    return 1;
+                }
+
+                JsonOutput.WriteSuccess(new { threadId = threadId2, name = threadName });
+                return 0;
+            }
+            finally
+            {
+                if (confirmed is not null)
+                {
+                    Marshal.ReleaseComObject(confirmed);
+                }
+            }
+        }
+        finally
+        {
+            Marshal.ReleaseComObject(thread);
+        }
+    }
+
+    public static int SelectFrame(Dictionary<string, string> opts)
+    {
+        if (!opts.TryGetValue("index", out var indexText) || !int.TryParse(indexText, out var index) || index < 0)
+        {
+            JsonOutput.WriteError("invalid-argument", "--index is required and must be a non-negative integer.");
+            return 1;
+        }
+
+        var (dte, errorCode, error) = RequireBreakMode(opts);
+        if (dte is null)
+        {
+            JsonOutput.WriteError(errorCode!, error!);
+            return 1;
+        }
+
+        var thread = ComRetry.Invoke(() => dte.Debugger.CurrentThread);
+        if (thread is null)
+        {
+            JsonOutput.WriteError("no-thread-selected", "No current thread is selected; call select-thread (or ensure the debugger has a current thread) first.");
+            return 1;
+        }
+
+        try
+        {
+            var framesCollection = ComRetry.Invoke(() => thread.StackFrames);
+            try
+            {
+                // StackFrame has no stable id/handle of its own in this interop surface -- unlike
+                // Thread.ID, frames are only addressable by their position in the live
+                // StackFrames collection, so --index is resolved fresh against the collection on
+                // every call rather than against any cached frame reference.
+                var position = 1;
+                (string code, string message)? resultError = null;
+                object? resultSuccess = null;
+                var matched = false;
+
+                ComRetry.ForEach<StackFrame>(framesCollection, candidate =>
+                {
+                    if (matched)
+                    {
+                        Marshal.ReleaseComObject(candidate);
+                        return true;
+                    }
+
+                    if (position - 1 == index)
+                    {
+                        matched = true;
+                        try
+                        {
+                            // Cache FunctionName once via ComRetry up front: every later reference to
+                            // it in this block is this already-retried value, so a transient busy
+                            // HRESULT here is retried/surfaced consistently via ComRetry rather than
+                            // leaking out as an unwrapped COMException from a bare property read.
+                            var candidateFunctionName = ComRetry.Invoke(() => candidate.FunctionName);
+
+                            if (!IsManagedFrame(candidate, candidateFunctionName))
+                            {
+                                resultError = (
+                                    "frame-not-managed",
+                                    $"Frame {index} ('{candidateFunctionName}') is not a managed/evaluable frame " +
+                                    "(e.g. a native transition or a 'paused execution' placeholder) -- select a " +
+                                    "different frame index.");
+                                return true;
+                            }
+
+                            ComRetry.Invoke(() => dte.Debugger.CurrentStackFrame = candidate);
+
+                            // Re-read CurrentStackFrame immediately after the set, the same way
+                            // SelectThread verifies CurrentThread above: StackFrame has no stable
+                            // id to compare, so function name + a presence check is the best
+                            // available confirmation that the assignment actually took effect
+                            // rather than being silently dropped/ignored by VS's internal state.
+                            var confirmedFrame = ComRetry.Invoke(() => dte.Debugger.CurrentStackFrame);
+                            try
+                            {
+                                if (confirmedFrame is null)
+                                {
+                                    resultError = (
+                                        "frame-selection-not-applied",
+                                        $"select-frame set Debugger.CurrentStackFrame to frame {index} ('{candidateFunctionName}'), " +
+                                        "but reading it back afterward returned no current stack frame.");
+                                    return true;
+                                }
+
+                                resultSuccess = new { index, function = candidateFunctionName };
+                                return true;
+                            }
+                            finally
+                            {
+                                Marshal.ReleaseComObject(confirmedFrame);
+                            }
+                        }
+                        finally
+                        {
+                            Marshal.ReleaseComObject(candidate);
+                        }
+                    }
+
+                    Marshal.ReleaseComObject(candidate);
+                    position++;
+                    return true;
+                });
+
+                if (resultError is not null)
+                {
+                    JsonOutput.WriteError(resultError.Value.code, resultError.Value.message);
+                    return 1;
+                }
+
+                if (resultSuccess is not null)
+                {
+                    JsonOutput.WriteSuccess(resultSuccess);
+                    return 0;
+                }
+
+                var threadId = ComRetry.Invoke(() => thread.ID);
+                JsonOutput.WriteError("frame-index-out-of-range", $"Thread {threadId} has {position - 1} stack frame(s); index {index} is out of range.");
+                return 1;
+            }
+            finally
+            {
+                Marshal.ReleaseComObject(framesCollection);
+            }
+        }
+        finally
+        {
+            Marshal.ReleaseComObject(thread);
+        }
+    }
+
+    // EnvDTE's StackFrame exposes no explicit IsManaged flag; Language is the reliable signal for
+    // whether this frame can actually be evaluated (GetExpression/ExecuteStatement). Native
+    // transition frames and VS's own "[[Application execution paused...]]" / "[Managed to Native
+    // Transition]" pseudo-frames either throw an empty/absent Language or a raw HRESULT
+    // (0x89711006, "no symbols"/"not evaluable" in the native debug engine) when FunctionName or
+    // Language is read, rather than returning a normal managed language name like "C#" -- treat
+    // any frame whose FunctionName looks like one of these known placeholders, or whose Language
+    // read fails/comes back empty, as non-managed/non-evaluable.
+    private static bool IsManagedFrame(StackFrame frame, string functionName)
+    {
+        if (string.IsNullOrEmpty(functionName)
+            || functionName.Contains("Native Transition", StringComparison.OrdinalIgnoreCase)
+            || functionName.Contains("execution paused", StringComparison.OrdinalIgnoreCase)
+            || functionName.StartsWith('[') && functionName.EndsWith(']'))
+        {
+            return false;
+        }
+
+        try
+        {
+            var language = ComRetry.Invoke(() => frame.Language);
+            return !string.IsNullOrEmpty(language);
+        }
+        catch (COMException)
+        {
+            return false;
+        }
+    }
+
+    public static int Evaluate(Dictionary<string, string> opts)
+    {
+        if (!opts.TryGetValue("expression", out var expressionText) || string.IsNullOrWhiteSpace(expressionText))
+        {
+            JsonOutput.WriteError("invalid-argument", "--expression is required.");
+            return 1;
+        }
+
+        var allowSideEffects = opts.TryGetValue("allowSideEffects", out var allowText)
+            && string.Equals(allowText, "true", StringComparison.OrdinalIgnoreCase);
+
+        var (dte, errorCode, error) = RequireBreakMode(opts);
+        if (dte is null)
+        {
+            JsonOutput.WriteError(errorCode!, error!);
+            return 1;
+        }
+
+        var stackFrame = ComRetry.Invoke(() => dte.Debugger.CurrentStackFrame);
+        if (stackFrame is null)
+        {
+            JsonOutput.WriteError(
+                "no-frame-selected",
+                "No managed stack frame is currently selected to evaluate against -- select a thread/frame " +
+                "(select-thread/select-frame) first, or confirm the debugger has a current managed stack frame " +
+                "(it may be stale, or the attached process may have no managed frames).");
+            return 1;
+        }
+
+        try
+        {
+            // Cache FunctionName once via ComRetry: every later reference to it in this method
+            // re-uses this already-retried value rather than re-reading the bare COM property
+            // (which could surface a transient busy HRESULT as an unwrapped COMException instead
+            // of being retried/reported consistently via ComRetry/com-busy-retry-exhausted).
+            var stackFrameFunctionName = ComRetry.Invoke(() => stackFrame.FunctionName);
+
+            if (!IsManagedFrame(stackFrame, stackFrameFunctionName))
+            {
+                JsonOutput.WriteError(
+                    "frame-not-managed",
+                    $"The current stack frame ('{stackFrameFunctionName}') is not a managed/evaluable frame " +
+                    "(e.g. a native transition or a 'paused execution' placeholder) -- select a managed frame " +
+                    "(select-frame) before evaluating.");
+                return 1;
+            }
+
+            if (allowSideEffects)
+            {
+                // UNSAFE opt-in path: ExecuteStatement can run property getters, method calls, and
+                // assignment statements against the live debuggee. Only reached when the caller
+                // explicitly passes --allowSideEffects=true.
+                try
+                {
+                    ComRetry.Invoke(() => dte.Debugger.ExecuteStatement(expressionText, Timeout: -1, TreatAsExpression: true));
+                }
+                catch (COMException ex)
+                {
+                    JsonOutput.WriteError(
+                        "evaluation-failed",
+                        $"Expression '{expressionText}' could not be executed in the current frame: {DescribeComFailure(ex)}");
+                    return 1;
+                }
+
+                JsonOutput.WriteSuccess(new { expression = expressionText, allowSideEffects = true, executed = true });
+                return 0;
+            }
+
+            // Safe-by-default path: Debugger.GetExpression evaluates (does not execute) an expression
+            // against the current stack frame -- the same read mechanism get-locals already uses for
+            // Locals entries -- and never runs assignment statements. Implicit property-getter/
+            // function evaluation during this read is governed solely by Visual Studio's own global
+            // Tools > Options > Debugging > General "Allow property evaluation and other implicit
+            // function calls" setting, not by anything this CLI can toggle per-call; this verb does
+            // not change that setting and does not attempt to call methods/assignments itself.
+            Expression? result;
+            try
+            {
+                result = ComRetry.Invoke(() => dte.Debugger.GetExpression(expressionText, UseAutoExpandRules: false, Timeout: -1));
+            }
+            catch (COMException ex)
+            {
+                // Any transient-busy HRESULT is already retried/surfaced by ComRetry as
+                // com-busy-retry-exhausted before reaching here; this catch is for everything
+                // else the native debug engine can throw synchronously for an unevaluable
+                // expression/frame combination (e.g. 0x89711006), so the caller gets a specific,
+                // actionable message instead of the generic top-level unhandled-exception.
+                JsonOutput.WriteError(
+                    "evaluation-failed",
+                    $"Expression '{expressionText}' could not be evaluated in the current frame: {DescribeComFailure(ex)}");
+                return 1;
+            }
+
+            if (result is null || !result.IsValidValue)
+            {
+                JsonOutput.WriteError(
+                    "evaluation-failed",
+                    $"Expression '{expressionText}' could not be evaluated in the current frame.",
+                    new { name = result?.Name, type = result?.Type });
+                return 1;
+            }
+
+            JsonOutput.WriteSuccess(new { name = result.Name, value = result.Value, type = result.Type });
+            return 0;
+        }
+        finally
+        {
+            Marshal.ReleaseComObject(stackFrame);
+        }
+    }
+
+    // Translates a COMException surfaced while evaluating/executing an expression into a short,
+    // human-readable description instead of a raw HRESULT. 0x89711006 is the native debug
+    // engine's "expression could not be evaluated in this context" HRESULT (observed live when
+    // attempting to evaluate against native/non-evaluable transition frames); anything else is
+    // reported with its HRESULT for diagnosability.
+    private static string DescribeComFailure(COMException ex) => unchecked((uint)ex.ErrorCode) switch
+    {
+        0x89711006 => "the native debug engine reported this expression cannot be evaluated in the current context " +
+                      "(commonly seen for native/non-managed frames or during a native-to-managed transition).",
+        _ => $"{ex.Message} (0x{unchecked((uint)ex.ErrorCode):X8})"
+    };
+
+    private static (EnvDTE.Thread? thread, (string code, string message)? error) ResolveThreadById(DTE dte, int threadId)
+    {
+        var program = ComRetry.Invoke(() => dte.Debugger.CurrentProgram);
+        if (program is null)
+        {
+            return (null, ("no-current-program", "The debugger has no current program (debuggee) to select a thread from."));
+        }
+
+        try
+        {
+            var threadsCollection = ComRetry.Invoke(() => program.Threads);
+            try
+            {
+                EnvDTE.Thread? found = null;
+                ComRetry.ForEach<EnvDTE.Thread>(threadsCollection, candidate =>
+                {
+                    if (found is null && ComRetry.Invoke(() => candidate.ID) == threadId)
+                    {
+                        found = candidate;
+                        return false;
+                    }
+
+                    Marshal.ReleaseComObject(candidate);
+                    return true;
+                });
+
+                return found is not null
+                    ? (found, null)
+                    : (null, ("thread-not-found", $"No thread with id {threadId} was found in the current program."));
+            }
+            finally
+            {
+                Marshal.ReleaseComObject(threadsCollection);
+            }
+        }
+        finally
+        {
+            Marshal.ReleaseComObject(program);
+        }
     }
 
     public static int GetExceptionInfo(Dictionary<string, string> opts)
@@ -176,14 +640,15 @@ internal static class Verbs
         }
 
         Expression? exceptionExpr = null;
-        foreach (Expression local in ComRetry.Invoke(() => stackFrame.Locals))
+        ComRetry.ForEach<Expression>(ComRetry.Invoke(() => stackFrame.Locals), local =>
         {
-            if (local.Name == "$exception")
+            if (ComRetry.Invoke(() => local.Name) == "$exception")
             {
                 exceptionExpr = local;
-                break;
+                return false;
             }
-        }
+            return true;
+        });
 
         if (exceptionExpr is null)
         {
@@ -191,7 +656,11 @@ internal static class Verbs
             return 1;
         }
 
-        JsonOutput.WriteSuccess(new { exceptionType = exceptionExpr.Type, message = exceptionExpr.Value });
+        JsonOutput.WriteSuccess(new
+        {
+            exceptionType = ComRetry.Invoke(() => exceptionExpr.Type),
+            message = ComRetry.Invoke(() => exceptionExpr.Value),
+        });
         return 0;
     }
 
@@ -346,17 +815,22 @@ internal static class Verbs
         var breakpointsCollection = ComRetry.Invoke(() => dte.Debugger.Breakpoints);
         try
         {
-            foreach (Breakpoint breakpoint in breakpointsCollection)
+            ComRetry.ForEach<Breakpoint>(breakpointsCollection, breakpoint =>
             {
                 try
                 {
-                    breakpoints.Add(new { file = breakpoint.File, line = breakpoint.FileLine, enabled = breakpoint.Enabled });
+                    breakpoints.Add(new
+                    {
+                        file = ComRetry.Invoke(() => breakpoint.File),
+                        line = ComRetry.Invoke(() => breakpoint.FileLine),
+                        enabled = ComRetry.Invoke(() => breakpoint.Enabled),
+                    });
                 }
                 finally
                 {
                     Marshal.ReleaseComObject(breakpoint);
                 }
-            }
+            });
         }
         finally
         {
@@ -412,10 +886,7 @@ internal static class Verbs
         var breakpointsCollection = ComRetry.Invoke(() => dte.Debugger.Breakpoints);
         try
         {
-            foreach (Breakpoint breakpoint in breakpointsCollection)
-            {
-                candidates.Add(breakpoint);
-            }
+            ComRetry.ForEach<Breakpoint>(breakpointsCollection, breakpoint => candidates.Add(breakpoint));
         }
         finally
         {
@@ -496,6 +967,110 @@ internal static class Verbs
 
             System.Threading.Thread.Sleep(Math.Min(pollMs, (int)Math.Max(0, timeoutMs - stopwatch.ElapsedMilliseconds)));
         }
+    }
+
+    public static int AttachProcess(Dictionary<string, string> opts)
+    {
+        if (!TryParsePid(opts, out var pid))
+        {
+            return 1;
+        }
+
+        opts.TryGetValue("solution", out var solutionName);
+        var (dte, process, errorCode, error, candidates) = DteLocator.FindProcessToAttach(pid, solutionName);
+        if (dte is null || process is null)
+        {
+            JsonOutput.WriteError(errorCode!, error!, candidates is null ? null : new { candidates });
+            return 1;
+        }
+
+        try
+        {
+            // EnvDTE.Process.Attach() is the only supported way to start debugging an
+            // already-running process (no UI automation / SendKeys involved): it is the same
+            // COM entry point the IDE's own "Attach to Process" dialog calls internally.
+            ComRetry.Invoke(() => process.Attach());
+            JsonOutput.WriteSuccess(new { pid, mode = ToModeString(ComRetry.Invoke(() => dte.Debugger.CurrentMode)) });
+            return 0;
+        }
+        finally
+        {
+            Marshal.ReleaseComObject(process);
+        }
+    }
+
+    public static int BreakAll(Dictionary<string, string> opts)
+    {
+        if (!TryParsePid(opts, out var pid))
+        {
+            return 1;
+        }
+
+        opts.TryGetValue("solution", out var solutionName);
+        var (dte, process, errorCode, error, candidates) = DteLocator.FindDebuggedProcess(pid, solutionName);
+        if (dte is null || process is null)
+        {
+            JsonOutput.WriteError(errorCode!, error!, candidates is null ? null : new { candidates });
+            return 1;
+        }
+
+        try
+        {
+            // Process.Break(WaitForBreakMode) breaks every thread in this specific debuggee
+            // process (not just the current thread, and not every process VS is debugging),
+            // matching EnvDTE's documented remarks for this overload. WaitForBreakMode: true so
+            // the mode reported back reflects the break having actually taken effect.
+            ComRetry.Invoke(() => process.Break(WaitForBreakMode: true));
+            JsonOutput.WriteSuccess(new { pid, mode = ToModeString(ComRetry.Invoke(() => dte.Debugger.CurrentMode)) });
+            return 0;
+        }
+        finally
+        {
+            Marshal.ReleaseComObject(process);
+        }
+    }
+
+    public static int Detach(Dictionary<string, string> opts)
+    {
+        if (!TryParsePid(opts, out var pid))
+        {
+            return 1;
+        }
+
+        opts.TryGetValue("solution", out var solutionName);
+        var (dte, process, errorCode, error, candidates) = DteLocator.FindDebuggedProcess(pid, solutionName);
+        if (dte is null || process is null)
+        {
+            JsonOutput.WriteError(errorCode!, error!, candidates is null ? null : new { candidates });
+            return 1;
+        }
+
+        try
+        {
+            // Process.Detach(WaitForBreakOrEnd) stops the debugger from monitoring this process
+            // without terminating it -- distinct from Debugger.Stop(), which ends the debuggee.
+            // WaitForBreakOrEnd: false so this call returns immediately rather than blocking
+            // until the (now undebugged) process happens to hit a break or exit on its own.
+            ComRetry.Invoke(() => process.Detach(WaitForBreakOrEnd: false));
+            JsonOutput.WriteSuccess(new { pid, mode = ToModeString(ComRetry.Invoke(() => dte.Debugger.CurrentMode)) });
+            return 0;
+        }
+        finally
+        {
+            Marshal.ReleaseComObject(process);
+        }
+    }
+
+    private static bool TryParsePid(Dictionary<string, string> opts, out int pid)
+    {
+        if (!opts.TryGetValue("pid", out var pidText) || !int.TryParse(pidText, out pid) || pid <= 0)
+        {
+            JsonOutput.WriteError("invalid-argument", "--pid is required and must be a positive integer.");
+            pid = 0;
+            return false;
+        }
+
+        return true;
     }
 
     private static (DTE? dte, string? errorCode, string? error) ResolveDte(Dictionary<string, string> opts)

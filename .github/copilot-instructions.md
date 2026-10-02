@@ -1,4 +1,4 @@
-<!-- project-memory-management-graph: skill-version=11 -->
+<!-- project-memory-management-graph: skill-version=12 -->
 # Copilot Instructions
 
 ## Persistent Project Memory
@@ -77,6 +77,11 @@ memory plus a Roslyn-based code knowledge graph.
 - After editing the repo copy, stop and show the diff for review before doing anything else. Do not
   run `Install-Skills.ps1` unless explicitly asked to — that is the user's call after reviewing the
   skill change separately from the AgentDebugToolkit change that triggered it.
+- This project has a WinForms/WPF UI. If you need to debug it in Visual Studio, use the `vs-debug`
+  skill (also independently useful for debugging tasks not reached via UI navigation). If you need
+  to navigate through the running application to reach a specific screen or feature — including as
+  part of debugging it — use the `ui-navigation-orchestrator` skill, which composes `vs-debug` and
+  `ui-interaction` for you.
 
 ## Response Guidelines
 

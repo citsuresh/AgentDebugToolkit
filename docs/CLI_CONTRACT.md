@@ -839,7 +839,8 @@ running instance found via the Running Object Table (ROT) is used.
 - Failure (`continue` called with no active debugging session at all):
   `{ "success": false, "error": "no-active-session", "message": "..." }`
 - Failure (any verb, if a COM call into Visual Studio kept failing with the IDE reporting itself
-  busy — `RPC_E_SERVERCALL_RETRYLATER` / `RPC_E_CALL_REJECTED` — after automatic retries):
+  busy — `RPC_E_SERVERCALL_RETRYLATER` / `RPC_E_CALL_REJECTED` / `RPC_E_SERVERCALL_REJECTED` /
+  `RPC_E_CALL_COMPLETE` — after automatic retries):
   `{ "success": false, "error": "com-busy-retry-exhausted", "message": "..." }`
   Every EnvDTE/COM call site in this project is wrapped in a shared retry helper (`ComRetry`)
   that retries up to 3 times with a short backoff (100ms/200ms/300ms) before surfacing this
@@ -950,6 +951,243 @@ begins — a zero `--timeoutMs` still checks status once before timing out.
 - Failure: `{ "success": false, "error": "timeout", "message": "..." }` if break mode is never
   reached in time; same attach-resolution errors as other verbs otherwise (including
   `com-busy-retry-exhausted` if a poll iteration's COM call exhausts its retries mid-wait).
+
+## Phase 21 verbs (PID-targeted attach/break-all/detach, 2026-10-02)
+
+These three verbs operate on an explicit `--pid` (target debuggee process), unlike every other
+verb above which operates on the Visual Studio instance itself (`--solution` only disambiguates
+*which* `devenv.exe`, never *which* debuggee process). All three use EnvDTE/COM exclusively — no
+UI automation/SendKeys is involved in locating or attaching to the target process.
+
+Resolution for `--pid` is unambiguous by construction: every running `devenv.exe` instance (or
+just the one matching `--solution`, if given) is scanned for a `Process` with a matching
+`ProcessID`. If the PID is visible to more than one instance, or isn't found in any instance's
+candidate set, the verb fails rather than guessing — see the `ambiguous-process` /
+`process-not-found` / `process-not-debugged` errors below, each of which includes a `candidates`
+array describing every instance that was a partial match, so the caller can retry with
+`--solution` to disambiguate.
+
+### `attach-process --pid <n> [--solution <name>]`
+Attaches the debugger to an already-running process by PID, via `Process.Attach()` on the
+matching entry in the resolved Visual Studio instance's `Debugger.LocalProcesses` collection (the
+full set of processes that instance could attach to — matches the instance/process scanned by
+EnvDTE's own documented `Process.Attach` usage pattern).
+- Success: `{ "success": true, "pid": 12345, "mode": "design" | "run" | "break" }`
+- Failure: `{ "success": false, "error": "invalid-argument", "message": "--pid is required and must be a positive integer." }`
+- Failure: `{ "success": false, "error": "process-not-found", "message": "..." }` if no running
+  Visual Studio instance (that matches `--solution`, if given) can see a process with that PID in
+  its `LocalProcesses` collection.
+- Failure: `{ "success": false, "error": "ambiguous-process", "message": "...", "candidates": [ { "instance": "!VisualStudio.DTE.17.0:1234", "solution": "MySolution" | null }, ... ] }`
+  if the PID is attachable from more than one running Visual Studio instance; retry with
+  `--solution` to pick one.
+- Failure: same `devenv-not-found` / `rot-unavailable` / `com-busy-retry-exhausted` errors as
+  other verbs (see "Attaching to Visual Studio" above).
+
+### `break-all --pid <n> [--solution <name>]`
+Breaks *all* threads in the target debuggee process (not just the current thread, and not every
+process any instance happens to be debugging), via `Process.Break(WaitForBreakMode: true)` on the
+matching entry in the resolved instance's `Debugger.DebuggedProcesses` collection (processes
+currently under an active debug session — distinct from `LocalProcesses`, which is every
+attachable process on the machine whether or not it's being debugged).
+- Success: `{ "success": true, "pid": 12345, "mode": "design" | "run" | "break" }`
+- Failure: `{ "success": false, "error": "invalid-argument", "message": "--pid is required and must be a positive integer." }`
+- Failure: `{ "success": false, "error": "process-not-debugged", "message": "..." }` if no running
+  Visual Studio instance (that matches `--solution`, if given) is currently debugging a process
+  with that PID.
+- Failure: `{ "success": false, "error": "ambiguous-process", "message": "...", "candidates": [ { "instance": "...", "solution": "..." | null }, ... ] }`
+  if more than one running Visual Studio instance is debugging that PID; retry with `--solution`.
+- Failure: same `devenv-not-found` / `rot-unavailable` / `com-busy-retry-exhausted` errors as
+  other verbs.
+
+### `detach --pid <n> [--solution <name>]`
+Detaches the debugger from the target debuggee process via `Process.Detach(WaitForBreakOrEnd:
+false)` — this stops the debugger from monitoring the process **without terminating it**,
+deliberately distinct from `stop-debugging`'s `Debugger.Stop`, which ends the debuggee. The target
+is resolved the same way as `break-all` (via `Debugger.DebuggedProcesses`), since only an actively
+debugged process can be detached from. `WaitForBreakOrEnd: false` is used so the call returns
+immediately rather than blocking until the now-undebugged process happens to hit a break or exit
+on its own.
+- Success: `{ "success": true, "pid": 12345, "mode": "design" | "run" | "break" }` — the debuggee
+  process itself keeps running after this call; only the debugger's monitoring of it stops.
+- Failure: same `invalid-argument` / `process-not-debugged` / `ambiguous-process` /
+  `devenv-not-found` / `rot-unavailable` / `com-busy-retry-exhausted` errors as `break-all`.
+
+**Live verification (2026-10-02):** all three verbs were exercised end-to-end against real
+running Visual Studio instances (not just unit-level): `attach-process --pid <n>` against a
+spawned long-lived `powershell.exe` process correctly returned `ambiguous-process` with 4
+candidates when 4 devenv instances could all see the PID, then succeeded once `--solution` was
+supplied; `break-all --pid <n> --solution ...` returned `"mode":"break"`; `detach --pid <n>
+--solution ...` returned `"mode":"design"`, and the target process was confirmed still alive via
+`Get-Process -Id <n>` immediately afterward — proving `Process.Detach` does not terminate the
+debuggee, as opposed to `Debugger.Stop`.
+
+**Note on `ambiguous-process` candidate shape:** this is a distinct `candidates` shape
+(`{instance, solution}`, describing which Visual Studio instance/solution the PID was found
+under) from the `ambiguous-process` candidates documented for `agentdebug-ui`'s `attach` verb
+(`{pid, title}`, describing which OS process a process-name match resolved to) — same error code,
+different domain, disambiguated by which CLI/verb emitted it.
+
+**Note on `com-busy-retry-exhausted` retry coverage:** `ComRetry`'s busy-HRESULT set now also
+covers `RPC_E_SERVERCALL_REJECTED` (`0x8001010C`, distinct from the pre-existing
+`RPC_E_CALL_REJECTED` `0x80010001` already handled — both ends of VS's COM message-filter
+rejection path) and `RPC_E_CALL_COMPLETE` (`0x80010117`), alongside the original
+`RPC_E_SERVERCALL_RETRYLATER` (`0x8001010A`). All four are retried with the same bounded backoff
+(100ms/200ms/300ms) before surfacing `com-busy-retry-exhausted` — this applies to every verb's
+state-reporting calls (`debugger-status`, `wait-for-break`, and the new
+`attach-process`/`break-all`/`detach`'s post-action mode read), never silently falling back to a
+default/assumed debugger state on retry exhaustion.
+
+**Live verification of the retry path (2026-10-02):** 20-30 concurrent PowerShell processes
+calling `debugger-status`/`list-threads` against the same attached VS instance reliably triggered
+the real `RPC_E_SERVERCALL_RETRYLATER` HRESULT. This surfaced three call sites that bypassed
+`ComRetry` entirely: `DteLocator.EnumerateDteInstances()`'s `rot.EnumRunning`/`enumMoniker.Reset`/
+`enumMoniker.Next` calls (hit on every CLI invocation, before any debugger-specific call), bare
+`dte.Debugger`/`thread.ID`/`thread.Name` reads in `debugger-status`/`list-threads`, and —
+isolated via temporary diagnostic logging after an initial partial fix — `ListThreads`'s
+`foreach (EnvDTE.Thread thread in threadsCollection)`, whose compiler-generated
+`EnvDTE.Threads.GetEnumerator()` call is itself a cross-process COM call that can throw the same
+busy HRESULTs, bypassing `ComRetry` since `foreach`'s enumerator acquisition is implicit. All
+three were fixed: the first two wrapped in `ComRetry.Invoke`, and the `foreach` replaced with
+explicit `ComRetry.Invoke(() => threadsCollection.GetEnumerator())` +
+`ComRetry.Invoke(() => enumerator.MoveNext())` calls. The two P/Invoke-based suspects
+(`GetRunningObjectTable`/`CreateBindCtx`) were investigated and ruled out — they never appeared
+in the diagnostic log across any repro run. After all three fixes, two further concurrent stress
+runs (250 and 360 calls respectively) completed with 0 leaked `unhandled-exception` and 0
+`com-busy-retry-exhausted` results (610 total calls, 0 failures) — see
+`docs/KNOWN_OPEN_FINDINGS.md`'s now-resolved entry for the full isolation narrative.
+
+**Broader fix and re-verification (2026-10-02, follow-up):** the `foreach`-bypasses-`ComRetry`
+pattern found above was not unique to `ListThreads` — every other `foreach` over an EnvDTE/COM
+collection in the project had the same latent gap. Added a shared `ComRetry.ForEach<T>` helper
+(an always-exhaust `Action<T>` overload and an early-exit `Func<T,bool>` overload, both routing
+`GetEnumerator()`/`MoveNext()`/`Current` through `ComRetry.Invoke`) and converted every remaining
+site to use it: `get-callstack`'s `thread.StackFrames` loop, `get-locals`'s and
+`get-exception-info`'s `stackFrame.Locals` loops, `select-frame`'s frame-resolution loop,
+thread-by-id resolution (used by `select-thread`), `list-breakpoints`'s and
+`remove-breakpoint`'s `breakpointsCollection` loops, and `DteLocator`'s process-by-pid scan (used
+by `attach-process`/`break-all`/`detach`). Re-ran two 25-30-parallel-job concurrent stress tests
+exercising `debugger-status`, `list-threads`, `get-callstack`, `select-thread`, `select-frame`,
+`get-locals`, and `list-breakpoints` together against a real break-mode session with real stack
+frames, locals, and breakpoints present: 1540 total calls across both runs, 0 leaked
+`unhandled-exception`, 8 correctly-surfaced `com-busy-retry-exhausted` results under heavy
+contention. The retry-coverage gap is now considered closed project-wide, not just for the
+originally-reproduced `debugger-status`/`list-threads` path.
+
+## Phase 22 verbs (thread listing/selection, frame selection, evaluate, 2026-10-02)
+
+These four verbs add thread/stack-frame selection on top of an already-attached, break-mode
+debug session, and a side-effect-safe-by-default expression evaluator built on the same
+`Expression`-reading pattern `get-locals` already uses. All require break mode (same
+`not-in-break-mode` failure as `get-callstack`/`get-locals`/stepping verbs), and all use
+EnvDTE/COM exclusively — no UI automation/SendKeys.
+
+### `list-threads [--solution <name>]`
+Enumerates `Debugger.CurrentProgram.Threads` (the threads of the currently-debugged program) and
+returns each thread's real, stable `Thread.ID` (an OS/runtime thread id, not a CLI-invented
+handle) alongside its name.
+- Success: `{ "success": true, "threads": [ { "id": 1234, "name": "Main Thread" }, ... ] }`
+- Failure: `{ "success": false, "error": "no-current-program", "message": "..." }` if
+  `Debugger.CurrentProgram` is null (no program is currently being debugged).
+- Failure: same `not-in-break-mode` / `com-busy-retry-exhausted` / attach-resolution errors as
+  other verbs.
+
+### `select-thread --threadId <n> [--solution <name>]`
+Re-scans `Debugger.CurrentProgram.Threads` for the thread whose `.ID` matches `--threadId`, then
+sets `Debugger.CurrentThread` to it. `Debugger.CurrentThread` is a genuinely settable EnvDTE
+property (confirmed via the EnvDTE API reference, not assumed), so this call actually changes
+which thread subsequent `get-locals`/`get-callstack`/`evaluate` calls operate on — it is not
+merely tracked externally and never applied to the real debugger session.
+- Success: `{ "success": true, "threadId": 1234, "name": "Main Thread" }`
+- Failure: `{ "success": false, "error": "invalid-argument", "message": "--threadId is required and must be an integer." }`
+- Failure: `{ "success": false, "error": "thread-not-found", "message": "..." }` if no thread with
+  that id exists in the current program.
+- Failure: `{ "success": false, "error": "thread-selection-not-applied", "message": "..." }` if,
+  after setting `Debugger.CurrentThread`, re-reading it back does not confirm the selection (null,
+  or a different thread id than the one just set). This is a defense-in-depth confirmation read
+  added after live testing showed `Debugger.CurrentThread = thread` can silently fail to "stick"
+  in some cases — this verb never reports success on the strength of the assignment call alone.
+- Failure: same `no-current-program` / `not-in-break-mode` / `com-busy-retry-exhausted` errors as
+  `list-threads`.
+
+### `select-frame --index <n> [--solution <name>]`
+Resolves `Debugger.CurrentThread.StackFrames` and sets `Debugger.CurrentStackFrame` to the frame
+at `--index` (0-based, innermost-first — frame 0 is the innermost/current frame, matching
+`get-callstack`'s enumeration order for the same collection). Unlike
+`Thread.ID`, EnvDTE's `StackFrame` interface exposes no stable id/handle of its own, so frames are
+necessarily addressed by position in the live `StackFrames` collection and re-resolved fresh on
+every call rather than cached.
+- Success: `{ "success": true, "index": 0, "function": "MyApp.Program.Main" }`
+- Failure: `{ "success": false, "error": "invalid-argument", "message": "--index is required and must be a non-negative integer." }`
+- Failure: `{ "success": false, "error": "no-thread-selected", "message": "..." }` if
+  `Debugger.CurrentThread` is null (no thread selected yet — call `select-thread` first, or
+  confirm the debugger has a current thread).
+- Failure: `{ "success": false, "error": "frame-index-out-of-range", "message": "..." }` if
+  `--index` is beyond the selected thread's frame count.
+- Failure: `{ "success": false, "error": "frame-not-managed", "message": "..." }` if the frame at
+  `--index` is detected as not managed/evaluable (a native transition frame, or a VS pseudo-frame
+  placeholder such as `"[Application execution paused, double-click to view all thread stacks]"`)
+  — detected via `FunctionName` pattern-matching plus a check that `StackFrame.Language` reads back
+  non-empty. Confirmed live that attempting to select these either silently fails to apply or (for
+  native-transition frames specifically) can surface a raw native-debug-engine HRESULT on
+  subsequent evaluation, so this is checked and rejected up front instead. Select a different
+  frame index.
+- Failure: `{ "success": false, "error": "frame-selection-not-applied", "message": "..." }` if,
+  after setting `Debugger.CurrentStackFrame` to a frame that passed the managed-frame check above,
+  re-reading `Debugger.CurrentStackFrame` back immediately returns null — same defense-in-depth
+  read-back confirmation as `select-thread`, for the same reason (observed live that the
+  assignment does not always "stick").
+- Failure: same `not-in-break-mode` / `com-busy-retry-exhausted` errors as other verbs.
+- **Staleness note**: a successful `select-frame`/`select-thread` selection is only valid until the
+  next continue/step/break. If a new pause occurs between selecting and a later `get-locals`/
+  `evaluate` call, the prior selection is invalidated and the next call against it returns
+  `no-stack-frame` (or `not-in-break-mode` if the process is no longer paused at all) — this is
+  expected behavior, not a bug; there is currently no separate staleness/generation signal in the
+  success response, so callers must re-select after every new pause rather than assuming a prior
+  selection still applies.
+
+### `evaluate --expression <text> [--allowSideEffects] [--solution <name>]`
+Evaluates `--expression` against the currently selected stack frame (`Debugger.CurrentStackFrame`
+— set via `select-frame`, or whatever EnvDTE's own current frame happens to be if no explicit
+selection was made) and returns its resulting name/value/type, using the same `Expression` object
+shape `get-locals` already returns for `Locals` entries.
+
+- **Safe by default**: calls `Debugger.GetExpression(expressionText, UseAutoExpandRules: false,
+  Timeout: -1)`, which evaluates (reads) an expression without executing statements or
+  assignments — the same non-mutating read path `get-locals` uses for every `Locals` entry.
+  Implicit property-getter/function evaluation during this read is governed solely by Visual
+  Studio's own global Tools > Options > Debugging > General "Allow property evaluation and other
+  implicit function calls" setting; this verb does not change that setting and never calls
+  `ExecuteStatement` on this path.
+- **Unsafe opt-in**: `--allowSideEffects` (accepted case-insensitively, e.g. `true`/`True`/`TRUE`;
+  any other value, or omitting the flag, keeps the safe default path) switches to
+  `Debugger.ExecuteStatement(expressionText, Timeout: -1, TreatAsExpression: true)`, which CAN run
+  property getters, method calls, and assignment statements against the live debuggee. This is
+  explicitly unsafe-by-default-off — only reached when the caller passes `--allowSideEffects` set
+  to `true`.
+- Success (safe path): `{ "success": true, "name": "myVar", "value": "42", "type": "int" }`
+- Success (unsafe/`--allowSideEffects` path): `{ "success": true, "expression": "...", "allowSideEffects": true, "executed": true }`
+  (`ExecuteStatement` does not return an `Expression` object, so there is no name/value/type to
+  report back for this path — only confirmation that the statement was executed).
+- Failure: `{ "success": false, "error": "invalid-argument", "message": "--expression is required." }`
+- Failure: `{ "success": false, "error": "no-frame-selected", "message": "..." }` if
+  `Debugger.CurrentStackFrame` is null — deliberately distinct from the generic `no-stack-frame`
+  error used elsewhere, since this condition specifically covers a stale/never-made selection or
+  an attached process with no managed frames, which callers of the new selection verbs need to
+  distinguish from "not in break mode" at all.
+- Failure: `{ "success": false, "error": "frame-not-managed", "message": "..." }` if
+  `Debugger.CurrentStackFrame` resolves to a frame but it is detected as not managed/evaluable
+  (same detection as `select-frame`'s check above, applied here to whatever the ambient current
+  frame happens to be — this covers callers who never went through `select-frame` at all, not only
+  ones who did). This replaces what would otherwise be a raw native-debug-engine HRESULT (observed
+  live as `0x89711006`) surfacing through the generic `unhandled-exception` path.
+- Failure: `{ "success": false, "error": "evaluation-failed", "message": "...", "name": "...", "type": "..." }`
+  (safe path only) if `GetExpression` returns a result whose `IsValidValue` is false (e.g. a
+  malformed expression that parses but cannot be evaluated), OR if `GetExpression`/
+  `ExecuteStatement` itself throws a `COMException` that isn't one of the `com-busy-retry-exhausted`
+  HRESULTs already handled by `ComRetry` — in that case the message is a human-readable translation
+  of the HRESULT (e.g. the `0x89711006` case is translated to a specific explanation) rather than
+  the raw exception text/HRESULT alone.
+- Failure: same `not-in-break-mode` / `com-busy-retry-exhausted` errors as other verbs.
 
 ---
 

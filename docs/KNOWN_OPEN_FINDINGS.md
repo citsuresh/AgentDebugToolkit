@@ -124,6 +124,85 @@ every exit path (including the early `rot-unavailable`/`devenv-not-found` return
 `FindDte` returns. A Regression Auditor review found no in-scope issues; build succeeded with 0
 warnings/errors; no test project exists for this code.
 
+## ComRetry's COM-busy retry/backoff path: live-triggered, isolated, and fixed — RESOLVED
+
+- **First seen:** 2026-10-02
+- **Last seen:** 2026-10-02
+- **Occurrences:** 1
+- **Resolved:** 2026-10-02 (same session)
+
+**Description:** `ComRetry`'s bounded retry-with-backoff around `RPC_E_SERVERCALL_RETRYLATER` /
+`RPC_E_CALL_REJECTED` / `RPC_E_SERVERCALL_REJECTED` / `RPC_E_CALL_COMPLETE` (surfacing
+`com-busy-retry-exhausted` on exhaustion) was live-triggered via 20-30 parallel PowerShell jobs
+calling `debugger-status`/`list-threads` against the same attached VS instance simultaneously. The
+real busy HRESULT (`0x8001010A RPC_E_SERVERCALL_RETRYLATER`) fired repeatedly and reliably under
+this load. The first attempt showed 34/200 (17%) of calls surfacing the busy HRESULT as a raw
+`unhandled-exception` instead of being retried — traced to `DteLocator.EnumerateDteInstances()`'s
+`rot.EnumRunning`/`enumMoniker.Reset`/`enumMoniker.Next` calls and bare `dte.Debugger`/`thread.ID`/
+`thread.Name` property reads bypassing `ComRetry`. Wrapping those reduced the leak to 4/250 (1.6%).
+
+**Root cause of the remaining 1.6%, isolated via temporary diagnostic logging:** added a
+temporary `catch` block logging the call site/stack trace whenever a busy-HRESULT `COMException`
+escaped uncaught, then re-ran the same stress test. Caught the exact site on the first repro: the
+C# compiler's implicit `foreach (EnvDTE.Thread thread in threadsCollection)` over
+`EnvDTE.Threads` calls `EnvDTE.Threads.GetEnumerator()` internally — this is itself a cross-process
+COM call into devenv and threw `RPC_E_SERVERCALL_RETRYLATER` directly from
+`ListThreads`'s `foreach`, bypassing `ComRetry` entirely since `foreach`'s enumerator acquisition
+is compiler-generated and was never passed through `ComRetry.Invoke`. The two P/Invoke-based
+suspects named in the original finding (`GetRunningObjectTable`/`CreateBindCtx`) were **ruled out**
+— they never appeared in the diagnostic log across any repro run.
+
+**Fix applied:** Replaced the `foreach` in `ListThreads` with manual
+`ComRetry.Invoke(() => threadsCollection.GetEnumerator())` + `ComRetry.Invoke(() =>
+enumerator.MoveNext())` calls, so both the enumerator acquisition and each iteration step go
+through the same retry/backoff path as every other EnvDTE call.
+
+**Verification:** removed the temporary diagnostic logging after isolating the cause, rebuilt (0
+warnings/errors), then re-ran the same concurrent stress test twice more: 250/250 and 360/360
+calls succeeded with 0 leaked `unhandled-exception` and 0 `com-busy-retry-exhausted` (610 total
+calls, 0 failures of either kind) — a reliable real busy condition was both triggered and
+correctly retried/surfaced end to end.
+
+**Residual caveat (RESOLVED as of 2026-10-02, broader fix):** the original fix above covered only
+the `debugger-status`/`list-threads` call path. A follow-up pass added a shared
+`ComRetry.ForEach<T>` helper (two overloads: always-exhaust and early-exit) and converted every
+remaining `foreach` over an EnvDTE/COM collection in the project to use it: `GetCallStack`'s
+`thread.StackFrames` loop, `GetLocals`'s and `GetExceptionInfo`'s `stackFrame.Locals` loops,
+`SelectFrame`'s frame-resolution loop, `ResolveThreadById`'s thread-search loop,
+`ListBreakpoints`'s and `RemoveBreakpoint`'s `breakpointsCollection` loops, and
+`DteLocator.FindProcessByPid`'s `processes` loop. (`RemoveBreakpoint`'s final loop over its
+already-materialized `List<Breakpoint> candidates`, and `DteLocator`'s loops over plain
+`List<(DTE,...)>` tuples, were confirmed to NOT need conversion since they iterate managed
+collections, not live COM collections.)
+
+**Verification of the broader fix:** rebuilt clean (0 warnings/errors), re-attached to the same
+live WPF app, set a real breakpoint, and ran two 25-30-parallel-job concurrent stress tests
+exercising `debugger-status`, `list-threads`, `get-callstack`, `select-thread`, `select-frame`,
+`get-locals`, and `list-breakpoints` together (not just the original two verbs) against a real
+break-mode session with real stack frames/locals/breakpoints. Results: 1540 total calls across both
+runs, 0 leaked `unhandled-exception`, 8 calls correctly surfaced as `com-busy-retry-exhausted`
+(genuine retry-budget exhaustion under heavy contention, not a ComRetry-bypass leak). This is now
+considered fully resolved across the whole project, not just the originally-reproduced
+`debugger-status`/`list-threads` path.
+
+## select-frame throws COMException("Element not found.") on the WPF UI/dispatcher thread
+
+- **First seen:** 2026-10-02
+- **Last seen:** 2026-10-02
+- **Occurrences:** 1
+
+**Description:** discovered incidentally while verifying the ComRetry fix above (not a ComRetry
+issue itself). `select-frame` against a specific thread's frames (the WPF UI/dispatcher thread,
+thread id 95012 in the test app, `AttendenceChecker.UI.exe`) consistently raised
+`EnvDTE.Debugger.set_CurrentStackFrame` → `COMException("Element not found.")` for every frame
+index on that thread (0 through 5, including the `[Managed to Native Transition]` frame and every
+managed frame above it), reproducing identically with zero concurrency (sequential single calls,
+no stress test involved). Confirmed via stack trace that this is a genuine `COMException` thrown
+directly from the property setter itself, not a `ComRetry`-bypassed enumerator call (ruled out as
+unrelated to the busy-HRESULT retry path). Selecting frames on a different thread in the same
+process (thread id 124504, `.NET Timer`) worked without error. Not investigated further at the
+time since it was out of scope for the ComRetry fix in progress.
+
 ## Root nuget.config's `<clear/>` is solution-wide, not scoped to the new project — RESOLVED
 
 - **First seen:** 2026-09-14
