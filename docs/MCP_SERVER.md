@@ -5,6 +5,7 @@
 `ModelContextProtocol` .NET SDK with stdio transport, that exposes the existing
 `agentdebug-vs.exe` and `agentdebug-ui.exe` CLIs as MCP tools so an MCP client (Claude Desktop,
 Cowork, etc.) can call this toolkit directly instead of a human/agent shelling out to each CLI.
+An opt-in third group wraps `agentdebug-console.exe` — see "Tool groups and `--tools`" below.
 
 **It is a thin wrapper only.** It contains no debugger, COM, or UIA logic of its own: every tool
 builds an argument list for the matching CLI verb (via `ProcessStartInfo.ArgumentList`, never a
@@ -40,12 +41,13 @@ and the timeout error is reported distinctly (`WrapperErrorCode: "timeout"`). Lo
 
 ## Locating the CLI exes
 
-`agentdebug-vs.exe` and `agentdebug-ui.exe` are built into different per-project output folders,
-so the server resolves each one's bin directory independently, and never searches the disk or
-guesses another location ("ask, don't guess"):
+`agentdebug-vs.exe`, `agentdebug-ui.exe`, and (when enabled) `agentdebug-console.exe` are built
+into different per-project output folders, so the server resolves each one's bin directory
+independently, and never searches the disk or guesses another location ("ask, don't guess"):
 
 1. An exe-specific environment variable, if set: `AGENTDEBUG_VS_BIN` for `agentdebug-vs.exe`,
-   `AGENTDEBUG_UI_BIN` for `agentdebug-ui.exe`.
+   `AGENTDEBUG_UI_BIN` for `agentdebug-ui.exe`, `AGENTDEBUG_CONSOLE_BIN` for
+   `agentdebug-console.exe`.
 2. Otherwise, the shared `AGENTDEBUG_TOOLKIT_BIN` environment variable, if set — use this only
    when both exes happen to live in (or have been copied/published into) the same folder.
 3. Otherwise, the MCP server's own build output directory (`AppContext.BaseDirectory`) — this
@@ -56,6 +58,25 @@ guesses another location ("ask, don't guess"):
 If an exe is not found, the tool call returns a wrapper-level `exe-not-found` error naming every
 path that was checked (the specific env var's path if set, the shared env var's path if set, and
 the server build output fallback), so you can see exactly what was tried.
+
+## Tool groups and `--tools`
+
+By default the server registers only the `vs_*` and `ui_*` tool groups. Pass `--tools` on the
+command line to choose which groups are registered, as a comma-separated list drawn from `vs`,
+`ui`, `console`:
+
+- `--tools vs,ui` (default if `--tools` is omitted) — the original behavior, unchanged.
+- `--tools console` — registers **only** the 7 `console_*` tools (not `vs`/`ui` as well).
+- `--tools vs,ui,console` — registers all three groups.
+- An unknown group name (e.g. `--tools vs,bogus`) fails startup immediately with a clear message
+  on stderr and a non-zero exit code; the server never starts partially configured.
+
+The `console` group is **never** registered unless explicitly listed — there is no way to get
+console tools by accident. This flag exists so that MCP clients/users who don't need the
+console tools (the highest-risk group; see below) aren't charged their token cost in every tool
+listing. Run a second server process (a separate `mcpServers` entry) with `--tools console` if
+you want both groups available side by side without paying for console tools in a server
+instance that doesn't use them.
 
 ## Safety split
 
@@ -69,6 +90,12 @@ the server build output fallback), so you can see exactly what was tried.
 - Selection-only tools (`vs_select_thread`, `vs_select_frame`) are `readOnlyHint: false` (they do
   change debugger state) but `destructiveHint: false` (the change is just which thread/frame
   subsequent calls target, trivially reversible by selecting again).
+- **Console tools (opt-in, highest risk):** `console_launch` and `console_send_text`/
+  `console_send_keys` send input or launch a process with the user's own privileges on their
+  behalf — these are `destructiveHint: true` and carry an explicit "UNSAFE" warning in their
+  descriptions. `console_launch` is additionally gated **in code**, not just by annotation: it
+  refuses to run at all unless `AGENTDEBUG_CONSOLE_ALLOWED_EXE` is set, and always refuses a
+  shell/script host even if one is listed in that allowlist. See "Console tools" below.
 
 Side-effecting operations are kept as **separate tools** from their read-only counterparts, so an
 MCP client can grant/prompt approval per tool rather than per call:
@@ -107,6 +134,11 @@ MCP client can grant/prompt approval per tool rather than per call:
     lack effect** — they do resume the debuggee. They are the normal debugging loop, and requiring
     per-step approval would be impractical. Clients that want tighter control should require
     approval for these tools explicitly rather than relying on `destructiveHint`.
+  - **Console tools** (`console_launch`, `console_send_text`, `console_send_keys`,
+    `console_stop`) are `readOnlyHint: false`, `destructiveHint: true` — they spawn a process or
+    send input to it under the user's own privileges. `console_read_screen`, `console_is_running`,
+    `console_wait_for_text` are `readOnlyHint: true` (they only read the console buffer/process
+    state).
 
 ## Tool list
 
@@ -166,26 +198,71 @@ MCP client can grant/prompt approval per tool rather than per call:
 | `ui_find_first` | `find-first` | Read-only |
 | `ui_find_all` | `find-all` | Read-only |
 
+### Console automation tools (`ConsoleTools`, wrapping `agentdebug-console.exe`; opt-in via `--tools console`)
+
+**Highest risk group — read the warnings below before enabling.** Not registered unless
+`console` is explicitly listed in `--tools`.
+
+| Tool | CLI verb | Notes |
+| --- | --- | --- |
+| `console_launch` | `launch` | **UNSAFE.** Destructive. Refuses to run unless `AGENTDEBUG_CONSOLE_ALLOWED_EXE` allowlists the exact exe (full path, case-insensitive); always refuses known shells/script hosts even if listed. |
+| `console_read_screen` | `read-screen` | Read-only |
+| `console_is_running` | `is-running` | Read-only |
+| `console_wait_for_text` | `wait-for-text` | Read-only; `timeoutMs` capped at 120000 |
+| `console_send_text` | `send-text` | **UNSAFE.** Destructive — sends input to the running console session |
+| `console_send_keys` | `send-keys` | Destructive; only accepts the CLI's known key set (`ENTER`, `TAB`, `ESC`, `UP`, `DOWN`, `LEFT`, `RIGHT`, `CTRL+C`) — any other value is rejected before the CLI is invoked |
+| `console_stop` | `stop` | Destructive |
+
+**`console_launch` allowlist (`AGENTDEBUG_CONSOLE_ALLOWED_EXE`):** a `;`-separated list of full
+executable paths. This check runs entirely in the MCP server's own code, before
+`agentdebug-console.exe` is ever invoked:
+- If the env var is unset or empty, every `console_launch` call fails with
+  `wrapperErrorCode: "console-launch-not-allowed"` and the CLI is never invoked.
+- The requested `exe` must be a fully-qualified path (bare names and relative paths are
+  rejected) and must case-insensitively full-path-match one of the allowlisted entries.
+- A fixed set of shell/script hosts (`cmd.exe`, `powershell.exe`, `pwsh.exe`, `wsl.exe`,
+  `bash.exe`, `sh.exe`, `wscript.exe`, `cscript.exe`, `mshta.exe`, `rundll32.exe`,
+  `powershell_ise.exe`, `conhost.exe`, `wt.exe`, `windowsterminal.exe`, `msiexec.exe`,
+  `regsvr32.exe`, `schtasks.exe`) is always rejected, even if one of them is present in the
+  allowlist — there is no way to override this from configuration. **This blocklist is a
+  backstop, not a complete list of every dangerous executable** — it catches the obvious
+  shells/script hosts, but the allowlist itself is the real control.
+- `--args` is free-form and is interpreted by the allowlisted program itself, not by the MCP
+  server or any shell. **Allowlisting an interpreter, package runner, or build tool (`python.exe`,
+  `node.exe`, `dotnet.exe`, `java.exe`, `msbuild.exe`, `git.exe`, `npm.cmd`, etc.) is equivalent
+  to allowlisting a shell**, because `--args` can direct it to execute arbitrary code (e.g.
+  `python.exe -c "<anything>"`, `dotnet.exe run`, `git.exe` with a malicious `core.pager`/hook
+  config). Only allowlist single-purpose tools you trust with the arguments you expect — never
+  interpreters, runners, or other programs whose job is to execute further code on your behalf.
+- **This is a protection for the MCP server's own surface only, not system-wide protection.**
+  The allowlist and blocklist only stop a *tool call through this MCP server* from launching an
+  unapproved or shell-like target. Anything that can already run `agentdebug-console.exe` (or
+  any other executable) directly — for example an agent or script with its own shell/process
+  access — bypasses these checks entirely, since they are not enforced by the OS or by
+  `agentdebug-console.exe` itself.
+
 No generic "run any verb"/"run any command" tool is exposed — every tool corresponds to exactly
 one documented CLI verb with typed, described parameters matching `docs/CLI_CONTRACT.md`.
 
-`agentdebug-console.exe`'s verbs are not yet wrapped as MCP tools (out of scope for this initial
-server; can be added the same way if/when needed).
+## Configuration: `AGENTDEBUG_VS_BIN` / `AGENTDEBUG_UI_BIN` / `AGENTDEBUG_CONSOLE_BIN` / `AGENTDEBUG_TOOLKIT_BIN`
 
-## Configuration: `AGENTDEBUG_VS_BIN` / `AGENTDEBUG_UI_BIN` / `AGENTDEBUG_TOOLKIT_BIN`
-
-For a local dev build of this repo, `agentdebug-vs.exe` and `agentdebug-ui.exe` live in separate
-per-project `bin\Debug\net8.0-windows` folders, so set the two exe-specific variables before
-launching `agentdebug-mcp.exe`:
+For a local dev build of this repo, `agentdebug-vs.exe`, `agentdebug-ui.exe`, and
+`agentdebug-console.exe` live in separate per-project `bin\Debug\net8.0-windows` folders, so set
+the exe-specific variable(s) you need before launching `agentdebug-mcp.exe`:
 
 - `AGENTDEBUG_VS_BIN` — folder containing `agentdebug-vs.exe`
   (`src\AgentDebugToolkit.Debugger.VisualStudio\bin\Debug\net8.0-windows`).
 - `AGENTDEBUG_UI_BIN` — folder containing `agentdebug-ui.exe`
   (`src\AgentDebugToolkit.UiAutomation.Cli\bin\Debug\net8.0-windows`).
+- `AGENTDEBUG_CONSOLE_BIN` — folder containing `agentdebug-console.exe`
+  (`src\AgentDebugToolkit.ConsoleAutomation.Cli\bin\Debug\net8.0-windows`); only resolved when
+  `console` is one of the groups passed to `--tools`.
+- `AGENTDEBUG_CONSOLE_ALLOWED_EXE` — required to use `console_launch` at all; see "Console
+  automation tools" above.
 
-If you've copied or published both exes into one shared folder (e.g. a release layout), you can
-set `AGENTDEBUG_TOOLKIT_BIN` instead and omit the two exe-specific variables — each exe falls
-back to it when its own specific variable isn't set.
+If you've copied or published all exes into one shared folder (e.g. a release layout), you can
+set `AGENTDEBUG_TOOLKIT_BIN` instead and omit the exe-specific variables — each exe falls back
+to it when its own specific variable isn't set.
 
 ## Sample Claude Desktop configuration
 
@@ -202,10 +279,23 @@ This is a **sample only** — review and adapt the paths before adding it to you
         "AGENTDEBUG_VS_BIN": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\bin\\Debug\\net8.0-windows",
         "AGENTDEBUG_UI_BIN": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\bin\\Debug\\net8.0-windows"
       }
+    },
+    "agentdebug-console": {
+      "command": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\bin\\Debug\\net8.0-windows\\agentdebug-mcp.exe",
+      "args": ["--tools", "console"],
+      "env": {
+        "AGENTDEBUG_CONSOLE_BIN": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.ConsoleAutomation.Cli\\bin\\Debug\\net8.0-windows",
+        "AGENTDEBUG_CONSOLE_ALLOWED_EXE": "C:\\path\\to\\your\\allowed-tool.exe"
+      }
     }
   }
 }
 ```
+
+This is kept as a **separate server entry** with `--tools console` rather than folded into the
+first entry's groups, so a client that doesn't need console tools isn't charged their token cost
+in its `tools/list`, and the console group's highest-risk tools don't appear at all unless this
+second entry is explicitly configured.
 
 ## Verification
 

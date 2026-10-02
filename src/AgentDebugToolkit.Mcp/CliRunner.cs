@@ -72,12 +72,14 @@ public sealed class CliRunner
     private readonly ILogger _logger;
     private readonly string _vsBinDirectory;
     private readonly string _uiBinDirectory;
+    private readonly string? _consoleBinDirectory;
 
-    public CliRunner(ILogger logger, string vsBinDirectory, string uiBinDirectory)
+    public CliRunner(ILogger logger, string vsBinDirectory, string uiBinDirectory, string? consoleBinDirectory = null)
     {
         _logger = logger;
         _vsBinDirectory = vsBinDirectory;
         _uiBinDirectory = uiBinDirectory;
+        _consoleBinDirectory = consoleBinDirectory;
     }
 
     /// <summary>
@@ -113,6 +115,8 @@ public sealed class CliRunner
     {
         "agentdebug-vs.exe" => _vsBinDirectory,
         "agentdebug-ui.exe" => _uiBinDirectory,
+        "agentdebug-console.exe" => _consoleBinDirectory
+            ?? throw new InvalidOperationException("agentdebug-console.exe was requested but no console bin directory was configured."),
         _ => throw new ArgumentOutOfRangeException(nameof(exeName), exeName, "Unknown CLI exe name."),
     };
 
@@ -120,6 +124,7 @@ public sealed class CliRunner
     {
         "agentdebug-vs.exe" => ("AGENTDEBUG_VS_BIN", "agentdebug-vs.exe"),
         "agentdebug-ui.exe" => ("AGENTDEBUG_UI_BIN", "agentdebug-ui.exe"),
+        "agentdebug-console.exe" => ("AGENTDEBUG_CONSOLE_BIN", "agentdebug-console.exe"),
         _ => throw new ArgumentOutOfRangeException(nameof(exeName), exeName, "Unknown CLI exe name."),
     };
 
