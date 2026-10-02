@@ -12,6 +12,7 @@ failures.
 | `agentdebug-ui` | UI Automation process/window/element inspection and input |
 | `agentdebug-vs` | Read and control a running Visual Studio debugger through EnvDTE |
 | `agentdebug-console` | Launch and control a console target through a detached ConPTY broker |
+| `agentdebug-mcp` | Thin local MCP (Model Context Protocol) stdio server exposing `agentdebug-vs`/`agentdebug-ui` as MCP tools |
 
 The command-line tools are intentionally separate. They do not own navigation maps or screen
 graphs; an agent supplies selectors and owns workflow reasoning.
@@ -64,6 +65,9 @@ See [docs/CLI_CONTRACT.md](docs/CLI_CONTRACT.md) for exact options, JSON payload
 codes. See [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) for current phase status
 and validation boundaries. See [docs/KNOWN_OPEN_FINDINGS.md](docs/KNOWN_OPEN_FINDINGS.md) for a
 user-curated log of findings surfaced during development (all currently resolved).
+
+See [docs/MCP_SERVER.md](docs/MCP_SERVER.md) to run the toolkit as a local MCP stdio server
+(e.g. for Claude Desktop or Cowork) instead of invoking the CLIs directly.
 
 ## Using the toolkit from an agent
 
