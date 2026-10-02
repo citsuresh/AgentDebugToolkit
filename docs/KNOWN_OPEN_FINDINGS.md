@@ -185,11 +185,12 @@ runs, 0 leaked `unhandled-exception`, 8 calls correctly surfaced as `com-busy-re
 considered fully resolved across the whole project, not just the originally-reproduced
 `debugger-status`/`list-threads` path.
 
-## select-frame throws COMException("Element not found.") on the WPF UI/dispatcher thread
+## select-frame can fail mid-call when the debuggee resumes — MITIGATED (specific error returned)
 
 - **First seen:** 2026-10-02
 - **Last seen:** 2026-10-02
 - **Occurrences:** 1
+- **Mitigated:** 2026-10-02 (same session, follow-up investigation)
 
 **Description:** discovered incidentally while verifying the ComRetry fix above (not a ComRetry
 issue itself). `select-frame` against a specific thread's frames (the WPF UI/dispatcher thread,
@@ -202,6 +203,59 @@ directly from the property setter itself, not a `ComRetry`-bypassed enumerator c
 unrelated to the busy-HRESULT retry path). Selecting frames on a different thread in the same
 process (thread id 124504, `.NET Timer`) worked without error. Not investigated further at the
 time since it was out of scope for the ComRetry fix in progress.
+
+**Root cause, isolated via targeted temporary diagnostic logging (HRESULT + stack trace on the
+`unhandled-exception` path) and systematic hypothesis elimination:**
+- (a) Ruled out "needs a fresh re-fetch of `StackFrames` after `select-thread`": calling
+  `select-thread` immediately before `select-frame` made no difference — the failure reproduced
+  either way.
+- (b) Ruled out "the frame is managed-to-native/external-code and inherently non-settable":
+  `IsManagedFrame`'s check already passes (frame 4, `System.Windows.Application.RunInternal`, is a
+  normal managed frame, not the native-transition frame at index 0), and the same frame index
+  succeeded reliably once the real cause (below) was removed — so EnvDTE can set this exact frame
+  current; it is not an inherent per-frame limitation.
+- (c) Confirmed via `debugger-status` polled alongside repeated `select-frame` calls: `CurrentMode`
+  was repeatedly observed flipping between `"break"` and `"run"` **with no `continue`/`step`/
+  `detach` ever issued by the caller** — i.e. the debuggee was genuinely resuming and re-breaking
+  on its own between the frame-enumeration read and the `CurrentStackFrame` set, invalidating the
+  just-enumerated `StackFrame` RCW out from under the call. Live-isolated the trigger: the test app
+  (`AttendenceChecker.UI.exe`) had 11 pre-existing **enabled breakpoints** left over from earlier
+  session testing, several of which were in frequently-executed code paths and kept firing
+  (background timer/polling threads), causing continuous real pause/resume churn. Removing all 11
+  breakpoints (`remove-breakpoint --all`) made `select-frame` against the same thread/frame index
+  succeed 8/8 times in a row; reproducing the HRESULT required those breakpoints (or equivalent
+  background execution) to be present and firing. This is NOT a WPF-dispatcher-thread-specific
+  limitation and NOT a concurrency/stress-test artifact — it is the project's own already-documented
+  "staleness" behavior (see CLI_CONTRACT.md's select-frame/select-thread staleness note: "a
+  successful selection is only valid until the next continue/step/break"), just surfacing as a raw
+  `COMException`/HRESULT instead of the clean, documented error path.
+- (d) Not reproduced via the VS UI directly (not needed once (c) isolated the real mechanism with
+  high confidence from the CLI side alone).
+
+**Fix applied:** `select-frame` now catches `COMException` specifically around the
+`CurrentStackFrame` setter and, before falling through to the generic `unhandled-exception` path,
+re-checks `Debugger.CurrentMode`. If the debugger has left break mode (the race described above),
+it returns a new specific error, `frame-selection-stale`, naming the real cause (the process
+resumed and re-paused between enumerating frames and applying the selection) and telling the caller
+to `break-all` and retry. Any other `COMException` from the same setter now returns
+`frame-selection-failed` with a human-readable HRESULT translation (reusing the existing
+`DescribeComFailure` helper `evaluate` already uses) instead of the raw exception text. **This is a
+mitigation, not a fix for the underlying race**: the race itself (the debuggee resuming/re-pausing
+between frame enumeration and the set) cannot be eliminated from this tool's side — it is a
+consequence of other code in the debuggee actively executing (e.g. an enabled breakpoint elsewhere
+firing) while `select-frame` is mid-call, which is outside EnvDTE/this CLI's control. What changed
+is that the failure is now reported clearly and actionably instead of leaking as a raw
+`COMException`/HRESULT.
+
+**Verification:** rebuilt clean (0 warnings/errors), reproduced the original failure on the same
+dispatcher thread (id 78644 in a fresh attach to the same app, PID had changed to 66340 since the
+app had been relaunched) with a breakpoint enabled, confirmed `select-frame` now returns
+`frame-selection-stale` instead of a raw `unhandled-exception`/`COMException`, then removed all
+breakpoints and confirmed 8/8 repeated `select-frame` calls against that same thread/frame succeed
+cleanly with no error — i.e. the race condition itself was absent once nothing was actively firing
+a breakpoint, not because the race was fixed, but because nothing was triggering it. Updated
+`docs/CLI_CONTRACT.md` with the new `frame-selection-stale`/`frame-selection-failed` error codes.
+
 
 ## Root nuget.config's `<clear/>` is solution-wide, not scoped to the new project — RESOLVED
 
