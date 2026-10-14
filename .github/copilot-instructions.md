@@ -1,42 +1,38 @@
-<!-- project-memory-management-graph: skill-version=12 -->
 # Copilot Instructions
 
+<!-- project-memory-management-graph: skill-version=14 -->
 ## Persistent Project Memory
 
 This repo uses the `project-memory-management-graph` skill for persistent, low-token project
-memory plus a Roslyn-based code knowledge graph.
+memory plus Roslyn-based code knowledge graphs.
 
 - If it exists, read `docs/CODE_SUMMARY.md` and `docs/DESIGN_DECISIONS.md` before exploring the
   codebase with search tools for a new task. If these files do not exist, fall back to normal
   exploration — their absence is not an error.
 - If it exists, read `docs/PROJECT_STATE.md` and `docs/ROADMAP.md` when the user asks "do you
   remember", references prior work, or asks what's next.
-- If it exists, read `docs/domain-lookup-patterns.md` when a task requires domain conventions,
-  naming schemes, or business logic that the graph doesn't represent — check it before falling
-  back to manual exploration or a fresh graph query.
-- If it exists, `docs/full-graph.json`/`docs/project-dependencies.json` are available and should
-  be queried via the GraphTools wrapper script
-  (`C:\MyFiles\Git\GraphTools\tools\Invoke-GraphTools.ps1`, invoked as
-  `<wrapper> -Tool Query -- <args>`) (never read wholesale). This is a default, not a judgment
-  call: before using a general-purpose search tool (text search, symbol search, grep, or
-  similar) to locate a class/interface/enum, find a method's definition, find its callers, find
-  its callees, check how two types relate, or otherwise answer "where is X" / "what uses X" for
-  anything that is a C# symbol, first check whether `docs/full-graph.json` exists in this
-  project, and if so, query it via the wrapper instead of a general search tool. This applies
-  even to a simple "find this file/class" request, not only explicit call-graph or architecture
-  questions. This preference applies regardless of how the question is phrased:
-  conceptual/explanatory framings ("explain X", "walk me through X", "how does X work",
-  "describe the Y flow") are NOT exempt just because they aren't literally worded as a
-  find/locate request. The test is whether answering the question requires locating,
-  identifying, or relating specific named C# classes/interfaces/methods — not whether the
-  question is phrased as a lookup. If it does, query the graph first.
-- Fallback: if `docs/full-graph.json` does not exist, if `GraphTools.Query.exe` errors or exits
-  non-zero, or if the graph doesn't contain an answer to the specific question (e.g. the
-  question is about non-code content, file layout, or something the graph doesn't track), fall
-  back to normal search tools and proceed — do not treat a missing/failed graph query as a
-  blocking error.
-- If, during graph-first or domain-lookup work, you notice a recurring friction point, mention
-  it briefly at the end of your response — don't act on it, just note it.
+- Read `docs/domain-lookup-patterns.md` when a task depends on domain conventions not represented
+  in the graph. Read `docs/FEATURE_CHECKLIST.md` when planning or adding a feature, include its
+  items in the proposed breakdown, and check parity during audit. Read `docs/KNOWN_OPEN_FINDINGS.md`
+  when investigating an unexpected issue. The checklist and open findings are user-curated; never
+  create or edit them without explicit user direction.
+- Registered solution graphs and dependencies are listed below. Query graphs through
+  `C:\MyFiles\Git\GraphTools\tools\Invoke-GraphTools.ps1 -Tool Query -- <args>`; never read a
+  graph wholesale.
+
+  | Solution path relative to repo root | Slug | Graph file | Dependencies file |
+  | --- | --- | --- | --- |
+  | `AgentDebugToolkit.slnx` | `agentdebugtoolkit` | `docs/full-graph.agentdebugtoolkit.json` | `docs/project-dependencies.agentdebugtoolkit.json` |
+
+- Before using general search to locate a C# type/member, find its definition/callers/callees,
+  or understand type relationships, query the registered graph first. Query the current IDE
+  solution graph first only when that solution is determinable; otherwise query registered
+  graphs and label each result by solution, noting symbols found in multiple.
+- If no registered graph covers the question, a graph file is missing, a query fails, or no
+  graph has the answer, say so explicitly (include the full error for failures), then fall back
+  to normal search. A "symbol not found" result may mean the graph is stale. If graph/domain
+  investigation reveals recurring friction, mention it briefly at the end; do not proactively
+  search for such issues.
 - Update `docs/CODE_SUMMARY.md` when: a new project is added, a new structural class/service is
   added, a component's responsibility changes, or a project/component dependency changes. Do not
   update for routine bug fixes or small edits that don't affect structure. Ensure the pointer
@@ -52,9 +48,33 @@ memory plus a Roslyn-based code knowledge graph.
 - Update `docs/PROJECT_STATE.md` at the end of a working session to reflect current focus, open
   tasks, and recently changed files (overwrite, not append).
 - Update `docs/ROADMAP.md` only when priorities/plans deliberately change, not automatically
-  each session.
-- Keep all memory files concise — they exist to reduce token usage on future re-reads, not to
-  serve as exhaustive documentation.
+  each session. Keep memory files concise.
+
+## Regression Auditor Protocol
+
+For code changes, use an independent regression auditor after each meaningful part and again
+at the end. The auditor reviews unintended behavior/caller/shared-state changes, contradictions
+or duplication, and runs available builds/tests. If `docs/FEATURE_CHECKLIST.md` exists, check
+parity against it. Each in-scope finding must give the root cause, an effort/risk estimate, and a
+suggested diff only; out-of-scope findings are report-only, with no estimate or fix suggestion.
+The final audit also runs the full build/test suite, verifies docs synchronization, and checks
+cross-cutting consistency. Surface the full report; never apply a suggested fix without the
+user's explicit, individual approval.
+
+Before a non-trivial multi-part change, propose the smallest independently reviewable breakdown
+and get confirmation before coding; include feature-checklist items. If parts are too coupled,
+explain and propose combining them. The auditor reviews the diff independently, without the
+builder's rationale. If the same underlying issue recurs across two or more attempted fixes, stop
+and recommend a fresh focused context. Judge quality against project conventions, explicit
+criteria, or passing tests, in that order; reports state checks/findings as facts, never with
+overall confidence claims.
+
+A user may opt out for the current session: by default this suspends both audits and pre-build
+decomposition. If the request targets only one, clarify; never persist the opt-out. Reduced
+cadence is a separate session-scoped option: keep decomposition, audit once at each confirmed
+phase boundary, and revert to per-part audits for the remainder after a real in-scope finding.
+The final phase audit is also the final audit; if no phases were agreed up front, use full
+per-part cadence. Neither mode waives the full-report or individual-fix-approval rules.
 
 ## Project Guidelines
 

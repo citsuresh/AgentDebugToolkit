@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0",
-  "generatedAt": "2026-09-20T15:05:03.8200409Z",
+  "generatedAt": "2026-10-14T10:39:06.5866655Z",
   "solutionPath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\AgentDebugToolkit.slnx",
-  "commitSha": "e567beb4b25b41823907758cc54c9e496e4b9542",
+  "commitSha": "40dfc597850ca9f6c751d3a10e9d14543790bc3f",
   "projects": [
     {
       "name": "AgentDebugToolkit.ConsoleAutomation.Cli",
@@ -17,6 +17,11 @@
     {
       "name": "AgentDebugToolkit.Debugger.VisualStudio",
       "path": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Debugger.VisualStudio\\AgentDebugToolkit.Debugger.VisualStudio.csproj",
+      "references": []
+    },
+    {
+      "name": "AgentDebugToolkit.Mcp",
+      "path": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\AgentDebugToolkit.Mcp.csproj",
       "references": []
     },
     {

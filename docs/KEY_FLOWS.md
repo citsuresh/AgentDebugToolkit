@@ -6,9 +6,13 @@ Program.Verbs.ListWindows/Attach -> UiaHelper.ListTopLevelWindows -> NativeMetho
 
 Program.Verbs.Inspect -> UiaHelper.FindWindowByHwnd -> UiaHelper.ToElementInfo -> ScreenshotHelper.Capture -> JsonOutput.WriteSuccess
 
-Program.Verbs.Click -> Program.Verbs.ResolveElement -> UiaHelper.FindWindowByHwnd -> UiaHelper.ResolveSelector -> UiaHelper.Click (InvokePattern/TogglePattern, falls back to NativeMethods.Click)
+Program.Verbs.Click -> Program.Verbs.ResolveElement -> UiaHelper.FindWindowByHwnd -> UiaHelper.ResolveSelectorAll -> UiaHelper.Click (InvokePattern/TogglePattern, falls back to NativeMethods.Click)
 
-Program.Verbs.Type -> Program.Verbs.ResolveElement -> UiaHelper.ResolveSelector -> UiaHelper.Type (ValuePattern, falls back to NativeMethods.Click + NativeMethods.SendText)
+Program.Verbs.Type -> Program.Verbs.ResolveElement -> UiaHelper.ResolveSelectorAll -> UiaHelper.Type (ValuePattern, falls back to NativeMethods.Click + NativeMethods.SendText)
+
+Program.Verbs.ResolveElement -> UiaHelper.ResolveSelectorAll -> Program.Verbs.ToElementSummary -> JsonOutput.WriteError (ambiguous-match)
+
+Program.Verbs.Inspect -> UiaHelper.ToElementInfo -> UiaHelper.PruneElementInfo -> JsonOutput.WriteSuccess (filtered tree and matchCount)
 
 Program.Verbs.SetGridCell -> UiaHelper.ResolveGridCell -> UiaHelper.ResolveGridEditor -> UiaHelper.Type -> UiaHelper.Click (optional Apply)
 
