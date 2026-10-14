@@ -158,8 +158,29 @@ internal static class ConsoleVerbs
         startInfo.ArgumentList.Add("--rows");
         startInfo.ArgumentList.Add(rows.ToString());
 
+        ClearStandardHandleInheritance();
         return Process.Start(startInfo)
             ?? throw new InvalidOperationException("Could not start the console broker process.");
+    }
+
+    /// <summary>
+    /// Process.Start inherits every inheritable handle, so without this the long-lived broker would
+    /// hold the caller's stdio pipe handles, and callers that capture launch output wait for EOF
+    /// until the broker exits. The broker still gets its own private redirected pipes.
+    /// </summary>
+    private static void ClearStandardHandleInheritance()
+    {
+        foreach (var stdHandle in new[] { NativeConPty.StdInputHandle, NativeConPty.StdOutputHandle, NativeConPty.StdErrorHandle })
+        {
+            var handle = NativeConPty.GetStdHandle(stdHandle);
+            if (handle == IntPtr.Zero || handle == NativeConPty.InvalidHandleValue)
+            {
+                continue;
+            }
+
+            // Best effort: a failure only leaves the previous inheritance behavior in place.
+            _ = NativeConPty.SetHandleInformation(handle, NativeConPty.HandleFlagInherit, 0);
+        }
     }
 
     private static bool IsMatchingBroker(int pid, DateTime startedAtUtc)

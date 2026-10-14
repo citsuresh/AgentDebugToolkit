@@ -76,3 +76,16 @@ launch gates, or the broker's internal protocol.
 
 **Alternatives considered:** Retaining console's `--args` swallowing exception or duplicating
 MCP formatting in each builder -- rejected because both allow inconsistent option handling.
+
+## 2026-10-14 -- Broker must not inherit the caller's standard handles
+
+**Decision:** `ConsoleVerbs.StartBroker` clears `HANDLE_FLAG_INHERIT` on the CLI's own standard
+handles before `Process.Start`, keeping the broker's private redirected stdio.
+
+**Rationale:** `Process.Start` inherits all inheritable handles, so the long-lived broker kept the
+caller's output pipe open; callers that capture output (including MCP `CliRunner`) waited for EOF
+until the broker exited.
+
+**Alternatives considered:** Launching the broker via native `CreateProcessW` with inheritance
+disabled -- larger change. Making `CliRunner` stop waiting for EOF -- affects every VS/UI tool,
+can truncate output, and leaves non-MCP callers affected.

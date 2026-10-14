@@ -98,6 +98,19 @@ internal static class NativeConPty
     [DllImport("kernel32.dll", SetLastError = true)]
     internal static extern uint WaitForSingleObject(IntPtr handle, uint milliseconds);
 
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern IntPtr GetStdHandle(int stdHandle);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool SetHandleInformation(IntPtr handle, uint mask, uint flags);
+
+    internal const int StdInputHandle = -10;
+    internal const int StdOutputHandle = -11;
+    internal const int StdErrorHandle = -12;
+    internal const uint HandleFlagInherit = 0x00000001;
+    internal static readonly IntPtr InvalidHandleValue = new(-1);
+
     internal const uint WaitObject0 = 0;
     internal const uint WaitTimeout = 258;
     internal const uint WaitFailed = 0xFFFFFFFF;

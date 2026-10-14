@@ -3,6 +3,27 @@
 User-curated list of open, unresolved findings intentionally deferred rather than fixed
 immediately. Entries are only added, edited, or removed at the user's explicit request.
 
+## Console launch held the caller's output pipe open via inherited handles - RESOLVED
+
+- **First seen:** 2026-10-14
+- **Last seen:** 2026-10-14
+- **Occurrences:** 1
+- **Resolved:** 2026-10-14
+
+**Description:** MCP `console_launch` (`ping.exe -n 3 127.0.0.1`) reported a 30000ms `timeout`
+although `rawOutput` held `{"success":true,...}` and the session was created. `StartBroker` used
+`Process.Start`, which inherits every inheritable handle, so the long-lived broker held copies of
+the caller's redirected stdout/stderr. `CliRunner`'s `WaitForExitAsync` also waits for redirected
+stream EOF, which never came until the broker exited. Pre-existing since `f918009`; not caused by
+the 2026-10-14 parser change.
+
+**Fix applied:** `StartBroker` clears `HANDLE_FLAG_INHERIT` on the CLI's own standard input,
+output, and error handles immediately before `Process.Start` (best effort; null/invalid handles
+skipped, failures ignored). The broker's private stdio redirection is unchanged. Windows
+PowerShell 5.1 captured `launch` returned `success:true` in 3298ms with the broker still alive;
+`wait-for-text`, `is-running`, and `stop` then succeeded with no leftover processes. MCP
+`console_launch` itself was not re-run.
+
 ## VS and console bare value flags silently became `true` - RESOLVED
 
 - **First seen:** 2026-10-14

@@ -1352,9 +1352,11 @@ Commands are invoked as `agentdebug-console <verb> [options]` and print one JSON
 stdout. Exit code 0 means success; a non-zero exit code has a `"success": false` envelope with
 `"error"` and `"message"` fields.
 
-The CLI is a short-lived named-pipe client. `launch` starts a detached broker that owns the
+The CLI is a short-lived named-pipe client. `launch` starts a separate broker process that owns the
 ConPTY session, target process, terminal buffer, and pipe server; later commands reuse its
-persisted session context. The persisted broker PID and UTC start time are validated before use,
+persisted session context. The broker has its own private stdio pipes and does not inherit the
+caller's standard handles, so `launch` returns promptly even when the caller captures its output.
+The persisted broker PID and UTC start time are validated before use,
 so a stale or PID-reused session is removed and reported as `session-not-found`.
 
 `read-screen` returns the ConPTY VT terminal buffer, not a native console-window capture. The
@@ -1382,7 +1384,9 @@ launch arguments. Parsing an empty value does not bypass the verb's own validati
 equals-form convention as VS `--expression=--i` and UI `--text=`.
 
 ### `launch --exe <path> [--args <value>] [--cols <n>] [--rows <n>]`
-Starts a detached broker and target under ConPTY. `--cols` and `--rows` default to `120` and
+Starts a broker and target under ConPTY. The broker uses private stdio pipes and does not inherit
+the caller's standard handles, so `launch` returns promptly even when its output is captured.
+`--cols` and `--rows` default to `120` and
 `30`; both must be positive. `--args` is preserved as one value; empty or `--`-prefixed values
 must use `--args=<value>`. The broker receives reconstructed strict flag/value pairs through
 `ProcessStartInfo.ArgumentList`, including empty values; it does not receive equals-form flags.
