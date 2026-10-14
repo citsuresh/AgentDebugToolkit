@@ -85,11 +85,27 @@ throwing. `inspect` remains successful in this case; only the affected element(s
 ### Error envelope (on failure, any verb)
 ```json
 { "success": false, "error": "element-not-found" | "stale-context" | "ambiguous-process" |
-  "ambiguous-window" | "timeout" | "process-not-responding" | "window-not-responding" |
+  "ambiguous-window" | "ambiguous-match" | "timeout" | "process-not-responding" | "window-not-responding" |
   "foreground-activation-failed" | "input-injection-failed" | "invalid-argument" |
   "session-context-write-failed",
   "message": "human readable detail" }
 ```
+
+`ambiguous-match` includes the total `count` and at most 10 `candidates`, using the same summary
+shape as `find-all`:
+```json
+{ "success": false, "error": "ambiguous-match", "message": "...",
+  "count": 2, "candidates": [
+    { "name": "OK", "automationId": "ok", "controlType": "ControlType.Button", "className": "Button" }
+  ] }
+```
+The message states when more than 10 matches exist and only the first 10 candidates are shown.
+**Behavior change (2026-10-14):** selectors matching several elements that previously acted on
+the first match now fail for `click`, `right-click`, `double-click`, `drag`, selector-based
+`move-mouse`, `type`, `get-text`, and `send-keys`. Use `find-all` to pre-check the count and
+`--scopeHwnd` to narrow the action's search. Zero matches still return `element-not-found`;
+exactly one match behaves as before. `find-first`, `find-all`, `wait-for-element`,
+`set-grid-cell`, and `submit-chat-message` retain their existing resolution semantics.
 
 State-changing UI verbs (`click`, `right-click`, `double-click`, `drag`, selector-based
 `move-mouse`, `type`, `set-grid-cell`, `send-keys`, and `submit-chat-message`) verify that the
@@ -129,15 +145,31 @@ Uses context pid if `--pid` omitted. Returns every visible top-level window belo
 process, including owned native dialogs such as `#32770` MessageBox windows.
 - Success: `{ "success": true, "windows": [WindowInfo, ...] }`
 
-### `inspect --hwnd <h> [--maxDepth <n>] [--screenshot true|false]`
+### `inspect --hwnd <h> [--maxDepth <n>] [--screenshot true|false] [--nameContains <substring>] [--controlType <short name>]`
 Dumps the UIA subtree rooted at the given window/element handle, and optionally saves a
 screenshot.
 - Success: `{ "success": true, "root": ElementInfo, "screenshotPath": "C:\\...\\shot_20260914...png" | null }`
-- `--maxDepth` default: unbounded within reason (cap at e.g. 12 to avoid runaway trees); document
-  actual default once implemented.
+- `--maxDepth` defaults to `8`; the root is depth `0`. Filtering uses the same depth limit,
+  without extending the traversal or resetting depth at each match.
+- `--nameContains`: case-insensitive substring match on a node's Name.
+- `--controlType`: recognized short UIA control type name, such as `Button` or `Edit`
+  (case-insensitive). Unknown names fail with `invalid-argument`.
+- With both filters, a node must satisfy both (AND). With either filter, `root` is a pruned
+  tree: retain matching nodes, the minimal ancestor chains connecting them to the root, and
+  each matching node's own subtree within `--maxDepth`. Unrelated branches are omitted; the
+  result is not a flat list.
+- Filtered success adds `matchCount`, the number of matching nodes within the depth-limited
+  traversal, not the number of retained ancestors or nonmatching descendants:
+  `{ "success": true, "root": ElementInfo, "matchCount": 2, "screenshotPath": "..." }`.
+  Zero matches still succeed with `matchCount: 0` and a root with `children: []`.
+- Without filters, the tree and response shape are unchanged (`matchCount` is absent).
+  `--hwnd` and `--screenshot` behavior is unchanged; screenshots capture the original root,
+  not just matching controls.
 - Screenshots save to a standard folder, e.g. `%LOCALAPPDATA%\AgentDebugToolkit\screenshots\`.
 
 ### `click --hwnd <h> --strategy <s> --value <v> [--scopeHwnd <h2>]`
+- Fails with `ambiguous-match` instead of clicking the first of several matches. Pre-check the
+  count with `find-all`; narrow the search with `--scopeHwnd`.
 Resolves the element via selector (scoped to `--scopeHwnd` if given, else `--hwnd`), attempts
 `InvokePattern`/`TogglePattern`, falls back to synthetic click at `BoundingRectangle` center.
 - **Fixed 2026-09-15:** `--scopeHwnd` is now actually honored — previously it was accepted as an
@@ -157,6 +189,8 @@ Resolves the element via selector (scoped to `--scopeHwnd` if given, else `--hwn
 - Failure: `element-not-found` if selector resolves to nothing.
 
 ### `right-click --hwnd <h> --strategy <s> --value <v> [--scopeHwnd <h2>]`
+- Fails with `ambiguous-match` instead of right-clicking the first of several matches. Pre-check
+  the count with `find-all`; narrow the search with `--scopeHwnd`.
 Resolves the element via selector (same scoping/error semantics as `click`), then performs a
 synthetic right mouse click at its `BoundingRectangle` center via `SendInput`
 (`MOUSEEVENTF_RIGHTDOWN`/`MOUSEEVENTF_RIGHTUP`). Unlike `click`, no UIA pattern is attempted
@@ -168,6 +202,8 @@ first — a right-click's usual purpose (opening a context menu) isn't expressed
 - Failure: `element-not-found` if selector resolves to nothing, `window-not-responding`.
 
 ### `double-click --hwnd <h> --strategy <s> --value <v> [--scopeHwnd <h2>]`
+- Fails with `ambiguous-match` instead of double-clicking the first of several matches. Pre-check
+  the count with `find-all`; narrow the search with `--scopeHwnd`.
 Resolves the element via selector (same scoping/error semantics as `click`). Attempts
 `InvokePattern` first (same as `click`); falls back to two rapid synthetic left-clicks at the
 element's `BoundingRectangle` center, using a shorter button-hold time per click (10ms) than a
@@ -183,6 +219,9 @@ double-click semantically differs from a single toggle).
 - Failure: `element-not-found` if selector resolves to nothing, `window-not-responding`.
 
 ### `drag --hwnd <h> --strategy <s> --value <v> (--targetStrategy <s> --targetValue <v> | --targetX <n> --targetY <n>) [--scopeHwnd <h2>] [--steps <n>] [--durationMs <n>]`
+- Fails with `ambiguous-match` instead of using the first of several source or destination
+  selector matches; no drag is performed. Pre-check each count with `find-all`; narrow both
+  searches with `--scopeHwnd`. Coordinate destinations are unaffected.
 Resolves the source element via selector (scoped to `--scopeHwnd` if given, else `--hwnd`, same
 as `click`), then performs a synthetic mouse drag from that element's `BoundingRectangle` center
 to a destination — either another selector-resolved element's center, or explicit screen
@@ -218,6 +257,9 @@ coordinates.
   target selector resolves to nothing), `window-not-responding`.
 
 ### `move-mouse (--hwnd <h> --strategy <s> --value <v> | --x <n> --y <n>) [--scopeHwnd <h2>]`
+- The selector form fails with `ambiguous-match` instead of moving to the first of several
+  matches. Pre-check the count with `find-all`; narrow the search with `--scopeHwnd`.
+  Coordinate-only moves are unaffected.
 Moves the cursor to an absolute screen position via `SetCursorPos`, without pressing any mouse
 button. Destination is mutually exclusive: exactly one of `--strategy`/`--value` (resolved to
 that element's `BoundingRectangle` center, same selector/scope semantics as `click`/`drag`'s
@@ -236,6 +278,8 @@ resolution involved.
 - Success: `{ "success": true, "x": n, "y": n }`.
 
 ### `type --hwnd <h> --strategy <s> --value <v> --text <input> [--scopeHwnd <h2>] [--verify] [--paste]`
+- Fails with `ambiguous-match` instead of typing into the first of several matches. Pre-check
+  the count with `find-all`; narrow the search with `--scopeHwnd`.
 Resolves element, attempts `ValuePattern.SetValue`, falls back to click-to-focus + synthetic
 keyboard input.
 - **`ValuePattern.SetValue` (`method: "pattern"`) always REPLACES the control's entire existing
@@ -401,7 +445,9 @@ keyboard input.
     verification, and clipboard-restore paths all worked correctly against the actual motivating
     target (a control with no `ValuePattern`).
 
-### `get-text --hwnd <h> --strategy <s> --value <v>`
+### `get-text --hwnd <h> --strategy <s> --value <v> [--scopeHwnd <h2>]`
+- Fails with `ambiguous-match` instead of reading the first of several matches. Pre-check the
+  count with `find-all`; narrow the search with `--scopeHwnd` (now honored by `get-text` too).
 Reads current `Name` or `ValuePattern.Value` (whichever is more appropriate/available) of the
 resolved element.
 - Success: `{ "success": true, "text": "10.176.100.248" }`
@@ -601,6 +647,8 @@ fall back to `--pid`/persisted session context.
   as evidence the window/session is invalid.
 
 ### `send-keys --hwnd <h> --strategy <s> --value <v> --keys <SendKeys syntax> [--focusMode set-focus|click|none]`
+- Fails with `ambiguous-match` instead of sending keys to the first of several matches. Pre-check
+  the count with `find-all`; narrow the search with `--scopeHwnd`.
 Companion to `type` for input `type` cannot express. `type` sends literal Unicode keyboard input,
 so literal text is never interpreted as `SendKeys` syntax — this means `type` has no way to send key combinations like
 `Ctrl+A`, `Delete`, or `Enter` as actual key presses. `send-keys` instead accepts and passes

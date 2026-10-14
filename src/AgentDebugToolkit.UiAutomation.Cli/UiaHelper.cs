@@ -1,5 +1,6 @@
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Windows.Automation;
 using AgentDebugToolkit.Core.Models;
 
@@ -393,6 +394,45 @@ internal static class UiaHelper
         {
             scrollItem.ScrollIntoView();
         }
+    }
+
+    public static bool TryParseControlType(string text, out ControlType? controlType)
+    {
+        var field = typeof(ControlType).GetFields(BindingFlags.Public | BindingFlags.Static)
+            .FirstOrDefault(f => f.FieldType == typeof(ControlType)
+                && string.Equals(f.Name, text, StringComparison.OrdinalIgnoreCase));
+        controlType = field?.GetValue(null) as ControlType;
+        return controlType is not null;
+    }
+
+    public static ElementInfo ToElementInfo(AutomationElement el, bool includeChildren, int maxDepth,
+        string? nameContains, ControlType? controlType, out int matchCount)
+    {
+        var info = ToElementInfo(el, includeChildren, maxDepth);
+        matchCount = nameContains is null && controlType is null
+            ? 0
+            : PruneElementInfo(info, nameContains, controlType);
+        return info;
+    }
+
+    private static int PruneElementInfo(ElementInfo info, string? nameContains, ControlType? controlType,
+        bool retainSubtree = false)
+    {
+        var matches = (nameContains is null || info.Name.Contains(nameContains, StringComparison.OrdinalIgnoreCase))
+            && (controlType is null || info.ControlType == controlType.ProgrammaticName);
+        var matchCount = matches ? 1 : 0;
+        var children = new List<ElementInfo>();
+        foreach (var child in info.Children)
+        {
+            var childMatches = PruneElementInfo(child, nameContains, controlType, retainSubtree || matches);
+            matchCount += childMatches;
+            if (retainSubtree || matches || childMatches > 0)
+            {
+                children.Add(child);
+            }
+        }
+        info.Children = children;
+        return matchCount;
     }
 
     public static ElementInfo ToElementInfo(AutomationElement el, bool includeChildren, int maxDepth, int depth = 0)

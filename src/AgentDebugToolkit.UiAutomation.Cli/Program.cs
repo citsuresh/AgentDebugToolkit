@@ -422,6 +422,15 @@ internal static class Verbs
 
     public static int Inspect(Dictionary<string, string> opts)
     {
+        opts.TryGetValue("nameContains", out var nameContains);
+        ControlType? controlType = null;
+        if (opts.TryGetValue("controlType", out var controlTypeText)
+            && !UiaHelper.TryParseControlType(controlTypeText, out controlType))
+        {
+            JsonOutput.WriteError("invalid-argument", "--controlType must be a recognized short UIA control type name, such as Button or Edit.");
+            return 1;
+        }
+
         var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
         if (errorCode is not null)
         {
@@ -439,10 +448,19 @@ internal static class Verbs
         var maxDepth = opts.TryGetValue("maxDepth", out var mdText) && int.TryParse(mdText, out var md) ? md : 8;
         var takeScreenshot = !opts.TryGetValue("screenshot", out var ssText) || ssText != "false";
 
-        var tree = UiaHelper.ToElementInfo(element, includeChildren: true, maxDepth: maxDepth);
+        var filtered = nameContains is not null || controlType is not null;
+        var tree = UiaHelper.ToElementInfo(element, includeChildren: true, maxDepth: maxDepth,
+            nameContains: nameContains, controlType: controlType, out var matchCount);
         string? screenshotPath = takeScreenshot ? ScreenshotHelper.Capture(element) : null;
 
-        JsonOutput.WriteSuccess(new { root = tree, screenshotPath });
+        if (filtered)
+        {
+            JsonOutput.WriteSuccess(new { root = tree, screenshotPath, matchCount });
+        }
+        else
+        {
+            JsonOutput.WriteSuccess(new { root = tree, screenshotPath });
+        }
         return 0;
     }
 
@@ -461,10 +479,10 @@ internal static class Verbs
             return 1;
         }
 
-        var (element, elementErrorCode, elementError) = ResolveElement(windowHwnd, opts);
+        var (element, elementErrorCode, elementError, elementErrorDetails) = ResolveElement(windowHwnd, opts);
         if (element is null)
         {
-            JsonOutput.WriteError(elementErrorCode!, elementError!);
+            JsonOutput.WriteError(elementErrorCode!, elementError!, elementErrorDetails);
             return 1;
         }
 
@@ -500,10 +518,10 @@ internal static class Verbs
             return 1;
         }
 
-        var (element, elementErrorCode, elementError) = ResolveElement(windowHwnd, opts);
+        var (element, elementErrorCode, elementError, elementErrorDetails) = ResolveElement(windowHwnd, opts);
         if (element is null)
         {
-            JsonOutput.WriteError(elementErrorCode!, elementError!);
+            JsonOutput.WriteError(elementErrorCode!, elementError!, elementErrorDetails);
             return 1;
         }
 
@@ -535,10 +553,10 @@ internal static class Verbs
             return 1;
         }
 
-        var (element, elementErrorCode, elementError) = ResolveElement(windowHwnd, opts);
+        var (element, elementErrorCode, elementError, elementErrorDetails) = ResolveElement(windowHwnd, opts);
         if (element is null)
         {
-            JsonOutput.WriteError(elementErrorCode!, elementError!);
+            JsonOutput.WriteError(elementErrorCode!, elementError!, elementErrorDetails);
             return 1;
         }
 
@@ -607,33 +625,26 @@ internal static class Verbs
             return 1;
         }
 
-        var (element, elementErrorCode, elementError) = ResolveElement(windowHwnd, opts);
+        var (element, elementErrorCode, elementError, elementErrorDetails) = ResolveElement(windowHwnd, opts);
         if (element is null)
         {
-            JsonOutput.WriteError(elementErrorCode!, elementError!);
+            JsonOutput.WriteError(elementErrorCode!, elementError!, elementErrorDetails);
             return 1;
         }
 
-        if (!EnsureElementForeground(element, windowHwnd))
-        {
-            JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
-            return 1;
-        }
-
-        int targetX, targetY;
+        int targetX = 0, targetY = 0;
+        AutomationElement? destination = null;
         if (hasTargetSelector)
         {
-            var (targetElement, targetErrorCode, targetError) = ResolveElement(
+            var (targetElement, targetErrorCode, targetError, targetErrorDetails) = ResolveElement(
                 windowHwnd, opts, strategyKey: "targetStrategy", valueKey: "targetValue");
             if (targetElement is null)
             {
-                JsonOutput.WriteError(targetErrorCode!, targetError!);
+                JsonOutput.WriteError(targetErrorCode!, targetError!, targetErrorDetails);
                 return 1;
             }
 
-            var tr = targetElement.Current.BoundingRectangle;
-            targetX = (int)(tr.X + tr.Width / 2);
-            targetY = (int)(tr.Y + tr.Height / 2);
+            destination = targetElement;
         }
         else
         {
@@ -643,6 +654,19 @@ internal static class Verbs
                 JsonOutput.WriteError("invalid-argument", "--targetX and --targetY must both be valid integers.");
                 return 1;
             }
+        }
+
+        if (!EnsureElementForeground(element, windowHwnd))
+        {
+            JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
+            return 1;
+        }
+
+        if (destination is not null)
+        {
+            var tr = destination.Current.BoundingRectangle;
+            targetX = (int)(tr.X + tr.Width / 2);
+            targetY = (int)(tr.Y + tr.Height / 2);
         }
 
         // Capture elementFound BEFORE invoking the drag, not after -- same call-ordering rule as
@@ -693,10 +717,10 @@ internal static class Verbs
                 return 1;
             }
 
-            var (element, elementErrorCode, elementError) = ResolveElement(windowHwnd, opts);
+            var (element, elementErrorCode, elementError, elementErrorDetails) = ResolveElement(windowHwnd, opts);
             if (element is null)
             {
-                JsonOutput.WriteError(elementErrorCode!, elementError!);
+                JsonOutput.WriteError(elementErrorCode!, elementError!, elementErrorDetails);
                 return 1;
             }
 
@@ -755,10 +779,10 @@ internal static class Verbs
             return 1;
         }
 
-        var (element, elementErrorCode, elementError) = ResolveElement(windowHwnd, opts);
+        var (element, elementErrorCode, elementError, elementErrorDetails) = ResolveElement(windowHwnd, opts);
         if (element is null)
         {
-            JsonOutput.WriteError(elementErrorCode!, elementError!);
+            JsonOutput.WriteError(elementErrorCode!, elementError!, elementErrorDetails);
             return 1;
         }
 
@@ -1164,10 +1188,10 @@ internal static class Verbs
             return 1;
         }
 
-        var (element, elementErrorCode, elementError) = ResolveElement(windowHwnd, opts);
+        var (element, elementErrorCode, elementError, elementErrorDetails) = ResolveElement(windowHwnd, opts);
         if (element is null)
         {
-            JsonOutput.WriteError(elementErrorCode!, elementError!);
+            JsonOutput.WriteError(elementErrorCode!, elementError!, elementErrorDetails);
             return 1;
         }
 
@@ -1196,17 +1220,17 @@ internal static class Verbs
 
     public static int GetText(Dictionary<string, string> opts)
     {
-        var (scope, errorCode, error) = ResolveWindow(opts);
-        if (scope is null)
+        var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
+        if (errorCode is not null)
         {
             JsonOutput.WriteError(errorCode!, error!);
             return 1;
         }
 
-        var (element, elementErrorCode, elementError) = ResolveElement(scope, opts);
+        var (element, elementErrorCode, elementError, elementErrorDetails) = ResolveElement(windowHwnd, opts);
         if (element is null)
         {
-            JsonOutput.WriteError(elementErrorCode!, elementError!);
+            JsonOutput.WriteError(elementErrorCode!, elementError!, elementErrorDetails);
             return 1;
         }
 
@@ -1917,7 +1941,7 @@ internal static class Verbs
         return (scopeElement, null, null);
     }
 
-    private static (AutomationElement? element, string? errorCode, string? error) ResolveElement(
+    private static (AutomationElement? element, string? errorCode, string? error, object? errorDetails) ResolveElement(
         IntPtr windowHwnd, Dictionary<string, string> opts, string strategyKey = "strategy", string valueKey = "value")
     {
         // --scopeHwnd, when given, narrows the search to that element (and its subtree) instead
@@ -1934,45 +1958,60 @@ internal static class Verbs
             }
             catch (Exception ex) when (ex is FormatException or OverflowException)
             {
-                return (null, "invalid-argument", $"Invalid scopeHwnd '{scopeHwndText}'.");
+                return (null, "invalid-argument", $"Invalid scopeHwnd '{scopeHwndText}'.", null);
             }
 
             var scopeElement = UiaHelper.FindWindowByHwnd($"0x{scopeHwnd.ToInt64():X}");
             return scopeElement is null
-                ? (null, "element-not-found", $"No scope element found for scopeHwnd '0x{scopeHwnd.ToInt64():X}'.")
+                ? (null, "element-not-found", $"No scope element found for scopeHwnd '0x{scopeHwnd.ToInt64():X}'.", null)
                 : ResolveElement(scopeElement, opts, strategyKey, valueKey);
         }
 
         var scope = UiaHelper.FindWindowByHwnd($"0x{windowHwnd.ToInt64():X}");
         return scope is null
-            ? (null, "element-not-found", $"No window found for hwnd '0x{windowHwnd.ToInt64():X}'.")
+            ? (null, "element-not-found", $"No window found for hwnd '0x{windowHwnd.ToInt64():X}'.", null)
             : ResolveElement(scope, opts, strategyKey, valueKey);
     }
 
-    private static (AutomationElement? element, string? errorCode, string? error) ResolveElement(
+    private static (AutomationElement? element, string? errorCode, string? error, object? errorDetails) ResolveElement(
         AutomationElement scope, Dictionary<string, string> opts, string strategyKey = "strategy", string valueKey = "value")
     {
         opts.TryGetValue(strategyKey, out var strategyText);
         if (!UiaHelper.TryParseImplementedSelectorStrategy(strategyText, out var strategy, out var strategyError))
         {
             return (null, "invalid-argument",
-                $"--{strategyKey} is required and {strategyError}");
+                $"--{strategyKey} is required and {strategyError}", null);
         }
 
         if (!opts.TryGetValue(valueKey, out var value))
         {
-            return (null, "invalid-argument", $"--{valueKey} is required.");
+            return (null, "invalid-argument", $"--{valueKey} is required.", null);
         }
 
         var selector = new Selector { Strategy = strategy, Value = value };
-        var element = UiaHelper.ResolveSelector(scope, selector);
-        if (element is null)
+        var matches = UiaHelper.ResolveSelectorAll(scope, selector);
+        if (matches.Count == 0)
         {
             return (null, "element-not-found",
-                $"No element found for selector [{strategy}] '{value}'.");
+                $"No element found for selector [{strategy}] '{value}'.", null);
         }
 
-        return (element, null, null);
+        if (matches.Count > 1)
+        {
+            const int candidateLimit = 10;
+            var candidates = matches.Cast<AutomationElement>()
+                .Take(candidateLimit)
+                .Select(ToElementSummary)
+                .ToArray();
+            var limitMessage = matches.Count > candidateLimit
+                ? $" Only the first {candidateLimit} candidates are shown."
+                : string.Empty;
+            return (null, "ambiguous-match",
+                $"Selector [{strategy}] '{value}' matched {matches.Count} elements.{limitMessage} Use find-all to pre-check matches and --scopeHwnd to narrow the search.",
+                new { count = matches.Count, candidates });
+        }
+
+        return (matches[0], null, null, null);
     }
 
     private static (AutomationElement? element, string? errorCode, string? error) ResolveWindow(

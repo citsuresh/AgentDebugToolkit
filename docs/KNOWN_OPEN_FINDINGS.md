@@ -3,6 +3,25 @@
 User-curated list of open, unresolved findings intentionally deferred rather than fixed
 immediately. Entries are only added, edited, or removed at the user's explicit request.
 
+## Action selectors silently use the first matching element - RESOLVED
+
+- **First seen:** 2026-10-14
+- **Last seen:** 2026-10-14
+- **Occurrences:** 1
+- **Resolved:** 2026-10-14
+
+**Description:** `UiaHelper.ResolveSelector` uses `FindFirst`, so action selectors matching
+multiple descendants silently acted on the first one. This could click, edit, read, move to,
+or send keys to an unintended element, including either selector endpoint of a drag.
+
+**Fix applied:** The shared `ResolveElement` helper now uses `ResolveSelectorAll`. Zero matches
+still return `element-not-found`; one match behaves as before; multiple matches return
+`ambiguous-match`, the full count, and at most 10 `find-all`-shaped candidates before acting.
+Applies to `click`, `right-click`, `double-click`, `drag`, selector-based `move-mouse`, `type`,
+`get-text`, and `send-keys`. `get-text` now also honors `--scopeHwnd` for narrowing. Intentional
+first-match/enumeration paths (`find-first`, `find-all`, `wait-for-element`, `set-grid-cell`)
+and `submit-chat-message` are unchanged.
+
 ## SessionContext.Save() File.Move can intermittently throw UnauthorizedAccessException — RESOLVED
 
 - **First seen:** 2026-09-14
