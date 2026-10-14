@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.0",
-  "generatedAt": "2026-10-14T10:39:06.5318402Z",
+  "generatedAt": "2026-10-14T10:51:58.3485199Z",
   "solutionPath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\AgentDebugToolkit.slnx",
-  "mode": "incremental",
-  "commitSha": "40dfc597850ca9f6c751d3a10e9d14543790bc3f",
+  "mode": "full",
+  "commitSha": "362176da19585ed88ad38c5b48dcff6abaf10ca1",
   "nodes": [
     {
       "id": "AgentDebugToolkit.ConsoleAutomation.Cli.BrokerClient",
