@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.0",
-  "generatedAt": "2026-10-14T10:51:58.3485199Z",
+  "generatedAt": "2026-10-14T11:28:56.2119481Z",
   "solutionPath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\AgentDebugToolkit.slnx",
-  "mode": "full",
-  "commitSha": "362176da19585ed88ad38c5b48dcff6abaf10ca1",
+  "mode": "incremental",
+  "commitSha": "61a65087efe2c89ce6f997f1136af34b0a600e56",
   "nodes": [
     {
       "id": "AgentDebugToolkit.ConsoleAutomation.Cli.BrokerClient",
@@ -4049,409 +4049,6 @@
       "isAbstract": false
     },
     {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "kind": "class",
-      "name": "UiAutomationTools",
-      "containingType": null,
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 11,
-      "endLine": 327,
-      "accessibility": "public",
-      "isStatic": false,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.Exe",
-      "kind": "field",
-      "name": "Exe",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 14,
-      "endLine": 14,
-      "accessibility": "private",
-      "isStatic": true,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools._cli",
-      "kind": "field",
-      "name": "_cli",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 15,
-      "endLine": 15,
-      "accessibility": "private",
-      "isStatic": false,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools..ctor(CliRunner)",
-      "kind": "constructor",
-      "name": ".ctor",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 17,
-      "endLine": 20,
-      "accessibility": "public",
-      "isStatic": false,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
-      "kind": "method",
-      "name": "BuildArgs",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 22,
-      "endLine": 34,
-      "accessibility": "private",
-      "isStatic": true,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
-      "kind": "method",
-      "name": "RunAsync",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 36,
-      "endLine": 40,
-      "accessibility": "private",
-      "isStatic": false,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.Bool(bool?)",
-      "kind": "method",
-      "name": "Bool",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 42,
-      "endLine": 42,
-      "accessibility": "private",
-      "isStatic": true,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.Attach(string,CancellationToken)",
-      "kind": "method",
-      "name": "Attach",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 44,
-      "endLine": 49,
-      "accessibility": "public",
-      "isStatic": false,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.ListWindows(int?,CancellationToken)",
-      "kind": "method",
-      "name": "ListWindows",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 51,
-      "endLine": 56,
-      "accessibility": "public",
-      "isStatic": false,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.Inspect(string,int?,bool?,CancellationToken)",
-      "kind": "method",
-      "name": "Inspect",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 58,
-      "endLine": 65,
-      "accessibility": "public",
-      "isStatic": false,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.Click(string,string,string,string?,CancellationToken)",
-      "kind": "method",
-      "name": "Click",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 67,
-      "endLine": 75,
-      "accessibility": "public",
-      "isStatic": false,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.RightClick(string,string,string,string?,CancellationToken)",
-      "kind": "method",
-      "name": "RightClick",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 77,
-      "endLine": 85,
-      "accessibility": "public",
-      "isStatic": false,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.DoubleClick(string,string,string,string?,CancellationToken)",
-      "kind": "method",
-      "name": "DoubleClick",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 87,
-      "endLine": 95,
-      "accessibility": "public",
-      "isStatic": false,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.Drag(string,string,string,string?,string?,int?,int?,string?,int?,int?,CancellationToken)",
-      "kind": "method",
-      "name": "Drag",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 97,
-      "endLine": 116,
-      "accessibility": "public",
-      "isStatic": false,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.MoveMouse(string?,string?,string?,int?,int?,string?,CancellationToken)",
-      "kind": "method",
-      "name": "MoveMouse",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 118,
-      "endLine": 131,
-      "accessibility": "public",
-      "isStatic": false,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.GetCursorPos(CancellationToken)",
-      "kind": "method",
-      "name": "GetCursorPos",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 133,
-      "endLine": 136,
-      "accessibility": "public",
-      "isStatic": false,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.Type(string,string,string,string,string?,bool?,bool?,CancellationToken)",
-      "kind": "method",
-      "name": "Type",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 138,
-      "endLine": 152,
-      "accessibility": "public",
-      "isStatic": false,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.GetText(string,string,string,CancellationToken)",
-      "kind": "method",
-      "name": "GetText",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 154,
-      "endLine": 161,
-      "accessibility": "public",
-      "isStatic": false,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.SetGridCell(string,string,string,string,string,int,string,string?,string?,string?,CancellationToken)",
-      "kind": "method",
-      "name": "SetGridCell",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 163,
-      "endLine": 182,
-      "accessibility": "public",
-      "isStatic": false,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForWindowChange(int,int?,int?,CancellationToken)",
-      "kind": "method",
-      "name": "WaitForWindowChange",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 184,
-      "endLine": 196,
-      "accessibility": "public",
-      "isStatic": false,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForElement(string,string,string?,int?,string?,int?,int?,CancellationToken)",
-      "kind": "method",
-      "name": "WaitForElement",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 198,
-      "endLine": 217,
-      "accessibility": "public",
-      "isStatic": false,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForProcessResponding(int,int,CancellationToken)",
-      "kind": "method",
-      "name": "WaitForProcessResponding",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 219,
-      "endLine": 230,
-      "accessibility": "public",
-      "isStatic": false,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.Delay(int,CancellationToken)",
-      "kind": "method",
-      "name": "Delay",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 232,
-      "endLine": 237,
-      "accessibility": "public",
-      "isStatic": false,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.SetContext(int,CancellationToken)",
-      "kind": "method",
-      "name": "SetContext",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 239,
-      "endLine": 244,
-      "accessibility": "public",
-      "isStatic": false,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.ReadVisibleText(string,int?,CancellationToken)",
-      "kind": "method",
-      "name": "ReadVisibleText",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 246,
-      "endLine": 252,
-      "accessibility": "public",
-      "isStatic": false,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.Screenshot(string,CancellationToken)",
-      "kind": "method",
-      "name": "Screenshot",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 254,
-      "endLine": 259,
-      "accessibility": "public",
-      "isStatic": false,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.Activate(string,CancellationToken)",
-      "kind": "method",
-      "name": "Activate",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 261,
-      "endLine": 266,
-      "accessibility": "public",
-      "isStatic": false,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.SendKeys(string,string,string,string,string?,CancellationToken)",
-      "kind": "method",
-      "name": "SendKeys",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 268,
-      "endLine": 279,
-      "accessibility": "public",
-      "isStatic": false,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.SubmitChatMessage(string,string,string?,string?,string?,string?,string?,bool?,CancellationToken)",
-      "kind": "method",
-      "name": "SubmitChatMessage",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 281,
-      "endLine": 297,
-      "accessibility": "public",
-      "isStatic": false,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.FindFirst(string,string,string,string?,string?,CancellationToken)",
-      "kind": "method",
-      "name": "FindFirst",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 299,
-      "endLine": 311,
-      "accessibility": "public",
-      "isStatic": false,
-      "isAbstract": false
-    },
-    {
-      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.FindAll(string,string,string,string?,string?,string?,CancellationToken)",
-      "kind": "method",
-      "name": "FindAll",
-      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
-      "project": "AgentDebugToolkit.Mcp",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "startLine": 313,
-      "endLine": 326,
-      "accessibility": "public",
-      "isStatic": false,
-      "isAbstract": false
-    },
-    {
       "id": "AgentDebugToolkit.Mcp.VsDebuggerTools",
       "kind": "class",
       "name": "VsDebuggerTools",
@@ -7608,6 +7205,409 @@
       "endLine": 2180,
       "accessibility": "private",
       "isStatic": true,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "kind": "class",
+      "name": "UiAutomationTools",
+      "containingType": null,
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 11,
+      "endLine": 331,
+      "accessibility": "public",
+      "isStatic": false,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.Exe",
+      "kind": "field",
+      "name": "Exe",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 14,
+      "endLine": 14,
+      "accessibility": "private",
+      "isStatic": true,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools._cli",
+      "kind": "field",
+      "name": "_cli",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 15,
+      "endLine": 15,
+      "accessibility": "private",
+      "isStatic": false,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools..ctor(CliRunner)",
+      "kind": "constructor",
+      "name": ".ctor",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 17,
+      "endLine": 20,
+      "accessibility": "public",
+      "isStatic": false,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
+      "kind": "method",
+      "name": "BuildArgs",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 22,
+      "endLine": 34,
+      "accessibility": "private",
+      "isStatic": true,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
+      "kind": "method",
+      "name": "RunAsync",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 36,
+      "endLine": 40,
+      "accessibility": "private",
+      "isStatic": false,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.Bool(bool?)",
+      "kind": "method",
+      "name": "Bool",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 42,
+      "endLine": 42,
+      "accessibility": "private",
+      "isStatic": true,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.Attach(string,CancellationToken)",
+      "kind": "method",
+      "name": "Attach",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 44,
+      "endLine": 49,
+      "accessibility": "public",
+      "isStatic": false,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.ListWindows(int?,CancellationToken)",
+      "kind": "method",
+      "name": "ListWindows",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 51,
+      "endLine": 56,
+      "accessibility": "public",
+      "isStatic": false,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.Inspect(string,int?,bool?,string?,string?,CancellationToken)",
+      "kind": "method",
+      "name": "Inspect",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 58,
+      "endLine": 67,
+      "accessibility": "public",
+      "isStatic": false,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.Click(string,string,string,string?,CancellationToken)",
+      "kind": "method",
+      "name": "Click",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 69,
+      "endLine": 77,
+      "accessibility": "public",
+      "isStatic": false,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.RightClick(string,string,string,string?,CancellationToken)",
+      "kind": "method",
+      "name": "RightClick",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 79,
+      "endLine": 87,
+      "accessibility": "public",
+      "isStatic": false,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.DoubleClick(string,string,string,string?,CancellationToken)",
+      "kind": "method",
+      "name": "DoubleClick",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 89,
+      "endLine": 97,
+      "accessibility": "public",
+      "isStatic": false,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.Drag(string,string,string,string?,string?,int?,int?,string?,int?,int?,CancellationToken)",
+      "kind": "method",
+      "name": "Drag",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 99,
+      "endLine": 118,
+      "accessibility": "public",
+      "isStatic": false,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.MoveMouse(string?,string?,string?,int?,int?,string?,CancellationToken)",
+      "kind": "method",
+      "name": "MoveMouse",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 120,
+      "endLine": 133,
+      "accessibility": "public",
+      "isStatic": false,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.GetCursorPos(CancellationToken)",
+      "kind": "method",
+      "name": "GetCursorPos",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 135,
+      "endLine": 138,
+      "accessibility": "public",
+      "isStatic": false,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.Type(string,string,string,string,string?,bool?,bool?,CancellationToken)",
+      "kind": "method",
+      "name": "Type",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 140,
+      "endLine": 154,
+      "accessibility": "public",
+      "isStatic": false,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.GetText(string,string,string,string?,CancellationToken)",
+      "kind": "method",
+      "name": "GetText",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 156,
+      "endLine": 164,
+      "accessibility": "public",
+      "isStatic": false,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.SetGridCell(string,string,string,string,string,int,string,string?,string?,string?,CancellationToken)",
+      "kind": "method",
+      "name": "SetGridCell",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 166,
+      "endLine": 185,
+      "accessibility": "public",
+      "isStatic": false,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForWindowChange(int,int?,int?,CancellationToken)",
+      "kind": "method",
+      "name": "WaitForWindowChange",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 187,
+      "endLine": 199,
+      "accessibility": "public",
+      "isStatic": false,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForElement(string,string,string?,int?,string?,int?,int?,CancellationToken)",
+      "kind": "method",
+      "name": "WaitForElement",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 201,
+      "endLine": 220,
+      "accessibility": "public",
+      "isStatic": false,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForProcessResponding(int,int,CancellationToken)",
+      "kind": "method",
+      "name": "WaitForProcessResponding",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 222,
+      "endLine": 233,
+      "accessibility": "public",
+      "isStatic": false,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.Delay(int,CancellationToken)",
+      "kind": "method",
+      "name": "Delay",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 235,
+      "endLine": 240,
+      "accessibility": "public",
+      "isStatic": false,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.SetContext(int,CancellationToken)",
+      "kind": "method",
+      "name": "SetContext",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 242,
+      "endLine": 247,
+      "accessibility": "public",
+      "isStatic": false,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.ReadVisibleText(string,int?,CancellationToken)",
+      "kind": "method",
+      "name": "ReadVisibleText",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 249,
+      "endLine": 255,
+      "accessibility": "public",
+      "isStatic": false,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.Screenshot(string,CancellationToken)",
+      "kind": "method",
+      "name": "Screenshot",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 257,
+      "endLine": 262,
+      "accessibility": "public",
+      "isStatic": false,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.Activate(string,CancellationToken)",
+      "kind": "method",
+      "name": "Activate",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 264,
+      "endLine": 269,
+      "accessibility": "public",
+      "isStatic": false,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.SendKeys(string,string,string,string,string?,string?,CancellationToken)",
+      "kind": "method",
+      "name": "SendKeys",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 271,
+      "endLine": 283,
+      "accessibility": "public",
+      "isStatic": false,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.SubmitChatMessage(string,string,string?,string?,string?,string?,string?,bool?,CancellationToken)",
+      "kind": "method",
+      "name": "SubmitChatMessage",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 285,
+      "endLine": 301,
+      "accessibility": "public",
+      "isStatic": false,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.FindFirst(string,string,string,string?,string?,CancellationToken)",
+      "kind": "method",
+      "name": "FindFirst",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 303,
+      "endLine": 315,
+      "accessibility": "public",
+      "isStatic": false,
+      "isAbstract": false
+    },
+    {
+      "id": "AgentDebugToolkit.Mcp.UiAutomationTools.FindAll(string,string,string,string?,string?,string?,CancellationToken)",
+      "kind": "method",
+      "name": "FindAll",
+      "containingType": "AgentDebugToolkit.Mcp.UiAutomationTools",
+      "project": "AgentDebugToolkit.Mcp",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "startLine": 317,
+      "endLine": 330,
+      "accessibility": "public",
+      "isStatic": false,
       "isAbstract": false
     }
   ],
@@ -16053,580 +16053,6 @@
       "targetId": "AgentDebugToolkit.Mcp.ConsoleTools.BuildArgs(string,(string Flag, string? Value)[])",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\ConsoleTools.cs",
       "line": 223
-    },
-    {
-      "type": "uses",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools._cli",
-      "targetId": "AgentDebugToolkit.Mcp.CliRunner",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 15
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
-      "targetId": "System.Collections.Generic.List\u003Cstring\u003E.Add(string)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 29
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
-      "targetId": "System.Collections.Generic.List\u003Cstring\u003E.Add(string)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 30
-    },
-    {
-      "type": "uses",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
-      "targetId": "System.Collections.Generic.List\u003Cstring\u003E",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 24
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.CliRunner.RunAsync(string,IReadOnlyList\u003Cstring\u003E,int?,CancellationToken)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 38
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.CliRunner.ToInvocationResult(CliResult)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 39
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Attach(string,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 49
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Attach(string,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 49
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.ListWindows(int?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 56
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.ListWindows(int?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 56
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.ListWindows(int?,CancellationToken)",
-      "targetId": "int.ToString()",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 56
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Inspect(string,int?,bool?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 65
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Inspect(string,int?,bool?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 65
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Inspect(string,int?,bool?,CancellationToken)",
-      "targetId": "int.ToString()",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 65
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Inspect(string,int?,bool?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.Bool(bool?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 65
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Click(string,string,string,string?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 75
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Click(string,string,string,string?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 75
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.RightClick(string,string,string,string?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 85
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.RightClick(string,string,string,string?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 85
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.DoubleClick(string,string,string,string?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 95
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.DoubleClick(string,string,string,string?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 95
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Drag(string,string,string,string?,string?,int?,int?,string?,int?,int?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 111
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Drag(string,string,string,string?,string?,int?,int?,string?,int?,int?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 111
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Drag(string,string,string,string?,string?,int?,int?,string?,int?,int?,CancellationToken)",
-      "targetId": "int.ToString()",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 115
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Drag(string,string,string,string?,string?,int?,int?,string?,int?,int?,CancellationToken)",
-      "targetId": "int.ToString()",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 115
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Drag(string,string,string,string?,string?,int?,int?,string?,int?,int?,CancellationToken)",
-      "targetId": "int.ToString()",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 116
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Drag(string,string,string,string?,string?,int?,int?,string?,int?,int?,CancellationToken)",
-      "targetId": "int.ToString()",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 116
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.MoveMouse(string?,string?,string?,int?,int?,string?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 128
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.MoveMouse(string?,string?,string?,int?,int?,string?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 128
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.MoveMouse(string?,string?,string?,int?,int?,string?,CancellationToken)",
-      "targetId": "int.ToString()",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 131
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.MoveMouse(string?,string?,string?,int?,int?,string?,CancellationToken)",
-      "targetId": "int.ToString()",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 131
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.GetCursorPos(CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 136
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.GetCursorPos(CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 136
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Type(string,string,string,string,string?,bool?,bool?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 149
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Type(string,string,string,string,string?,bool?,bool?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 149
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Type(string,string,string,string,string?,bool?,bool?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.Bool(bool?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 152
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Type(string,string,string,string,string?,bool?,bool?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.Bool(bool?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 152
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.GetText(string,string,string,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 161
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.GetText(string,string,string,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 161
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.SetGridCell(string,string,string,string,string,int,string,string?,string?,string?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 177
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.SetGridCell(string,string,string,string,string,int,string,string?,string?,string?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 177
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.SetGridCell(string,string,string,string,string,int,string,string?,string?,string?,CancellationToken)",
-      "targetId": "int.ToString()",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 180
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForWindowChange(int,int?,int?,CancellationToken)",
-      "targetId": "System.Math.Clamp(int,int,int)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 193
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForWindowChange(int,int?,int?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 194
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForWindowChange(int,int?,int?,CancellationToken)",
-      "targetId": "int.ToString()",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 194
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForWindowChange(int,int?,int?,CancellationToken)",
-      "targetId": "int.ToString()",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 194
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForWindowChange(int,int?,int?,CancellationToken)",
-      "targetId": "int.ToString()",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 194
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForWindowChange(int,int?,int?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 195
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForElement(string,string,string?,int?,string?,int?,int?,CancellationToken)",
-      "targetId": "System.Math.Clamp(int,int,int)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 211
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForElement(string,string,string?,int?,string?,int?,int?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 212
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForElement(string,string,string?,int?,string?,int?,int?,CancellationToken)",
-      "targetId": "int.ToString()",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 214
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForElement(string,string,string?,int?,string?,int?,int?,CancellationToken)",
-      "targetId": "int.ToString()",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 215
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForElement(string,string,string?,int?,string?,int?,int?,CancellationToken)",
-      "targetId": "int.ToString()",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 215
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForElement(string,string,string?,int?,string?,int?,int?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 216
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForProcessResponding(int,int,CancellationToken)",
-      "targetId": "System.Math.Clamp(int,int,int)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 227
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForProcessResponding(int,int,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 228
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForProcessResponding(int,int,CancellationToken)",
-      "targetId": "int.ToString()",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 228
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForProcessResponding(int,int,CancellationToken)",
-      "targetId": "int.ToString()",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 228
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForProcessResponding(int,int,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 229
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Delay(int,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 237
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Delay(int,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 237
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Delay(int,CancellationToken)",
-      "targetId": "int.ToString()",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 237
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Delay(int,CancellationToken)",
-      "targetId": "System.Math.Clamp(int,int,int)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 237
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.SetContext(int,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 244
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.SetContext(int,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 244
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.SetContext(int,CancellationToken)",
-      "targetId": "int.ToString()",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 244
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.ReadVisibleText(string,int?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 252
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.ReadVisibleText(string,int?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 252
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.ReadVisibleText(string,int?,CancellationToken)",
-      "targetId": "int.ToString()",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 252
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Screenshot(string,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 259
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Screenshot(string,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 259
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Activate(string,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 266
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Activate(string,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 266
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.SendKeys(string,string,string,string,string?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 277
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.SendKeys(string,string,string,string,string?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 277
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.SubmitChatMessage(string,string,string?,string?,string?,string?,string?,bool?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 293
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.SubmitChatMessage(string,string,string?,string?,string?,string?,string?,bool?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 293
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.SubmitChatMessage(string,string,string?,string?,string?,string?,string?,bool?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.Bool(bool?)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 297
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.FindFirst(string,string,string,string?,string?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 308
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.FindFirst(string,string,string,string?,string?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 308
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.FindAll(string,string,string,string?,string?,string?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 323
-    },
-    {
-      "type": "calls",
-      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.FindAll(string,string,string,string?,string?,string?,CancellationToken)",
-      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
-      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
-      "line": 323
     },
     {
       "type": "uses",
@@ -26700,6 +26126,580 @@
       "targetId": "System.Diagnostics.Process.GetProcessById(int)",
       "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.UiAutomation.Cli\\Program.cs",
       "line": 2173
+    },
+    {
+      "type": "uses",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools._cli",
+      "targetId": "AgentDebugToolkit.Mcp.CliRunner",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 15
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
+      "targetId": "System.Collections.Generic.List\u003Cstring\u003E.Add(string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 29
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
+      "targetId": "System.Collections.Generic.List\u003Cstring\u003E.Add(string)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 30
+    },
+    {
+      "type": "uses",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
+      "targetId": "System.Collections.Generic.List\u003Cstring\u003E",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 24
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.CliRunner.RunAsync(string,IReadOnlyList\u003Cstring\u003E,int?,CancellationToken)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 38
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.CliRunner.ToInvocationResult(CliResult)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 39
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Attach(string,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 49
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Attach(string,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 49
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.ListWindows(int?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 56
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.ListWindows(int?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 56
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.ListWindows(int?,CancellationToken)",
+      "targetId": "int.ToString()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 56
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Inspect(string,int?,bool?,string?,string?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 67
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Inspect(string,int?,bool?,string?,string?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 67
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Inspect(string,int?,bool?,string?,string?,CancellationToken)",
+      "targetId": "int.ToString()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 67
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Inspect(string,int?,bool?,string?,string?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.Bool(bool?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 67
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Click(string,string,string,string?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 77
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Click(string,string,string,string?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 77
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.RightClick(string,string,string,string?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 87
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.RightClick(string,string,string,string?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 87
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.DoubleClick(string,string,string,string?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 97
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.DoubleClick(string,string,string,string?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 97
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Drag(string,string,string,string?,string?,int?,int?,string?,int?,int?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 113
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Drag(string,string,string,string?,string?,int?,int?,string?,int?,int?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 113
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Drag(string,string,string,string?,string?,int?,int?,string?,int?,int?,CancellationToken)",
+      "targetId": "int.ToString()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 117
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Drag(string,string,string,string?,string?,int?,int?,string?,int?,int?,CancellationToken)",
+      "targetId": "int.ToString()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 117
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Drag(string,string,string,string?,string?,int?,int?,string?,int?,int?,CancellationToken)",
+      "targetId": "int.ToString()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 118
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Drag(string,string,string,string?,string?,int?,int?,string?,int?,int?,CancellationToken)",
+      "targetId": "int.ToString()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 118
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.MoveMouse(string?,string?,string?,int?,int?,string?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 130
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.MoveMouse(string?,string?,string?,int?,int?,string?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 130
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.MoveMouse(string?,string?,string?,int?,int?,string?,CancellationToken)",
+      "targetId": "int.ToString()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 133
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.MoveMouse(string?,string?,string?,int?,int?,string?,CancellationToken)",
+      "targetId": "int.ToString()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 133
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.GetCursorPos(CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 138
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.GetCursorPos(CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 138
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Type(string,string,string,string,string?,bool?,bool?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 151
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Type(string,string,string,string,string?,bool?,bool?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 151
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Type(string,string,string,string,string?,bool?,bool?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.Bool(bool?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 154
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Type(string,string,string,string,string?,bool?,bool?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.Bool(bool?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 154
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.GetText(string,string,string,string?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 164
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.GetText(string,string,string,string?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 164
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.SetGridCell(string,string,string,string,string,int,string,string?,string?,string?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 180
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.SetGridCell(string,string,string,string,string,int,string,string?,string?,string?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 180
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.SetGridCell(string,string,string,string,string,int,string,string?,string?,string?,CancellationToken)",
+      "targetId": "int.ToString()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 183
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForWindowChange(int,int?,int?,CancellationToken)",
+      "targetId": "System.Math.Clamp(int,int,int)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 196
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForWindowChange(int,int?,int?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 197
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForWindowChange(int,int?,int?,CancellationToken)",
+      "targetId": "int.ToString()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 197
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForWindowChange(int,int?,int?,CancellationToken)",
+      "targetId": "int.ToString()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 197
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForWindowChange(int,int?,int?,CancellationToken)",
+      "targetId": "int.ToString()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 197
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForWindowChange(int,int?,int?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 198
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForElement(string,string,string?,int?,string?,int?,int?,CancellationToken)",
+      "targetId": "System.Math.Clamp(int,int,int)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 214
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForElement(string,string,string?,int?,string?,int?,int?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 215
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForElement(string,string,string?,int?,string?,int?,int?,CancellationToken)",
+      "targetId": "int.ToString()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 217
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForElement(string,string,string?,int?,string?,int?,int?,CancellationToken)",
+      "targetId": "int.ToString()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 218
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForElement(string,string,string?,int?,string?,int?,int?,CancellationToken)",
+      "targetId": "int.ToString()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 218
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForElement(string,string,string?,int?,string?,int?,int?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 219
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForProcessResponding(int,int,CancellationToken)",
+      "targetId": "System.Math.Clamp(int,int,int)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 230
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForProcessResponding(int,int,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 231
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForProcessResponding(int,int,CancellationToken)",
+      "targetId": "int.ToString()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 231
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForProcessResponding(int,int,CancellationToken)",
+      "targetId": "int.ToString()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 231
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.WaitForProcessResponding(int,int,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 232
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Delay(int,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 240
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Delay(int,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 240
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Delay(int,CancellationToken)",
+      "targetId": "int.ToString()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 240
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Delay(int,CancellationToken)",
+      "targetId": "System.Math.Clamp(int,int,int)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 240
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.SetContext(int,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 247
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.SetContext(int,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 247
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.SetContext(int,CancellationToken)",
+      "targetId": "int.ToString()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 247
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.ReadVisibleText(string,int?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 255
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.ReadVisibleText(string,int?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 255
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.ReadVisibleText(string,int?,CancellationToken)",
+      "targetId": "int.ToString()",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 255
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Screenshot(string,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 262
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Screenshot(string,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 262
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Activate(string,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 269
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.Activate(string,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 269
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.SendKeys(string,string,string,string,string?,string?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 281
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.SendKeys(string,string,string,string,string?,string?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 281
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.SubmitChatMessage(string,string,string?,string?,string?,string?,string?,bool?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 297
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.SubmitChatMessage(string,string,string?,string?,string?,string?,string?,bool?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 297
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.SubmitChatMessage(string,string,string?,string?,string?,string?,string?,bool?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.Bool(bool?)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 301
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.FindFirst(string,string,string,string?,string?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 312
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.FindFirst(string,string,string,string?,string?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 312
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.FindAll(string,string,string,string?,string?,string?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.RunAsync(List\u003Cstring\u003E,int?,CancellationToken)",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 327
+    },
+    {
+      "type": "calls",
+      "sourceId": "AgentDebugToolkit.Mcp.UiAutomationTools.FindAll(string,string,string,string?,string?,string?,CancellationToken)",
+      "targetId": "AgentDebugToolkit.Mcp.UiAutomationTools.BuildArgs(string,(string Flag, string? Value)[])",
+      "filePath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\src\\AgentDebugToolkit.Mcp\\UiAutomationTools.cs",
+      "line": 327
     }
   ]
 }

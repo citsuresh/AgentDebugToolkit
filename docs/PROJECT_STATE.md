@@ -4,28 +4,33 @@
 
 ## Current Focus
 
-2026-10-14: Begin Session found the registered `agentdebugtoolkit` graph was behind `HEAD`;
-after the user chose Bootstrap, the graph pair was fully rebuilt with 585 nodes and 2,727 edges
-in 20.12 seconds, based on `362176d`. The graph now matches the current commit. No source code
-changed.
+2026-10-14: MCP UI tools were aligned with the CLI contract for inspect filters, ambiguous
+selectors, and `scopeHwnd` on `get-text`/`send-keys`. `Verbs.SendKeys` was verified to use the
+shared `ResolveElement(windowHwnd, opts)` path. Changes were committed and pushed in `14eda15`;
+the MCP project built successfully with `DOTNET_ROOT` cleared (0 warnings, 0 errors). No
+MCP-level live validation was performed.
 
-Project memory is synced to skill v14 with a registered per-solution graph pair.
+The registered graph was incrementally updated at `61a6508`: 585 nodes, 2,727 edges, 1 changed
+file, in 18.23 seconds. No additional Known Open Findings were requested.
 
 ## Open Tasks / Known Issues
 
 The `isModal` field still treats ownership as modal state, so owned modeless windows are
 misclassified; this is deferred to future multi-window/dialog-awareness work.
 
-No project tests are registered in Test Explorer. Targeted build and 22 disposable deterministic
-parser/pruner checks passed; the invalid-control-type CLI response passed. Live UI actions,
-real-provider filtered trees, and screenshot capture have not been validated for this change.
+No project tests are registered in Test Explorer. Live UI actions, real-provider filtered trees,
+and screenshot capture have not been validated for this work.
 
 Graph caller queries previously failed with `Error: An item with the same key has already been
-added. Key: Program`; audits used direct source searches. The full graph rebuild succeeded.
+added. Key: Program`; audits used direct source searches. The incremental graph update succeeded.
 
 ## Recently Changed Files
 
-- `docs/full-graph.agentdebugtoolkit.json` -- full graph rebuilt for `362176d` (585 nodes,
+- `src/AgentDebugToolkit.Mcp/UiAutomationTools.cs` -- optional inspect filters and `scopeHwnd`
+  forwarding for `get-text` and `send-keys`; ambiguity guidance for action tools.
+- `docs/CLI_CONTRACT.md` -- documented `send-keys --scopeHwnd` behavior.
+- `docs/MCP_SERVER.md` -- MCP UI filter, scoping, and ambiguity notes.
+- `docs/full-graph.agentdebugtoolkit.json` -- incrementally updated graph (585 nodes,
   2,727 edges).
-- `docs/project-dependencies.agentdebugtoolkit.json` -- refreshed solution dependency metadata.
+- `docs/project-dependencies.agentdebugtoolkit.json` -- updated solution metadata.
 - `docs/PROJECT_STATE.md` -- updated session snapshot.
