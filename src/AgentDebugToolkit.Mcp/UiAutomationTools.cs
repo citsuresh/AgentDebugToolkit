@@ -56,16 +56,18 @@ public sealed class UiAutomationTools
         => RunAsync(BuildArgs("list-windows", ("--pid", pid?.ToString())), null, cancellationToken);
 
     [McpServerTool(Name = "ui_inspect", ReadOnly = true, Destructive = false, OpenWorld = false),
-     Description("Dumps the UIA subtree rooted at the given window/element handle, optionally saving a screenshot. Read-only (does not interact with the UI).")]
+     Description("Dumps the UIA subtree rooted at the given window/element handle, optionally saving a screenshot. Read-only (does not interact with the UI). Prefer filtered inspection over a full dump; unfiltered output has no matchCount; if the window's own name matches nameContains the whole tree is returned.")]
     public Task<ToolInvocationResult> Inspect(
         [Description("Window handle, e.g. '0x00123456'.")] string hwnd,
         [Description("Maximum tree depth (default implementation-defined, capped internally).")] int? maxDepth = null,
         [Description("Also save a screenshot of the window.")] bool? screenshot = null,
+        [Description("Case-insensitive substring filter on element Name. Returns a pruned tree (matches plus ancestors) with a matchCount field.")] string? nameContains = null,
+        [Description("UIA control type short name, e.g. Button or Edit. An unrecognized value returns invalid-argument.")] string? controlType = null,
         CancellationToken cancellationToken = default)
-        => RunAsync(BuildArgs("inspect", ("--hwnd", hwnd), ("--maxDepth", maxDepth?.ToString()), ("--screenshot", Bool(screenshot))), null, cancellationToken);
+        => RunAsync(BuildArgs("inspect", ("--hwnd", hwnd), ("--maxDepth", maxDepth?.ToString()), ("--screenshot", Bool(screenshot)), ("--nameContains", nameContains), ("--controlType", controlType)), null, cancellationToken);
 
     [McpServerTool(Name = "ui_click", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false),
-     Description("Resolves an element via selector and clicks it (UIA pattern, falling back to a synthetic click). Changes target application state.")]
+     Description("Resolves an element via selector and clicks it (UIA pattern, falling back to a synthetic click). Changes target application state. If the selector matches more than one element this fails with ambiguous-match (count plus up to 10 candidates) and does nothing; narrow with scopeHwnd or pre-check with ui_find_all.")]
     public Task<ToolInvocationResult> Click(
         [Description("Window handle to resolve the selector against.")] string hwnd,
         [Description("Selector strategy: Name or AutomationId.")] string strategy,
@@ -75,7 +77,7 @@ public sealed class UiAutomationTools
         => RunAsync(BuildArgs("click", ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value), ("--scopeHwnd", scopeHwnd)), null, cancellationToken);
 
     [McpServerTool(Name = "ui_right_click", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false),
-     Description("Resolves an element via selector and performs a synthetic right-click at its bounding-rect center (e.g. to open a context menu). Changes target application state.")]
+     Description("Resolves an element via selector and performs a synthetic right-click at its bounding-rect center (e.g. to open a context menu). Changes target application state. If the selector matches more than one element this fails with ambiguous-match (count plus up to 10 candidates) and does nothing; narrow with scopeHwnd or pre-check with ui_find_all.")]
     public Task<ToolInvocationResult> RightClick(
         [Description("Window handle to resolve the selector against.")] string hwnd,
         [Description("Selector strategy: Name or AutomationId.")] string strategy,
@@ -85,7 +87,7 @@ public sealed class UiAutomationTools
         => RunAsync(BuildArgs("right-click", ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value), ("--scopeHwnd", scopeHwnd)), null, cancellationToken);
 
     [McpServerTool(Name = "ui_double_click", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false),
-     Description("Resolves an element via selector and double-clicks it (UIA pattern, falling back to two rapid synthetic clicks). Changes target application state.")]
+     Description("Resolves an element via selector and double-clicks it (UIA pattern, falling back to two rapid synthetic clicks). Changes target application state. If the selector matches more than one element this fails with ambiguous-match (count plus up to 10 candidates) and does nothing; narrow with scopeHwnd or pre-check with ui_find_all.")]
     public Task<ToolInvocationResult> DoubleClick(
         [Description("Window handle to resolve the selector against.")] string hwnd,
         [Description("Selector strategy: Name or AutomationId.")] string strategy,
@@ -95,7 +97,7 @@ public sealed class UiAutomationTools
         => RunAsync(BuildArgs("double-click", ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value), ("--scopeHwnd", scopeHwnd)), null, cancellationToken);
 
     [McpServerTool(Name = "ui_drag", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false),
-     Description("Resolves a source element and performs a synthetic mouse drag to either another selector-resolved element, or explicit screen coordinates. Changes target application state.")]
+     Description("Resolves a source element and performs a synthetic mouse drag to either another selector-resolved element, or explicit screen coordinates. Changes target application state. If the selector matches more than one element this fails with ambiguous-match (count plus up to 10 candidates) and does nothing; narrow with scopeHwnd or pre-check with ui_find_all.")]
     public Task<ToolInvocationResult> Drag(
         [Description("Window handle to resolve the source selector against.")] string hwnd,
         [Description("Source selector strategy: Name or AutomationId.")] string strategy,
@@ -116,7 +118,7 @@ public sealed class UiAutomationTools
             ("--scopeHwnd", scopeHwnd), ("--steps", steps?.ToString()), ("--durationMs", durationMs?.ToString())), null, cancellationToken);
 
     [McpServerTool(Name = "ui_move_mouse", ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false),
-     Description("Moves the cursor to an absolute screen position or a selector-resolved element's center, without pressing any mouse button. Minor environment change (cursor position) but no application-state side effect by itself.")]
+     Description("Moves the cursor to an absolute screen position or a selector-resolved element's center, without pressing any mouse button. Minor environment change (cursor position) but no application-state side effect by itself. If the selector form matches more than one element this fails with ambiguous-match (count plus up to 10 candidates) and does nothing; narrow with scopeHwnd or pre-check with ui_find_all.")]
     public Task<ToolInvocationResult> MoveMouse(
         [Description("Window handle to resolve the selector against. Required when using strategy/value; omit for explicit x/y.")] string? hwnd = null,
         [Description("Selector strategy: Name or AutomationId. Mutually exclusive with x/y.")] string? strategy = null,
@@ -136,7 +138,7 @@ public sealed class UiAutomationTools
         => RunAsync(BuildArgs("get-cursor-pos"), null, cancellationToken);
 
     [McpServerTool(Name = "ui_type", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false),
-     Description("Resolves an element and types text into it (ValuePattern, falling back to click-to-focus plus synthetic keyboard input, or clipboard paste). When ValuePattern is used (method: \"pattern\"), this REPLACES the control's entire existing value and typically leaves the caret at position 0, not at the end. To append instead, use ui_send_keys (send ^{END} first to move the caret to the end). Changes target application state.")]
+     Description("Resolves an element and types text into it (ValuePattern, falling back to click-to-focus plus synthetic keyboard input, or clipboard paste). When ValuePattern is used (method: \"pattern\"), this REPLACES the control's entire existing value and typically leaves the caret at position 0, not at the end. To append instead, use ui_send_keys (send ^{END} first to move the caret to the end). Changes target application state. If the selector matches more than one element this fails with ambiguous-match (count plus up to 10 candidates) and does nothing; narrow with scopeHwnd or pre-check with ui_find_all.")]
     public Task<ToolInvocationResult> Type(
         [Description("Window handle to resolve the selector against.")] string hwnd,
         [Description("Selector strategy: Name or AutomationId.")] string strategy,
@@ -152,13 +154,14 @@ public sealed class UiAutomationTools
             ("--scopeHwnd", scopeHwnd), ("--verify", Bool(verify)), ("--paste", Bool(paste))), null, cancellationToken);
 
     [McpServerTool(Name = "ui_get_text", ReadOnly = true, Destructive = false, OpenWorld = false),
-     Description("Reads the current Name or ValuePattern.Value of the resolved element. Read-only.")]
+     Description("Reads the current Name or ValuePattern.Value of the resolved element. Read-only. If the selector matches more than one element this fails with ambiguous-match (count plus up to 10 candidates) and does nothing; narrow with scopeHwnd or pre-check with ui_find_all.")]
     public Task<ToolInvocationResult> GetText(
         [Description("Window handle to resolve the selector against.")] string hwnd,
         [Description("Selector strategy: Name or AutomationId.")] string strategy,
         [Description("Selector value to match.")] string value,
+        [Description("Optional narrower scope window/element handle to search within instead of hwnd.")] string? scopeHwnd = null,
         CancellationToken cancellationToken = default)
-        => RunAsync(BuildArgs("get-text", ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value)), null, cancellationToken);
+        => RunAsync(BuildArgs("get-text", ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value), ("--scopeHwnd", scopeHwnd)), null, cancellationToken);
 
     [McpServerTool(Name = "ui_set_grid_cell", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false),
      Description("Edits a cell in a UIA DataGrid (locates grid/row/column, scrolls virtualized grids into view, edits via ValuePattern/TogglePattern or synthetic input, optionally invokes an Apply action). Changes target application state.")]
@@ -266,17 +269,18 @@ public sealed class UiAutomationTools
         => RunAsync(BuildArgs("activate", ("--hwnd", hwnd)), null, cancellationToken);
 
     [McpServerTool(Name = "ui_send_keys", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false),
-     Description("Sends raw, unescaped SendKeys syntax (e.g. '^a', '{DELETE}', '{ENTER}', '^{END}') to the resolved element at its CURRENT caret position. focusMode set-focus only establishes focus and does not move the caret; click performs a synthetic click that may reposition the caret depending on the control (unverified). To append after ui_type (which can leave the caret at position 0), send ^{END} first. Newlines from {ENTER} may read back as \"\\r\" in RichEdit-style controls. Changes target application state; can trigger unintended actions if the syntax is wrong for the control.")]
+     Description("Sends raw, unescaped SendKeys syntax (e.g. '^a', '{DELETE}', '{ENTER}', '^{END}') to the resolved element at its CURRENT caret position. focusMode set-focus only establishes focus and does not move the caret; click performs a synthetic click that may reposition the caret depending on the control (unverified). To append after ui_type (which can leave the caret at position 0), send ^{END} first. Newlines from {ENTER} may read back as \"\\r\" in RichEdit-style controls. Changes target application state; can trigger unintended actions if the syntax is wrong for the control. If the selector matches more than one element this fails with ambiguous-match (count plus up to 10 candidates) and does nothing; narrow with scopeHwnd or pre-check with ui_find_all.")]
     public Task<ToolInvocationResult> SendKeys(
         [Description("Window handle to resolve the selector against.")] string hwnd,
         [Description("Selector strategy: Name or AutomationId.")] string strategy,
         [Description("Selector value to match.")] string value,
         [Description("Unescaped SendKeys.SendWait syntax, e.g. '^a' for Ctrl+A, '{DELETE}', '{ENTER}'.")] string keys,
         [Description("How to establish focus before sending keys: set-focus (default), click, or none.")] string? focusMode = null,
+        [Description("Optional narrower scope window/element handle to search within instead of hwnd.")] string? scopeHwnd = null,
         CancellationToken cancellationToken = default)
         => RunAsync(BuildArgs(
             "send-keys",
-            ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value), ("--keys", keys), ("--focusMode", focusMode)), null, cancellationToken);
+            ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value), ("--keys", keys), ("--focusMode", focusMode), ("--scopeHwnd", scopeHwnd)), null, cancellationToken);
 
     [McpServerTool(Name = "ui_submit_chat_message", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false),
      Description("Composite verb for the Copilot Chat input pattern: clicks the input, types text, verifies it landed, then submits (Send button click or SendKeys). Changes target application state and can trigger a real chat submission — treat as high-impact.")]

@@ -175,7 +175,7 @@ MCP client can grant/prompt approval per tool rather than per call:
 | --- | --- | --- |
 | `ui_attach` | `attach` | |
 | `ui_list_windows` | `list-windows` | Read-only |
-| `ui_inspect` | `inspect` | Read-only |
+| `ui_inspect` | `inspect` | Read-only; `nameContains` and `controlType` filters return a pruned tree with `matchCount`; unfiltered output has no `matchCount`; a window-name match returns the whole tree; unknown control types fail with `invalid-argument` |
 | `ui_click` | `click` | Destructive |
 | `ui_right_click` | `right-click` | Destructive |
 | `ui_double_click` | `double-click` | Destructive |
@@ -183,7 +183,7 @@ MCP client can grant/prompt approval per tool rather than per call:
 | `ui_move_mouse` | `move-mouse` | |
 | `ui_get_cursor_pos` | `get-cursor-pos` | Read-only |
 | `ui_type` | `type` | Destructive |
-| `ui_get_text` | `get-text` | Read-only |
+| `ui_get_text` | `get-text` | Read-only; optional `scopeHwnd` narrows the selector search |
 | `ui_set_grid_cell` | `set-grid-cell` | Destructive |
 | `ui_wait_for_window_change` | `wait-for-window-change` | Read-only; `timeoutMs` capped at 120000 |
 | `ui_wait_for_element` | `wait-for-element` | Read-only; `timeoutMs` capped at 120000 |
@@ -197,6 +197,8 @@ MCP client can grant/prompt approval per tool rather than per call:
 | `ui_submit_chat_message` | `submit-chat-message` | Destructive; treat as high-impact (real submission) |
 | `ui_find_first` | `find-first` | Read-only |
 | `ui_find_all` | `find-all` | Read-only |
+
+Ambiguous selectors in `ui_click`, `ui_right_click`, `ui_double_click`, `ui_drag`, the selector form of `ui_move_mouse`, `ui_type`, `ui_get_text`, and `ui_send_keys` fail with `ambiguous-match` (count plus up to 10 candidates) and do nothing. Narrow with `scopeHwnd` or pre-check with `ui_find_all`.
 
 ### UI gotchas
 

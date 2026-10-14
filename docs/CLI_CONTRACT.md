@@ -646,9 +646,10 @@ fall back to `--pid`/persisted session context.
   `stale-context` result from `activate` should be treated as "could not activate this time," not
   as evidence the window/session is invalid.
 
-### `send-keys --hwnd <h> --strategy <s> --value <v> --keys <SendKeys syntax> [--focusMode set-focus|click|none]`
+### `send-keys --hwnd <h> --strategy <s> --value <v> --keys <SendKeys syntax> [--focusMode set-focus|click|none] [--scopeHwnd <h2>]`
 - Fails with `ambiguous-match` instead of sending keys to the first of several matches. Pre-check
   the count with `find-all`; narrow the search with `--scopeHwnd`.
+- `--scopeHwnd` follows the same scope semantics as `click`.
 Companion to `type` for input `type` cannot express. `type` sends literal Unicode keyboard input,
 so literal text is never interpreted as `SendKeys` syntax — this means `type` has no way to send key combinations like
 `Ctrl+A`, `Delete`, or `Enter` as actual key presses. `send-keys` instead accepts and passes
