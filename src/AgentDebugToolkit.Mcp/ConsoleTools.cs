@@ -47,8 +47,7 @@ public sealed class ConsoleTools
         {
             if (value is not null)
             {
-                args.Add(flag);
-                args.Add(value);
+                ArgumentFormatting.AppendOption(args, flag, value);
             }
         }
         return args;

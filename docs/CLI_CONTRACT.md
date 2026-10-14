@@ -914,6 +914,23 @@ failure with `"error"`/`"message"` populated). This is a fully independent proje
 `AgentDebugToolkit.UiAutomation.Cli` — no navigation-map awareness, no shared dependency beyond
 JSON envelope *style* (see `docs/ARCHITECTURE.md`).
 
+## Option parsing
+
+Only `--allowSideEffects` and `--all` may be bare, meaning `true`. Their existing evaluation
+semantics are unchanged: `allowSideEffects` enables side effects only for a case-insensitive
+`true` value. All other flags require a value token that does not begin with `--`, or the
+`--name=value` form. Missing values return `invalid-argument` through the JSON error envelope
+before Visual Studio is contacted. The message names the flag: `--<flag> requires a value.
+Some shells (Windows PowerShell 5.1) drop empty-string arguments; use --<flag>=.`
+
+Equals-form values may be empty or begin with `--`; only option tokens starting with `--`
+are split, at the first `=`. A separate value such as `a=b` is preserved. For example,
+`--expression=` passes an empty expression to verb validation. `--i` is a legitimate C#
+expression, but must now be supplied as `--expression=--i`, not `--expression "--i"`.
+
+**Behavior change (2026-10-14):** bare value flags no longer silently become `true`. Use
+`--flag=value` for empty or `--`-prefixed values, consistent with UI `--text=`.
+
 ## Attaching to Visual Studio
 
 Every verb accepts an optional `--solution <name>` (solution file name, without extension) to
@@ -1345,10 +1362,30 @@ broker processes exactly one newline-terminated JSON request per pipe connection
 target input through a bounded single-writer queue; if that queue is full, input commands return
 `input-busy` rather than blocking pipe handlers.
 
+## Option parsing
+
+Only `--regex` may be bare, meaning `true`. Its existing presence-based semantics are unchanged:
+supplying `--regex false` still selects regex matching. All other flags require a value token
+that does not begin with `--`, or the `--name=value` form. Missing values return `invalid-argument`
+through the JSON error envelope before any session access or console launch. The message names
+the flag: `--<flag> requires a value. Some shells (Windows PowerShell 5.1) drop empty-string
+arguments; use --<flag>=.`
+
+Equals-form values may be empty or begin with `--`; only option tokens starting with `--`
+are split, at the first `=`. A separate value such as `a=b` is preserved. Examples: `--text=`
+and `--text=--x`; `--args=` for empty launch arguments and `--args=--foo` for dash-prefixed
+launch arguments. Parsing an empty value does not bypass the verb's own validation.
+
+**Behavior change (2026-10-14):** bare value flags no longer silently become `true`, and
+`--args` no longer swallows a following `--` token. `--args --cols 80` fails for the missing
+`args` value; use `--args=<value>` for empty or `--`-prefixed arguments. This is the same
+equals-form convention as VS `--expression=--i` and UI `--text=`.
+
 ### `launch --exe <path> [--args <value>] [--cols <n>] [--rows <n>]`
 Starts a detached broker and target under ConPTY. `--cols` and `--rows` default to `120` and
-`30`; both must be positive. `--args` is preserved as one value, including when its value begins
-with `--`.
+`30`; both must be positive. `--args` is preserved as one value; empty or `--`-prefixed values
+must use `--args=<value>`. The broker receives reconstructed strict flag/value pairs through
+`ProcessStartInfo.ArgumentList`, including empty values; it does not receive equals-form flags.
 - Success: `{ "success": true, "sessionId": "guid-without-hyphens", "pid": 12345 }`
 - Failure: `invalid-argument`, `already-running`, `launch-in-progress`, `broker-unreachable`, or
   `session-write-failed`.

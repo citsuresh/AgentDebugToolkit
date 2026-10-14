@@ -11,7 +11,11 @@ if (args.Length == 0)
     return 1;
 }
 
-var options = CommandLine.ParseOptions(args.Skip(1).ToArray());
+if (!CommandLine.TryParseOptions(args.Skip(1).ToArray(), out var options, out var parseError))
+{
+    JsonOutput.WriteError("invalid-argument", parseError!);
+    return 1;
+}
 try
 {
     return args[0].ToLowerInvariant() switch

@@ -2,27 +2,48 @@
 
 internal static class CommandLine
 {
-    public static Dictionary<string, string> ParseOptions(string[] args)
+    public static bool TryParseOptions(string[] args, out Dictionary<string, string> options, out string? error)
     {
-        var options = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        options = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        error = null;
         for (var index = 0; index < args.Length; index++)
         {
-            if (!args[index].StartsWith("--", StringComparison.Ordinal))
+            var argument = args[index];
+            if (!argument.StartsWith("--", StringComparison.Ordinal))
             {
                 continue;
             }
 
-            var key = args[index][2..];
-            var acceptsDashPrefixedValue = key.Equals("args", StringComparison.OrdinalIgnoreCase);
-            var value = index + 1 < args.Length
-                && (acceptsDashPrefixedValue
-                    || !args[index + 1].StartsWith("--", StringComparison.Ordinal))
-                ? args[++index]
-                : "true";
+            var equalsIndex = argument.IndexOf('=');
+            string key;
+            string value;
+            if (equalsIndex >= 0)
+            {
+                key = argument[2..equalsIndex];
+                value = argument[(equalsIndex + 1)..];
+            }
+            else
+            {
+                key = argument[2..];
+                if (index + 1 < args.Length && !args[index + 1].StartsWith("--", StringComparison.Ordinal))
+                {
+                    value = args[++index];
+                }
+                else if (key.Equals("regex", StringComparison.OrdinalIgnoreCase))
+                {
+                    value = "true";
+                }
+                else
+                {
+                    error = $"--{key} requires a value. Some shells (Windows PowerShell 5.1) drop empty-string arguments; use --{key}=.";
+                    return false;
+                }
+            }
+
             options[key] = value;
         }
 
-        return options;
+        return true;
     }
 
     public static bool TryGetPositiveInteger(

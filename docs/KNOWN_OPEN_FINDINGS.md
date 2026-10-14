@@ -3,6 +3,25 @@
 User-curated list of open, unresolved findings intentionally deferred rather than fixed
 immediately. Entries are only added, edited, or removed at the user's explicit request.
 
+## VS and console bare value flags silently became `true` - RESOLVED
+
+- **First seen:** 2026-10-14
+- **Last seen:** 2026-10-14
+- **Occurrences:** 1
+- **Resolved:** 2026-10-14
+
+**Description:** The Visual Studio and console CLI option parsers also defaulted missing values
+to `"true"`. The console parser additionally let `--args` swallow a following `--` token, so
+`--args --cols 80` consumed `--cols` as the argument string instead of rejecting a missing value.
+This extends the separately recorded UI parsing finding to the other public CLIs.
+
+**Fix applied:** Both public parsers reject missing values with `invalid-argument` before dispatch
+and support empty or `--`-prefixed values through `--name=value`. Bare flags are limited to VS
+`allowSideEffects`/`all` and console `regex`, with existing evaluation semantics preserved.
+`--args` swallowing is removed; use `--args=--foo`, `--expression=--i`, or `--text=`. All MCP
+tool builders share the same value formatter. The broker retains its strict-pair parser because
+the public CLI reconstructs argument pairs through `ProcessStartInfo.ArgumentList`.
+
 ## Bare value flags silently became `true` - RESOLVED
 
 - **First seen:** 2026-10-14

@@ -63,3 +63,16 @@ UIA scroll, selection, grid, value, and invoke patterns provide a current, struc
 
 **Alternatives considered:** Coordinate-based grid clicking — rejected because it was flaky in
 live WindowWorks validation and cannot reliably distinguish a cell from its in-place editor.
+
+## 2026-10-14 -- Strict public option parsing and shared MCP value formatting
+
+**Decision:** Public CLI parsers accept bare flags only for their explicit boolean allow-lists;
+empty and `--`-prefixed values use `--name=value`. MCP builders share a single formatter while
+the console broker keeps its reconstructed strict flag/value pairs.
+
+**Rationale:** Missing native arguments must not silently become `true` or consume subsequent
+options. Shared formatting preserves values consistently without changing boolean evaluation,
+launch gates, or the broker's internal protocol.
+
+**Alternatives considered:** Retaining console's `--args` swallowing exception or duplicating
+MCP formatting in each builder -- rejected because both allow inconsistent option handling.

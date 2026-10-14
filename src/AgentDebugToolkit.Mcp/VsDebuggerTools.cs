@@ -26,14 +26,12 @@ public sealed class VsDebuggerTools
         {
             if (value is not null)
             {
-                args.Add(flag);
-                args.Add(value);
+                ArgumentFormatting.AppendOption(args, flag, value);
             }
         }
         if (!string.IsNullOrWhiteSpace(solution))
         {
-            args.Add("--solution");
-            args.Add(solution);
+            ArgumentFormatting.AppendOption(args, "--solution", solution);
         }
         return args;
     }

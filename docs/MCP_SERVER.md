@@ -200,7 +200,7 @@ MCP client can grant/prompt approval per tool rather than per call:
 
 Ambiguous selectors in `ui_click`, `ui_right_click`, `ui_double_click`, `ui_drag`, the selector form of `ui_move_mouse`, `ui_type`, `ui_get_text`, and `ui_send_keys` fail with `ambiguous-match` (count plus up to 10 candidates) and do nothing. Narrow with `scopeHwnd` or pre-check with `ui_find_all`.
 
-For every UI tool, empty values and values beginning with `--` are passed as a single `--flag=value` argument, preserving them across native process argument parsing.
+For all UI, VS, and console tools, included empty values and values beginning with `--` are passed as a single `--flag=value` argument, preserving them across native process argument parsing. This includes console launch arguments; optional VS solution values that are empty or whitespace remain omitted.
 
 ### UI gotchas
 

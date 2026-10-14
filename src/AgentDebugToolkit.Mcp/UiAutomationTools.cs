@@ -26,15 +26,7 @@ public sealed class UiAutomationTools
         {
             if (value is not null)
             {
-                if (value.Length == 0 || value.StartsWith("--", StringComparison.Ordinal))
-                {
-                    args.Add($"{flag}={value}");
-                }
-                else
-                {
-                    args.Add(flag);
-                    args.Add(value);
-                }
+                ArgumentFormatting.AppendOption(args, flag, value);
             }
         }
         return args;

@@ -9,7 +9,11 @@ if (args.Length == 0)
 }
 
 var verb = args[0];
-var opts = ParseOptions(args.Skip(1).ToArray());
+if (!TryParseOptions(args.Skip(1).ToArray(), out var opts, out var parseError))
+{
+    JsonOutput.WriteError("invalid-argument", parseError!);
+    return 1;
+}
 
 try
 {
@@ -73,21 +77,48 @@ catch (Exception ex)
     return 1;
 }
 
-static Dictionary<string, string> ParseOptions(string[] args)
+static bool TryParseOptions(string[] args, out Dictionary<string, string> dict, out string? error)
 {
-    var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    error = null;
     for (var i = 0; i < args.Length; i++)
     {
-        if (!args[i].StartsWith("--"))
+        var argument = args[i];
+        if (!argument.StartsWith("--", StringComparison.Ordinal))
         {
             continue;
         }
 
-        var key = args[i][2..];
-        var value = (i + 1 < args.Length && !args[i + 1].StartsWith("--")) ? args[++i] : "true";
+        var equalsIndex = argument.IndexOf('=');
+        string key;
+        string value;
+        if (equalsIndex >= 0)
+        {
+            key = argument[2..equalsIndex];
+            value = argument[(equalsIndex + 1)..];
+        }
+        else
+        {
+            key = argument[2..];
+            if (i + 1 < args.Length && !args[i + 1].StartsWith("--", StringComparison.Ordinal))
+            {
+                value = args[++i];
+            }
+            else if (key.Equals("allowSideEffects", StringComparison.OrdinalIgnoreCase)
+                || key.Equals("all", StringComparison.OrdinalIgnoreCase))
+            {
+                value = "true";
+            }
+            else
+            {
+                error = $"--{key} requires a value. Some shells (Windows PowerShell 5.1) drop empty-string arguments; use --{key}=.";
+                return false;
+            }
+        }
+
         dict[key] = value;
     }
-    return dict;
+    return true;
 }
 
 internal static class Verbs
