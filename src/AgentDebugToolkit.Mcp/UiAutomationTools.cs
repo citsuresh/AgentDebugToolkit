@@ -26,8 +26,15 @@ public sealed class UiAutomationTools
         {
             if (value is not null)
             {
-                args.Add(flag);
-                args.Add(value);
+                if (value.Length == 0 || value.StartsWith("--", StringComparison.Ordinal))
+                {
+                    args.Add($"{flag}={value}");
+                }
+                else
+                {
+                    args.Add(flag);
+                    args.Add(value);
+                }
             }
         }
         return args;
@@ -138,20 +145,21 @@ public sealed class UiAutomationTools
         => RunAsync(BuildArgs("get-cursor-pos"), null, cancellationToken);
 
     [McpServerTool(Name = "ui_type", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false),
-     Description("Resolves an element and types text into it (ValuePattern, falling back to click-to-focus plus synthetic keyboard input, or clipboard paste). When ValuePattern is used (method: \"pattern\"), this REPLACES the control's entire existing value and typically leaves the caret at position 0, not at the end. To append instead, use ui_send_keys (send ^{END} first to move the caret to the end). Changes target application state. If the selector matches more than one element this fails with ambiguous-match (count plus up to 10 candidates) and does nothing; narrow with scopeHwnd or pre-check with ui_find_all.")]
+     Description("Resolves an element and types text into it (ValuePattern, falling back to click-to-focus plus synthetic keyboard input, or clipboard paste). When ValuePattern is used (method: \"pattern\"), this REPLACES the control's entire existing value and typically leaves the caret at position 0, not at the end. To append instead, use ui_send_keys (send ^{END} first to move the caret to the end). To empty a control use clear=true; an empty text string is also passed correctly. Changes target application state. If the selector matches more than one element this fails with ambiguous-match (count plus up to 10 candidates) and does nothing; narrow with scopeHwnd or pre-check with ui_find_all.")]
     public Task<ToolInvocationResult> Type(
         [Description("Window handle to resolve the selector against.")] string hwnd,
         [Description("Selector strategy: Name or AutomationId.")] string strategy,
         [Description("Selector value to match.")] string value,
-        [Description("Text to type.")] string text,
+        [Description("Text to type; may be empty when clearing a value.")] string? text = null,
         [Description("Optional narrower scope window/element handle to search within instead of hwnd.")] string? scopeHwnd = null,
-        [Description("Read back the typed text and fail with verify-mismatch/verify-unstable if it doesn't match (only checked when method is pattern or clipboard-paste).")] bool? verify = null,
+        [Description("Read back the typed text and fail with verify-mismatch/verify-unstable if it doesn't match (checked for pattern, clipboard-paste, or pattern-clear).") ] bool? verify = null,
         [Description("Use clipboard paste instead of per-character synthetic keystrokes (required for embedded newlines on controls with no ValuePattern).")] bool? paste = null,
+        [Description("Clear the resolved control instead of typing text. Mutually exclusive with text and paste.")] bool? clear = null,
         CancellationToken cancellationToken = default)
         => RunAsync(BuildArgs(
             "type",
             ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value), ("--text", text),
-            ("--scopeHwnd", scopeHwnd), ("--verify", Bool(verify)), ("--paste", Bool(paste))), null, cancellationToken);
+            ("--scopeHwnd", scopeHwnd), ("--verify", Bool(verify)), ("--paste", Bool(paste)), ("--clear", Bool(clear))), null, cancellationToken);
 
     [McpServerTool(Name = "ui_get_text", ReadOnly = true, Destructive = false, OpenWorld = false),
      Description("Reads the current Name or ValuePattern.Value of the resolved element. Read-only. If the selector matches more than one element this fails with ambiguous-match (count plus up to 10 candidates) and does nothing; narrow with scopeHwnd or pre-check with ui_find_all.")]

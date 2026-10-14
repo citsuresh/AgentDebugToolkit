@@ -560,6 +560,25 @@ internal static class UiaHelper
         return "synthetic-keyboard";
     }
 
+    public static string Clear(AutomationElement element)
+    {
+        if (element.TryGetCurrentPattern(ValuePattern.Pattern, out var valueObj)
+            && valueObj is ValuePattern value
+            && !(bool)element.GetCurrentPropertyValue(ValuePattern.IsReadOnlyProperty))
+        {
+            value.SetValue(string.Empty);
+            return "pattern-clear";
+        }
+
+        var r = element.Current.BoundingRectangle;
+        var cx = (int)(r.X + r.Width / 2);
+        var cy = (int)(r.Y + r.Height / 2);
+        NativeMethods.Click(cx, cy);
+        Thread.Sleep(100);
+        NativeMethods.SendKeysRaw("^a{DELETE}");
+        return "synthetic-clear";
+    }
+
     /// <summary>
     /// Click-to-focus the element, then paste <paramref name="text"/> via the clipboard
     /// (Clipboard.SetDataObject + Ctrl+V) instead of per-character synthetic keystrokes. Faster

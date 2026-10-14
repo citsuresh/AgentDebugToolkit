@@ -182,7 +182,7 @@ MCP client can grant/prompt approval per tool rather than per call:
 | `ui_drag` | `drag` | Destructive |
 | `ui_move_mouse` | `move-mouse` | |
 | `ui_get_cursor_pos` | `get-cursor-pos` | Read-only |
-| `ui_type` | `type` | Destructive |
+| `ui_type` | `type` | Destructive; optional `text`, `clear`, `scopeHwnd`, `verify`, and `paste` parameters |
 | `ui_get_text` | `get-text` | Read-only; optional `scopeHwnd` narrows the selector search |
 | `ui_set_grid_cell` | `set-grid-cell` | Destructive |
 | `ui_wait_for_window_change` | `wait-for-window-change` | Read-only; `timeoutMs` capped at 120000 |
@@ -199,6 +199,8 @@ MCP client can grant/prompt approval per tool rather than per call:
 | `ui_find_all` | `find-all` | Read-only |
 
 Ambiguous selectors in `ui_click`, `ui_right_click`, `ui_double_click`, `ui_drag`, the selector form of `ui_move_mouse`, `ui_type`, `ui_get_text`, and `ui_send_keys` fail with `ambiguous-match` (count plus up to 10 candidates) and do nothing. Narrow with `scopeHwnd` or pre-check with `ui_find_all`.
+
+For every UI tool, empty values and values beginning with `--` are passed as a single `--flag=value` argument, preserving them across native process argument parsing.
 
 ### UI gotchas
 

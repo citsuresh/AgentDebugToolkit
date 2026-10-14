@@ -52,7 +52,11 @@ if (args.Length == 0)
 }
 
 var verb = args[0];
-var opts = ParseOptions(args.Skip(1).ToArray());
+if (!TryParseOptions(args.Skip(1).ToArray(), out var opts, out var parseError))
+{
+    JsonOutput.WriteError("invalid-argument", parseError!);
+    return 1;
+}
 
 try
 {
@@ -127,22 +131,58 @@ catch (Exception ex)
     return 1;
 }
 
-static Dictionary<string, string> ParseOptions(string[] args)
+static bool TryParseOptions(string[] args, out Dictionary<string, string> dict, out string? error)
 {
-    var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    error = null;
+
     for (var i = 0; i < args.Length; i++)
     {
-        if (!args[i].StartsWith("--"))
+        var argument = args[i];
+        if (!argument.StartsWith("--", StringComparison.Ordinal))
         {
             continue;
         }
 
-        var key = args[i][2..];
-        var value = (i + 1 < args.Length && !args[i + 1].StartsWith("--")) ? args[++i] : "true";
+        var equalsIndex = argument.IndexOf('=');
+        string key;
+        string value;
+        if (equalsIndex >= 0)
+        {
+            key = argument[2..equalsIndex];
+            value = argument[(equalsIndex + 1)..];
+        }
+        else
+        {
+            key = argument[2..];
+            if (i + 1 < args.Length && !args[i + 1].StartsWith("--", StringComparison.Ordinal))
+            {
+                value = args[++i];
+            }
+            else if (IsBooleanFlag(key))
+            {
+                value = "true";
+            }
+            else
+            {
+                var clearHint = key.Equals("text", StringComparison.OrdinalIgnoreCase)
+                    ? " or, for type, --clear"
+                    : string.Empty;
+                error = $"--{key} requires a value. Some shells (Windows PowerShell 5.1) drop empty-string arguments; use --{key}={clearHint}.";
+                return false;
+            }
+        }
+
         dict[key] = value;
     }
-    return dict;
+
+    return true;
 }
+
+static bool IsBooleanFlag(string name) => name.Equals("screenshot", StringComparison.OrdinalIgnoreCase)
+    || name.Equals("paste", StringComparison.OrdinalIgnoreCase)
+    || name.Equals("verify", StringComparison.OrdinalIgnoreCase)
+    || name.Equals("clear", StringComparison.OrdinalIgnoreCase);
 
 } // end Run
 
@@ -679,7 +719,13 @@ internal static class Verbs
 
         NativeMethods.Drag(sourceX, sourceY, targetX, targetY, steps, durationMs);
 
-        JsonOutput.WriteSuccess(new { method = "synthetic-drag", elementFound = info, target = new { x = targetX, y = targetY } });
+        JsonOutput.WriteSuccess(new
+        {
+            method = "synthetic-drag",
+            elementFound = info,
+            source = new { x = sourceX, y = sourceY },
+            target = new { x = targetX, y = targetY }
+        });
         return 0;
     }
 
@@ -758,13 +804,22 @@ internal static class Verbs
 
     public static int Type(Dictionary<string, string> opts)
     {
-        if (!opts.TryGetValue("text", out var text))
+        var hasText = opts.TryGetValue("text", out var text);
+        var hasClearOption = opts.TryGetValue("clear", out var clearText);
+        var useClear = hasClearOption && clearText != "false";
+        var usePaste = opts.TryGetValue("paste", out var pasteText) && pasteText != "false";
+
+        if (useClear && (hasText || usePaste))
         {
-            JsonOutput.WriteError("invalid-argument", "--text is required.");
+            JsonOutput.WriteError("invalid-argument", "--clear is mutually exclusive with --text and --paste.");
             return 1;
         }
 
-        var usePaste = opts.TryGetValue("paste", out var pasteText) && pasteText != "false";
+        if (!hasText && !useClear)
+        {
+            JsonOutput.WriteError("invalid-argument", "One of --text or --clear is required.");
+            return 1;
+        }
 
         var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
         if (errorCode is not null)
@@ -800,7 +855,7 @@ internal static class Verbs
         // character-by-character) or to ValuePattern-backed elements (SetValue bypasses SendKeys
         // entirely, so the underlying bug does not apply there either -- this is why the check now
         // happens after element resolution instead of unconditionally up front).
-        if (!usePaste && !ElementSupportsValuePattern(element) && (text.Contains('\n') || text.Contains('\r')))
+        if (!useClear && !usePaste && !ElementSupportsValuePattern(element) && (text!.Contains('\n') || text.Contains('\r')))
         {
             JsonOutput.WriteError(
                 "invalid-argument",
@@ -813,14 +868,18 @@ internal static class Verbs
         string method;
         bool? clipboardRestored = null;
 
+        if (useClear)
+        {
+            method = UiaHelper.Clear(element);
+        }
         // --paste is a no-op when ValuePattern is available: SetValue is already instant and
         // non-interruptible, so there's nothing for clipboard paste to improve on. Report the
         // actual method used ("pattern") rather than silently ignoring the flag.
-        if (usePaste && !ElementSupportsValuePattern(element))
+        else if (usePaste && !ElementSupportsValuePattern(element))
         {
             try
             {
-                (method, var restored) = UiaHelper.TypeViaPaste(element, text);
+                (method, var restored) = UiaHelper.TypeViaPaste(element, text!);
                 clipboardRestored = restored;
             }
             catch (ClipboardUnavailableException ex)
@@ -831,7 +890,7 @@ internal static class Verbs
         }
         else
         {
-            method = UiaHelper.Type(element, text);
+            method = UiaHelper.Type(element, text!);
         }
 
         // Optional read-back verification: --verify (matching --screenshot's boolean-flag
@@ -856,20 +915,21 @@ internal static class Verbs
         // on paste — a real editor behavior, not data loss. Comparing raw would report a false
         // verify-mismatch for any multi-line paste into such a control.
         if (opts.TryGetValue("verify", out var verifyText) && verifyText != "false"
-            && (method == "pattern" || method == "clipboard-paste"))
+            && (method == "pattern" || method == "clipboard-paste" || method == "pattern-clear"))
         {
+            var expected = useClear ? string.Empty : text!;
             var actual = method == "clipboard-paste"
                 ? UiaHelper.GetTextForPasteVerification(element)
                 : UiaHelper.GetText(element);
             var matches = method == "clipboard-paste"
-                ? NormalizeLineEndings(actual) == NormalizeLineEndings(text)
-                : actual == text;
+                ? NormalizeLineEndings(actual) == NormalizeLineEndings(expected)
+                : actual == expected;
             if (!matches)
             {
                 JsonOutput.WriteError(
                     "verify-mismatch",
-                    "The element's text after typing did not match the input.",
-                    new { expected = text, actual });
+                    "The element's text after the operation did not match the requested value.",
+                    new { expected, actual });
                 return 1;
             }
         
@@ -881,12 +941,12 @@ internal static class Verbs
             // investigation. Not applicable to "pattern" (SetValue is synchronous, no such race).
             if (method == "clipboard-paste")
             {
-                var instability = VerifyPasteStability(element, text, actual);
+                var instability = VerifyPasteStability(element, expected, actual);
                 if (instability is not null)
                 {
                     JsonOutput.WriteError(
                         instability.Value.error, instability.Value.message,
-                        new { expected = text, actual = instability.Value.actual });
+                        new { expected, actual = instability.Value.actual });
                     return 1;
                 }
             }

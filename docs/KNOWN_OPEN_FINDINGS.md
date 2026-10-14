@@ -3,6 +3,22 @@
 User-curated list of open, unresolved findings intentionally deferred rather than fixed
 immediately. Entries are only added, edited, or removed at the user's explicit request.
 
+## Bare value flags silently became `true` - RESOLVED
+
+- **First seen:** 2026-10-14
+- **Last seen:** 2026-10-14
+- **Occurrences:** 1
+- **Resolved:** 2026-10-14
+
+**Description:** `ParseOptions` converted any flag without a following value token to `"true"`.
+Windows PowerShell 5.1 evidence from the disposable Notepad test: both `type --text ''` and
+`type --text '--foo'` typed `"true"`.
+
+**Fix applied:** The UI CLI now permits bare values only for its allow-listed boolean-style flags,
+rejects other missing values with `invalid-argument`, and supports `--name=value` for empty and
+`--`-prefixed values. MCP UI tools serialize empty and `--`-prefixed values in that form. `type`
+adds `--clear` for explicit clearing.
+
 ## Action selectors silently use the first matching element - RESOLVED
 
 - **First seen:** 2026-10-14

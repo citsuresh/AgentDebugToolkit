@@ -6,6 +6,23 @@ Exit code 0 = success, non-zero = failure (with `"error"`/`"message"` fields pop
 This document covers Phases 1-4 verbs (see `IMPLEMENTATION_PLAN.md`). Extend this file as new
 verbs are added in later phases — do not silently diverge from what's documented here.
 
+## Option parsing
+
+Option flags normally require a value token. Boolean-style options that may be bare (bare means
+`true`) are limited to `--screenshot`, `--paste`, `--verify`, and `--clear`; explicit `false`
+continues to disable those options. A non-boolean flag with no following value, or followed by
+another `--` flag, returns `invalid-argument` before window or element resolution. The error names
+the missing flag and advises `--<flag>=` for an explicit value. For `--text`, the message is
+`--text requires a value. Some shells (Windows PowerShell 5.1) drop empty-string arguments; use
+--text= or, for type, --clear.`
+
+Use `--name=value` to pass an empty value (`--text=`) or a value beginning with `--`
+(`--text=--foo`). Only option tokens beginning with `--` are split at the first `=`; `=` in a
+separate value token is preserved (for example, `--text foo=bar`).
+
+**Behavior change (2026-10-14):** non-boolean bare flags no longer default silently to `true`.
+Supply a value, or use `--flag=value` when it is empty or begins with `--`.
+
 ## DPI awareness (all coordinates)
 
 **Fixed 2026-09-17:** `agentdebug-ui.exe` now declares per-monitor-v2 DPI awareness
@@ -249,7 +266,10 @@ coordinates.
   is not deprecated. Unlike `click`, there is no UIA pattern-based path attempted first —
   `DragPattern`/`DropTargetPattern` are rarely implemented by real controls, so this verb goes
   straight to the synthetic mechanism `click` only falls back to.
-- Success: `{ "success": true, "method": "synthetic-drag", "elementFound": ElementInfo, "target": { "x": n, "y": n } }`
+- Success: `{ "success": true, "method": "synthetic-drag", "elementFound": ElementInfo, "source": { "x": n, "y": n }, "target": { "x": n, "y": n } }`
+- `source` contains the source center coordinates used by the drag; `target` contains the
+  destination coordinates used by the drag.
+- Success means the input was dispatched, not that the application accepted the drop.
 - `elementFound` reflects the source element's state as resolved **before** the drag is invoked,
   same pre-action-state rule as `click`.
 - Failure: `invalid-argument` (missing/conflicting target args, non-integer `--targetX`/
@@ -277,11 +297,18 @@ Returns the current cursor position via `GetCursorPos`. Takes no arguments — n
 resolution involved.
 - Success: `{ "success": true, "x": n, "y": n }`.
 
-### `type --hwnd <h> --strategy <s> --value <v> --text <input> [--scopeHwnd <h2>] [--verify] [--paste]`
+### `type --hwnd <h> --strategy <s> --value <v> (--text <input> | --clear) [--scopeHwnd <h2>] [--verify] [--paste]`
 - Fails with `ambiguous-match` instead of typing into the first of several matches. Pre-check
   the count with `find-all`; narrow the search with `--scopeHwnd`.
 Resolves element, attempts `ValuePattern.SetValue`, falls back to click-to-focus + synthetic
 keyboard input.
+- Exactly one of `--text` or `--clear` is required. `--clear` is mutually exclusive with
+  `--text` and `--paste`. Without either option, the command fails with `invalid-argument`.
+  `--text=` supplies an empty string; use `--text=--foo` for text beginning with `--`.
+- `--clear` empties a writable `ValuePattern` control (`method: "pattern-clear"`). Otherwise it
+  uses the same click-to-focus approach as the synthetic typing fallback, then sends select-all
+  and delete (`method: "synthetic-clear"`). Shared element resolution, ambiguity detection, and
+  foreground activation are the same as for ordinary `type`.
 - **`ValuePattern.SetValue` (`method: "pattern"`) always REPLACES the control's entire existing
   value** — it is not an insert/append at the caret. This replace-whole-value behavior is
   inherent to `ValuePattern.SetValue`. The caret position afterward is control-dependent: live
@@ -289,9 +316,12 @@ keyboard input.
   caret left at position 0, not at the end of the new text, so a following `send-keys` call
   types at the start of the document unless the caller first moves the caret (e.g. `send-keys
   --keys "^{END}"`).
-- Success: `{ "success": true, "method": "pattern" | "synthetic-keyboard" | "clipboard-paste" }`
+- Success: `{ "success": true, "method": "pattern" | "synthetic-keyboard" | "clipboard-paste" | "pattern-clear" | "synthetic-clear" }`
   (`clipboardRestored: true|false|null` is also included when `method == "clipboard-paste"` — see
   the tri-state explanation under `--paste` below).
+- **`--verify` with `--clear`:** verification is performed only for `method: "pattern-clear"`,
+  and succeeds only when read-back is the empty string. It is skipped for `synthetic-clear`, just
+  as it is skipped for `synthetic-keyboard`.
 - **`--verify` (optional, Phase 9, added 2026-09-15):** boolean-style flag matching `inspect`'s
   `--screenshot` convention — absent or `--verify false` disables it, any other value (including
   a bare `--verify`) enables it. After typing, re-reads the element's text (same mechanism as
