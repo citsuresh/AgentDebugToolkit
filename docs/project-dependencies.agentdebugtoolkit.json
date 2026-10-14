@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0",
-  "generatedAt": "2026-10-14T11:28:56.2671835Z",
+  "generatedAt": "2026-10-14T15:37:28.1535384Z",
   "solutionPath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\AgentDebugToolkit.slnx",
-  "commitSha": "61a65087efe2c89ce6f997f1136af34b0a600e56",
+  "commitSha": "4f1a3c4f96b1287f7ec6c5208b721222c34f22a3",
   "projects": [
     {
       "name": "AgentDebugToolkit.ConsoleAutomation.Cli",

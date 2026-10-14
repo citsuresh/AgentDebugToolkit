@@ -18,6 +18,10 @@ Program.Verbs.SetGridCell -> UiaHelper.ResolveGridCell -> UiaHelper.ResolveGridE
 
 ConsoleVerbs.Launch -> StartBroker -> BrokerProgram.Run -> ConPtySession -> named-pipe broker session
 
+CommandLine.TryParseOptions -> ConsoleVerbs.Launch -> ConsoleVerbs.StartBroker (ArgumentList flag/value pairs) -> BrokerProgram.Run -> BrokerProgram.ParseOptions
+
+UiAutomationTools/VsDebuggerTools/ConsoleTools.BuildArgs -> ArgumentFormatting.AppendOption -> CliRunner.RunAsync
+
 ConsoleVerbs.SendText/WaitForText/ReadScreen/Stop -> BrokerClient.SendRequest -> BrokerProgram.ServeConnectionAsync -> TerminalBuffer/ConPtySession
 
 Program.Verbs.Activate -> ResolveWindowHwnd -> NativeMethods.SetForegroundWindow -> JsonOutput.WriteSuccess/WriteError(stale-context)
