@@ -40,6 +40,15 @@ public sealed class UiAutomationTools
 
     private static string? Bool(bool? value) => value is null ? null : (value.Value ? "true" : "false");
 
+    // Emits a boolean flag only when true, so false/null never adds a scope flag.
+    private static string? TrueOnly(bool? value) => value == true ? "true" : null;
+
+    private const string WindowDiscoveryNotes =
+        " Window titles can contain sensitive data: filter first (titleContains/className/processName) and return only the rows you need. " +
+        "Scope options pid, all and processName are mutually exclusive (the CLI rejects combinations). " +
+        "In all/processName modes, cloaked, untitled (unless includeUntitled) and zero-area windows are excluded by default; results are in z-order (topmost first) and capped by limit (1-200, default 50). " +
+        "Discovery never changes the session context: use the returned hwnd with hwnd-based tools, or ui_set_context for pid-based tools.";
+
     [McpServerTool(Name = "ui_attach", ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false),
      Description("Resolves a running process by name (flexible, .exe suffix optional) and persists it as the session's target. Returns every visible top-level window owned by it. Does not itself read or change the target's UI state, but changes server-side session context.")]
     public Task<ToolInvocationResult> Attach(
@@ -48,11 +57,20 @@ public sealed class UiAutomationTools
         => RunAsync(BuildArgs("attach", ("--process", process)), null, cancellationToken);
 
     [McpServerTool(Name = "ui_list_windows", ReadOnly = true, Destructive = false, OpenWorld = false),
-     Description("Returns every visible top-level window belonging to the target process (session context pid, or an explicit pid). Read-only.")]
+     Description("Lists visible top-level windows of the target process (session context pid or explicit pid), or across processes with all/processName. Read-only. Returns windows, count and truncated." + WindowDiscoveryNotes)]
     public Task<ToolInvocationResult> ListWindows(
-        [Description("Optional pid; uses the session context pid if omitted.")] int? pid = null,
+        [Description("Optional pid; uses the session context pid if no scope (pid/all/processName) is given.")] int? pid = null,
+        [Description("List windows of every process on the current desktop. Mutually exclusive with pid and processName.")] bool? all = null,
+        [Description("List windows of all processes with this name (case-insensitive, .exe optional). Mutually exclusive with pid and all.")] string? processName = null,
+        [Description("Case-insensitive substring filter on the window title.")] string? titleContains = null,
+        [Description("Case-insensitive substring filter on the window class name.")] string? className = null,
+        [Description("Maximum windows to return, 1-200 (default 50).")] int? limit = null,
+        [Description("In all/processName modes, also include windows with an empty title.")] bool? includeUntitled = null,
         CancellationToken cancellationToken = default)
-        => RunAsync(BuildArgs("list-windows", ("--pid", pid?.ToString())), null, cancellationToken);
+        => RunAsync(BuildArgs("list-windows",
+            ("--pid", pid?.ToString()), ("--all", TrueOnly(all)), ("--processName", processName),
+            ("--titleContains", titleContains), ("--className", className), ("--limit", limit?.ToString()),
+            ("--includeUntitled", TrueOnly(includeUntitled))), null, cancellationToken);
 
     [McpServerTool(Name = "ui_inspect", ReadOnly = true, Destructive = false, OpenWorld = false),
      Description("Dumps the UIA subtree rooted at the given window/element handle, optionally saving a screenshot. Read-only (does not interact with the UI). Prefer filtered inspection over a full dump; unfiltered output has no matchCount; if the window's own name matches nameContains the whole tree is returned.")]
@@ -185,16 +203,27 @@ public sealed class UiAutomationTools
             ("--applyStrategy", applyStrategy), ("--applyValue", applyValue)), null, cancellationToken);
 
     [McpServerTool(Name = "ui_wait_for_window_change", ReadOnly = true, Destructive = false, OpenWorld = false),
-     Description("Polls the target process's window set until it is stable for settleMs milliseconds, or timeoutMs elapses. Read-only (observational), but blocks for up to timeoutMs. Optional pid; uses the session context pid if omitted, matching ui_list_windows.")]
+     Description("Polls a window set (target pid, session context pid, or all/processName across processes, narrowed by filters) until it is stable for settleMs (until=settle, default; reports changed) or until a matching window is present and stable (until=match; returns matchedWindows; a match already present at start satisfies it). Read-only (observational), but blocks for up to timeoutMs. Use excludeHwnds (from an earlier ui_list_windows) or a distinctive title to avoid the baseline race." + WindowDiscoveryNotes)]
     public Task<ToolInvocationResult> WaitForWindowChange(
         [Description("Maximum time to wait, in milliseconds. Capped at 120000 for this tool.")] int timeoutMs,
-        [Description("Optional pid of the target process; uses the session context pid if omitted.")] int? pid = null,
+        [Description("Optional pid of the target process; uses the session context pid if no scope (pid/all/processName) is given.")] int? pid = null,
         [Description("Consecutive milliseconds the window set must be unchanged to be considered settled (default 300).")] int? settleMs = null,
+        [Description("Watch windows of every process on the current desktop. Mutually exclusive with pid and processName.")] bool? all = null,
+        [Description("Watch windows of all processes with this name (case-insensitive, .exe optional). Mutually exclusive with pid and all.")] string? processName = null,
+        [Description("Case-insensitive substring filter on the window title.")] string? titleContains = null,
+        [Description("Case-insensitive substring filter on the window class name.")] string? className = null,
+        [Description("In all/processName modes, also include windows with an empty title.")] bool? includeUntitled = null,
+        [Description("'settle' (default) or 'match'. match requires titleContains, className or processName.")] string? until = null,
+        [Description("Comma-separated hwnds to ignore, each 0x-prefixed hex or decimal.")] string? excludeHwnds = null,
+        [Description("Maximum entries per returned list in all/processName modes, 1-200 (default 50).")] int? limit = null,
         CancellationToken cancellationToken = default)
     {
         const int MaxWaitMs = 120_000;
         var cappedTimeoutMs = Math.Clamp(timeoutMs, 0, MaxWaitMs);
-        var args = BuildArgs("wait-for-window-change", ("--pid", pid?.ToString()), ("--timeoutMs", cappedTimeoutMs.ToString()), ("--settleMs", settleMs?.ToString()));
+        var args = BuildArgs("wait-for-window-change", ("--pid", pid?.ToString()), ("--timeoutMs", cappedTimeoutMs.ToString()), ("--settleMs", settleMs?.ToString()),
+            ("--all", TrueOnly(all)), ("--processName", processName), ("--titleContains", titleContains),
+            ("--className", className), ("--includeUntitled", TrueOnly(includeUntitled)), ("--until", until),
+            ("--excludeHwnds", excludeHwnds), ("--limit", limit?.ToString()));
         return RunAsync(args, cappedTimeoutMs + 10_000, cancellationToken);
     }
 

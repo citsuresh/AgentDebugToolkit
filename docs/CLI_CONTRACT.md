@@ -9,8 +9,9 @@ verbs are added in later phases — do not silently diverge from what's document
 ## Option parsing
 
 Option flags normally require a value token. Boolean-style options that may be bare (bare means
-`true`) are limited to `--screenshot`, `--paste`, `--verify`, and `--clear`; explicit `false`
-continues to disable those options. A non-boolean flag with no following value, or followed by
+`true`) are limited to `--screenshot`, `--paste`, `--verify`, `--clear`, `--all`, and
+`--includeUntitled`; explicit `false` continues to disable those options (any other value enables
+them, as before). A non-boolean flag with no following value, or followed by
 another `--` flag, returns `invalid-argument` before window or element resolution. The error names
 the missing flag and advises `--<flag>=` for an explicit value. For `--text`, the message is
 `--text requires a value. Some shells (Windows PowerShell 5.1) drop empty-string arguments; use
@@ -71,10 +72,16 @@ measurements) should stop doing so.
 ### WindowInfo
 ```json
 { "hwnd": "0x00123456", "title": "Field Deployment Manager", "className": "WindowsForms10...",
-  "pid": 12345, "ownerHwnd": "0x00000000" | null, "isModal": false, "isForeground": true,
-  "boundingRect": { "x": 21, "y": 69, "width": 1253, "height": 900 } }
+  "pid": 12345, "processName": "Fdm", "ownerHwnd": "0x00000000" | null, "isModal": false,
+  "isForeground": true, "boundingRect": { "x": 21, "y": 69, "width": 1253, "height": 900 } }
 ```
 (`ownerHwnd`/`isModal` fields added in Phase 4; omit or default false/null before then.)
+
+`processName` (added 2026-10-16) is the owning process's `Process.ProcessName`; successful lookups
+are cached per pid per invocation and failed lookups are retried. It is omitted when the process
+cannot be read (exited, access denied). It is
+additive and therefore also appears in `attach`, `list-windows`, and `wait-for-window-change`
+output. Packaged (UWP/MSIX) apps may report `ApplicationFrameHost` rather than the app itself.
 
 `list-windows` and `attach` enumerate visible top-level windows through Win32 `EnumWindows`, not
 only UIA desktop-tree children. This includes owned native dialogs such as WPF
@@ -157,10 +164,34 @@ process, including owned native dialogs.
   `session-context-write-failed` error instead of the generic `unhandled-exception`. See
   docs/KNOWN_OPEN_FINDINGS.md for the original finding.
 
-### `list-windows [--pid <n>]`
-Uses context pid if `--pid` omitted. Returns every visible top-level window belonging to that
-process, including owned native dialogs such as `#32770` MessageBox windows.
-- Success: `{ "success": true, "windows": [WindowInfo, ...] }`
+### `list-windows [--pid <n> | --all | --processName <name>] [--titleContains <s>] [--className <s>] [--limit <n>] [--includeUntitled]`
+Scope (mutually exclusive; any combination returns `invalid-argument`):
+- `--pid <n>`, or none of the three: the given pid, else the session context pid (unchanged
+  fallback and `stale-context` errors). Every visible top-level window of that process, including
+  owned native dialogs such as `#32770` MessageBox windows. No default exclusions.
+- `--all`: every visible top-level window on the current desktop, any process.
+- `--processName <name>`: windows of all processes whose `ProcessName` matches case-insensitively
+  (a trailing `.exe` is stripped, as in `attach`).
+
+Filters (narrow any scope; case-insensitive substring; an empty value returns `invalid-argument`):
+`--titleContains`, `--className`.
+
+In `--all`/`--processName` modes only, these are excluded by default: DWM-cloaked windows
+(`DWMWA_CLOAKED`; an API failure counts as not cloaked), windows with an empty title, and windows
+with zero-area bounds. `--includeUntitled` re-includes empty-title windows only.
+
+`--limit` (integer 1..200, default 50, else `invalid-argument`) caps the returned list after
+filtering, in every mode. Order is Win32 `EnumWindows` order: top of the z-order first.
+- Success: `{ "success": true, "windows": [WindowInfo, ...], "count": <returned>, "truncated": <more matches than limit> }`.
+  Zero matches is success with `count` 0.
+- Discovery is read-only and never changes the session context. Pass the returned `hwnd` to
+  hwnd-based verbs, or `set-context` the `pid` for pid-based verbs.
+- Window titles can contain sensitive data: filter first and keep only the rows you need. Example:
+  `list-windows --all --titleContains "Sample Report"` might return a window titled
+  `"Sample Report - Example App"`.
+- Limits: windows in other logon sessions, on the secure desktop, or in session 0 are never
+  visible to the CLI. Windows of elevated processes may be listed but probably cannot be driven
+  from a non-elevated CLI (UIPI; not verified).
 
 ### `inspect --hwnd <h> [--maxDepth <n>] [--screenshot true|false] [--nameContains <substring>] [--controlType <short name>]`
 Dumps the UIA subtree rooted at the given window/element handle, and optionally saves a
@@ -512,12 +543,32 @@ had no dispatch case in the CLI (an unimplemented gap); they are now implemented
 All four accept `--pid` explicitly or fall back to the persisted session context (same convention
 as `list-windows`/`click`/`type`), even though the signatures below show `--pid` without brackets.
 
-### `wait-for-window-change --pid <n> --timeoutMs <n> [--settleMs 300]`
-Snapshots `list-windows` immediately, polls until the window set is stable for `settleMs`
-consecutive milliseconds, or `timeoutMs` elapses.
+### `wait-for-window-change [--pid <n> | --all | --processName <name>] [--titleContains <s>] [--className <s>] [--includeUntitled] --timeoutMs <n> [--settleMs 300] [--until settle|match] [--excludeHwnds <list>] [--limit <n>]`
+Scope, mutual exclusivity, filters, default exclusions, and context fallback are the same as
+`list-windows`. Filters, exclusions, and `--excludeHwnds` apply to every snapshot, so every
+returned list contains only windows that pass them. Polling compares hwnd sets only.
+- `--until settle` (default, existing behavior): snapshots immediately, then polls until the set
+  is unchanged for `settleMs` consecutive milliseconds, or `timeoutMs` elapses.
+- `--until match`: succeeds once at least one window passing all filters and exclusions is
+  present and the set has been unchanged for `settleMs`. A matching window already present at
+  start satisfies it (no baseline needed). Requires at least one of `--titleContains`,
+  `--className`, `--processName`, else `invalid-argument`.
+- `--excludeHwnds`: comma-separated hwnds, each `0x`-prefixed hex or plain decimal. Any empty,
+  non-numeric, zero, negative, or overflowing entry returns `invalid-argument`.
+- `--limit` (1..200, default 50) caps each returned list in `--all`/`--processName` modes only;
+  polling and comparison always use the full set.
+- Invalid `--until`, `--limit`, `--timeoutMs`, or `--settleMs` returns `invalid-argument`.
 - Success: `{ "success": true, "windowsBefore": [WindowInfo,...], "windowsAfter": [WindowInfo,...],
-  "newWindows": [WindowInfo,...], "closedWindows": [WindowInfo,...], "elapsedMs": 480 }`
-- Failure: `timeout` (includes the same fields captured at timeout, best-effort).
+  "newWindows": [WindowInfo,...], "closedWindows": [WindowInfo,...], "elapsedMs": 480,
+  "changed": true, "truncated": false }`. `changed` is false when the before and after hwnd sets
+  are equal (an explicit no-op). `truncated` is true if any list was cut by `--limit`. With
+  `--until match`, `matchedWindows: [WindowInfo,...]` is added.
+- Failure: `timeout` (message: `Window set did not satisfy the requested condition within <n>ms.`;
+  includes the same fields captured at timeout, best-effort; `matchedWindows` is empty).
+- Baseline race: a window that opens before the first snapshot is part of `windowsBefore`, so it
+  is not reported in `newWindows`. To avoid this, take hwnds from an earlier `list-windows` and
+  pass them to `--excludeHwnds`, or wait with `--until match` on a distinctive title (for example
+  `--titleContains "Sample Report"`).
 
 ### `wait-for-element --strategy <s> --value <v> [--hwnd <h> | --pid <n>] [--state appeared|disappeared|enabled] [--timeoutMs <n>] [--pollMs <n>]`
 Resolves the target window **once, up front**, the same way as `click`/`type` (explicit `--hwnd`,

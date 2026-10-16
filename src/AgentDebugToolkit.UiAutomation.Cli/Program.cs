@@ -182,7 +182,9 @@ static bool TryParseOptions(string[] args, out Dictionary<string, string> dict, 
 static bool IsBooleanFlag(string name) => name.Equals("screenshot", StringComparison.OrdinalIgnoreCase)
     || name.Equals("paste", StringComparison.OrdinalIgnoreCase)
     || name.Equals("verify", StringComparison.OrdinalIgnoreCase)
-    || name.Equals("clear", StringComparison.OrdinalIgnoreCase);
+    || name.Equals("clear", StringComparison.OrdinalIgnoreCase)
+    || name.Equals("all", StringComparison.OrdinalIgnoreCase)
+    || name.Equals("includeUntitled", StringComparison.OrdinalIgnoreCase);
 
 } // end Run
 
@@ -241,29 +243,38 @@ internal static class Verbs
 
     public static int ListWindows(Dictionary<string, string> opts)
     {
-        var (pid, errorCode, error) = ResolveValidatedPid(opts);
-        if (pid is null)
+        var (query, errorCode, error) = ResolveWindowQuery(opts);
+        if (query is null)
         {
             JsonOutput.WriteError(errorCode!, error!);
             return 1;
         }
 
-        var windows = UiaHelper.ListTopLevelWindows(pid.Value);
-        JsonOutput.WriteSuccess(new { windows });
+        if (!TryParseWindowLimit(opts, out var limit, out error))
+        {
+            JsonOutput.WriteError("invalid-argument", error!);
+            return 1;
+        }
+
+        var windows = UiaHelper.QueryTopLevelWindows(query, new Dictionary<int, string?>());
+        var returnedWindows = windows.Take(limit).ToList();
+        JsonOutput.WriteSuccess(new
+        {
+            windows = returnedWindows,
+            count = returnedWindows.Count,
+            truncated = windows.Count > limit
+        });
         return 0;
     }
 
     /// <summary>
-    /// Snapshots the target process's visible top-level window set (including owned dialogs), polls
-    /// until it is stable (unchanged) for <paramref name="settleMs"/> (default 300) consecutive
-    /// milliseconds, or <c>--timeoutMs</c> elapses. "Stable" is determined by comparing hwnd sets
-    /// between polls; a window closing and a different one opening within the same tick still counts
-    /// as a change worth re-settling on.
+    /// Polls the filtered visible top-level window set until it settles or, with --until match,
+    /// until at least one matching window remains stable for settleMs.
     /// </summary>
     public static int WaitForWindowChange(Dictionary<string, string> opts)
     {
-        var (pid, errorCode, error) = ResolveValidatedPid(opts);
-        if (pid is null)
+        var (query, errorCode, error) = ResolveWindowQuery(opts);
+        if (query is null)
         {
             JsonOutput.WriteError(errorCode!, error!);
             return 1;
@@ -292,57 +303,161 @@ internal static class Verbs
         }
 
         var settleMs = opts.TryGetValue("settleMs", out var settleRaw) ? int.Parse(settleRaw) : 300;
+        var until = opts.TryGetValue("until", out var untilValue) ? untilValue : "settle";
+        if (!until.Equals("settle", StringComparison.OrdinalIgnoreCase)
+            && !until.Equals("match", StringComparison.OrdinalIgnoreCase))
+        {
+            JsonOutput.WriteError("invalid-argument", "--until must be 'settle' or 'match'.");
+            return 1;
+        }
 
-        var windowsBefore = UiaHelper.ListTopLevelWindows(pid.Value);
+        var untilMatch = until.Equals("match", StringComparison.OrdinalIgnoreCase);
+        if (untilMatch && query.TitleContains is null && query.ClassName is null && query.ProcessName is null)
+        {
+            JsonOutput.WriteError("invalid-argument", "--until match requires --titleContains, --className, or --processName.");
+            return 1;
+        }
+
+        if (!TryParseWindowLimit(opts, out var limit, out error))
+        {
+            JsonOutput.WriteError("invalid-argument", error!);
+            return 1;
+        }
+
+        if (!TryParseExcludedHwnds(opts, out var excludedHwnds, out error))
+        {
+            JsonOutput.WriteError("invalid-argument", error!);
+            return 1;
+        }
+
+        var processNameCache = new Dictionary<int, string?>();
+        List<WindowInfo> Snapshot() => UiaHelper.QueryTopLevelWindows(query, processNameCache)
+            .Where(window => !excludedHwnds.Contains(ParseWindowHandle(window.Hwnd)))
+            .ToList();
+
+        var windowsBefore = Snapshot();
         var stopwatch = Stopwatch.StartNew();
         var lastSnapshot = windowsBefore;
         var lastChangeElapsedMs = stopwatch.ElapsedMilliseconds;
+        long? matchingSinceElapsedMs = lastSnapshot.Count > 0 ? 0 : null;
 
         while (true)
         {
             Thread.Sleep(50);
-            var current = UiaHelper.ListTopLevelWindows(pid.Value);
-            var changed = !current.Select(w => w.Hwnd).OrderBy(h => h)
-                .SequenceEqual(lastSnapshot.Select(w => w.Hwnd).OrderBy(h => h));
+            var current = Snapshot();
+            var changedSinceLast = !SameWindowSet(current, lastSnapshot);
+            var elapsedMs = stopwatch.ElapsedMilliseconds;
 
-            if (changed)
+            if (changedSinceLast)
             {
-                lastSnapshot = current;
-                lastChangeElapsedMs = stopwatch.ElapsedMilliseconds;
+                lastChangeElapsedMs = elapsedMs;
             }
-            else if (stopwatch.ElapsedMilliseconds - lastChangeElapsedMs >= settleMs)
+
+            if (untilMatch)
             {
-                var beforeHwnds = windowsBefore.Select(w => w.Hwnd).ToHashSet();
-                var afterHwnds = lastSnapshot.Select(w => w.Hwnd).ToHashSet();
-                JsonOutput.WriteSuccess(new
+                if (current.Count == 0)
                 {
-                    windowsBefore,
-                    windowsAfter = lastSnapshot,
-                    newWindows = lastSnapshot.Where(w => !beforeHwnds.Contains(w.Hwnd)).ToList(),
-                    closedWindows = windowsBefore.Where(w => !afterHwnds.Contains(w.Hwnd)).ToList(),
-                    elapsedMs = stopwatch.ElapsedMilliseconds
-                });
+                    matchingSinceElapsedMs = null;
+                }
+                else if (changedSinceLast || matchingSinceElapsedMs is null)
+                {
+                    matchingSinceElapsedMs = elapsedMs;
+                }
+            }
+
+            lastSnapshot = current;
+            var isStable = untilMatch
+                ? matchingSinceElapsedMs is long matchedSince && elapsedMs - matchedSince >= settleMs
+                : elapsedMs - lastChangeElapsedMs >= settleMs;
+
+            if (isStable)
+            {
+                JsonOutput.WriteSuccess(CreateWindowChangePayload(
+                    windowsBefore, lastSnapshot, elapsedMs, query.IsCrossProcess, limit, untilMatch, timedOut: false));
                 return 0;
             }
 
-            if (stopwatch.ElapsedMilliseconds >= timeoutMs)
+            if (elapsedMs >= timeoutMs)
             {
-                var beforeHwnds = windowsBefore.Select(w => w.Hwnd).ToHashSet();
-                var afterHwnds = lastSnapshot.Select(w => w.Hwnd).ToHashSet();
                 JsonOutput.WriteError(
                     "timeout",
-                    $"Window set for pid {pid.Value} did not stabilize within {timeoutMs}ms.",
-                    new
-                    {
-                        windowsBefore,
-                        windowsAfter = lastSnapshot,
-                        newWindows = lastSnapshot.Where(w => !beforeHwnds.Contains(w.Hwnd)).ToList(),
-                        closedWindows = windowsBefore.Where(w => !afterHwnds.Contains(w.Hwnd)).ToList(),
-                        elapsedMs = stopwatch.ElapsedMilliseconds
-                    });
+                    $"Window set did not satisfy the requested condition within {timeoutMs}ms.",
+                    CreateWindowChangePayload(
+                        windowsBefore, lastSnapshot, elapsedMs, query.IsCrossProcess, limit, untilMatch, timedOut: true));
                 return 1;
             }
         }
+    }
+
+    private static object CreateWindowChangePayload(
+        List<WindowInfo> windowsBefore,
+        List<WindowInfo> windowsAfter,
+        long elapsedMs,
+        bool isCrossProcess,
+        int limit,
+        bool includeMatchedWindows,
+        bool timedOut)
+    {
+        var beforeHwnds = windowsBefore.Select(window => window.Hwnd).ToHashSet();
+        var afterHwnds = windowsAfter.Select(window => window.Hwnd).ToHashSet();
+        var newWindows = windowsAfter.Where(window => !beforeHwnds.Contains(window.Hwnd)).ToList();
+        var closedWindows = windowsBefore.Where(window => !afterHwnds.Contains(window.Hwnd)).ToList();
+        var truncated = false;
+        var returnedBefore = LimitWindows(windowsBefore, isCrossProcess, limit, ref truncated);
+        var returnedAfter = LimitWindows(windowsAfter, isCrossProcess, limit, ref truncated);
+        var returnedNew = LimitWindows(newWindows, isCrossProcess, limit, ref truncated);
+        var returnedClosed = LimitWindows(closedWindows, isCrossProcess, limit, ref truncated);
+        var changed = !beforeHwnds.SetEquals(afterHwnds);
+
+        if (includeMatchedWindows)
+        {
+            var matchedWindows = timedOut
+                ? new List<WindowInfo>()
+                : LimitWindows(windowsAfter, isCrossProcess, limit, ref truncated);
+            return new
+            {
+                windowsBefore = returnedBefore,
+                windowsAfter = returnedAfter,
+                newWindows = returnedNew,
+                closedWindows = returnedClosed,
+                matchedWindows,
+                elapsedMs,
+                changed,
+                truncated
+            };
+        }
+
+        return new
+        {
+            windowsBefore = returnedBefore,
+            windowsAfter = returnedAfter,
+            newWindows = returnedNew,
+            closedWindows = returnedClosed,
+            elapsedMs,
+            changed,
+            truncated
+        };
+    }
+
+    private static List<WindowInfo> LimitWindows(
+        List<WindowInfo> windows,
+        bool isCrossProcess,
+        int limit,
+        ref bool truncated)
+    {
+        if (isCrossProcess && windows.Count > limit)
+        {
+            truncated = true;
+            return windows.Take(limit).ToList();
+        }
+
+        return windows;
+    }
+
+    private static bool SameWindowSet(List<WindowInfo> first, List<WindowInfo> second)
+    {
+        return first.Select(window => window.Hwnd).ToHashSet()
+            .SetEquals(second.Select(window => window.Hwnd));
     }
 
     /// <summary>
@@ -2185,6 +2300,147 @@ internal static class Verbs
         return window is null
             ? (null, "element-not-found", $"No window found for hwnd '{hwnd}'.")
             : (window, null, null);
+    }
+
+    private static (UiaHelper.WindowQueryOptions? query, string? errorCode, string? error) ResolveWindowQuery(
+        Dictionary<string, string> opts)
+    {
+        var allProcesses = IsEnabledBooleanOption(opts, "all");
+        var hasPid = opts.ContainsKey("pid");
+        var hasProcessName = opts.TryGetValue("processName", out var processName);
+        var scopeCount = (hasPid ? 1 : 0) + (allProcesses ? 1 : 0) + (hasProcessName ? 1 : 0);
+        if (scopeCount > 1)
+        {
+            return (null, "invalid-argument", "--pid, --all, and --processName are mutually exclusive.");
+        }
+
+        if (opts.TryGetValue("titleContains", out var titleContains) && titleContains.Length == 0)
+        {
+            return (null, "invalid-argument", "--titleContains must not be empty.");
+        }
+
+        if (opts.TryGetValue("className", out var className) && className.Length == 0)
+        {
+            return (null, "invalid-argument", "--className must not be empty.");
+        }
+
+        if (hasProcessName)
+        {
+            processName = processName!.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
+                ? processName[..^".exe".Length]
+                : processName;
+            if (processName.Length == 0)
+            {
+                return (null, "invalid-argument", "--processName must not be empty.");
+            }
+        }
+
+        int? pid;
+        if (allProcesses || hasProcessName)
+        {
+            pid = null;
+        }
+        else
+        {
+            var (resolvedPid, errorCode, error) = ResolveValidatedPid(opts);
+            if (resolvedPid is null)
+            {
+                return (null, errorCode, error);
+            }
+
+            pid = resolvedPid.Value;
+        }
+
+        var includeUntitled = IsEnabledBooleanOption(opts, "includeUntitled");
+        return (new UiaHelper.WindowQueryOptions(
+            pid, allProcesses, hasProcessName ? processName : null, titleContains, className, includeUntitled), null, null);
+    }
+
+    private static bool IsEnabledBooleanOption(Dictionary<string, string> opts, string name)
+    {
+        return opts.TryGetValue(name, out var value) && value != "false";
+    }
+
+    private static bool TryParseWindowLimit(
+        Dictionary<string, string> opts,
+        out int limit,
+        out string? error)
+    {
+        limit = 50;
+        error = null;
+        if (!opts.TryGetValue("limit", out var value))
+        {
+            return true;
+        }
+
+        if (!int.TryParse(value, out limit) || limit < 1 || limit > 200)
+        {
+            error = "--limit must be an integer from 1 to 200.";
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool TryParseExcludedHwnds(
+        Dictionary<string, string> opts,
+        out HashSet<IntPtr> excludedHwnds,
+        out string? error)
+    {
+        excludedHwnds = new HashSet<IntPtr>();
+        error = null;
+        if (!opts.TryGetValue("excludeHwnds", out var value))
+        {
+            return true;
+        }
+
+        foreach (var entry in value.Split(','))
+        {
+            var isHex = entry.StartsWith("0x", StringComparison.OrdinalIgnoreCase);
+            var digits = isHex ? entry[2..] : entry;
+            var isValidNumber = digits.Length > 0 && (isHex
+                ? digits.All(Uri.IsHexDigit)
+                    && ulong.TryParse(digits, System.Globalization.NumberStyles.AllowHexSpecifier,
+                        System.Globalization.CultureInfo.InvariantCulture, out var hexValue)
+                    && AddHwnd(hexValue, excludedHwnds)
+                : digits.All(character => character is >= '0' and <= '9')
+                    && ulong.TryParse(digits, System.Globalization.NumberStyles.None,
+                        System.Globalization.CultureInfo.InvariantCulture, out var decimalValue)
+                    && AddHwnd(decimalValue, excludedHwnds));
+
+            if (!isValidNumber)
+            {
+                error = "--excludeHwnds must be a comma-separated list of non-zero decimal or 0x-prefixed hexadecimal HWNDs.";
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool AddHwnd(ulong value, HashSet<IntPtr> excludedHwnds)
+    {
+        if (value == 0
+            || (IntPtr.Size == sizeof(int) && value > uint.MaxValue)
+            || (IntPtr.Size == sizeof(long) && value > long.MaxValue))
+        {
+            return false;
+        }
+
+        var hwnd = IntPtr.Size == sizeof(int)
+            ? new IntPtr(unchecked((int)value))
+            : new IntPtr(unchecked((long)value));
+        excludedHwnds.Add(hwnd);
+        return true;
+    }
+
+    private static IntPtr ParseWindowHandle(string hwnd)
+    {
+        var value = ulong.Parse(hwnd[2..], System.Globalization.NumberStyles.AllowHexSpecifier,
+            System.Globalization.CultureInfo.InvariantCulture);
+        return IntPtr.Size == sizeof(int)
+            ? new IntPtr(unchecked((int)value))
+            : new IntPtr(unchecked((long)value));
     }
 
     private static (int? pid, string? errorCode, string? error) ResolveValidatedPid(

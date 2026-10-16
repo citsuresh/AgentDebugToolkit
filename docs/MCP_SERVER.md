@@ -174,7 +174,7 @@ MCP client can grant/prompt approval per tool rather than per call:
 | Tool | CLI verb | Notes |
 | --- | --- | --- |
 | `ui_attach` | `attach` | |
-| `ui_list_windows` | `list-windows` | Read-only |
+| `ui_list_windows` | `list-windows` | Read-only; optional `pid`, `all`, `processName` (mutually exclusive scopes), `titleContains`, `className`, `limit`, `includeUntitled`. Never changes session context |
 | `ui_inspect` | `inspect` | Read-only; `nameContains` and `controlType` filters return a pruned tree with `matchCount`; unfiltered output has no `matchCount`; a window-name match returns the whole tree; unknown control types fail with `invalid-argument` |
 | `ui_click` | `click` | Destructive |
 | `ui_right_click` | `right-click` | Destructive |
@@ -185,7 +185,7 @@ MCP client can grant/prompt approval per tool rather than per call:
 | `ui_type` | `type` | Destructive; optional `text`, `clear`, `scopeHwnd`, `verify`, and `paste` parameters |
 | `ui_get_text` | `get-text` | Read-only; optional `scopeHwnd` narrows the selector search |
 | `ui_set_grid_cell` | `set-grid-cell` | Destructive |
-| `ui_wait_for_window_change` | `wait-for-window-change` | Read-only; `timeoutMs` capped at 120000 |
+| `ui_wait_for_window_change` | `wait-for-window-change` | Read-only; `timeoutMs` capped at 120000; same scope/filter parameters as `ui_list_windows` plus `until` (`settle`/`match`) and `excludeHwnds` |
 | `ui_wait_for_element` | `wait-for-element` | Read-only; `timeoutMs` capped at 120000 |
 | `ui_wait_for_process_responding` | `wait-for-process-responding` | Read-only; `timeoutMs` capped at 120000 |
 | `ui_delay` | `delay` | |
@@ -197,6 +197,8 @@ MCP client can grant/prompt approval per tool rather than per call:
 | `ui_submit_chat_message` | `submit-chat-message` | Destructive; treat as high-impact (real submission) |
 | `ui_find_first` | `find-first` | Read-only |
 | `ui_find_all` | `find-all` | Read-only |
+
+`ui_list_windows` and `ui_wait_for_window_change` send `all` and `includeUntitled` only when true (false or omitted sends nothing, so `all=false` with `pid` still works). The CLI alone validates scope exclusivity and values. Window titles can contain sensitive data: filter first and return only the rows needed. Discovery never changes the session context; use the returned `hwnd` with hwnd-based tools, or `ui_set_context` for pid-based tools.
 
 Ambiguous selectors in `ui_click`, `ui_right_click`, `ui_double_click`, `ui_drag`, the selector form of `ui_move_mouse`, `ui_type`, `ui_get_text`, and `ui_send_keys` fail with `ambiguous-match` (count plus up to 10 candidates) and do nothing. Narrow with `scopeHwnd` or pre-check with `ui_find_all`.
 

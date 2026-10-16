@@ -89,3 +89,32 @@ until the broker exited.
 **Alternatives considered:** Launching the broker via native `CreateProcessW` with inheritance
 disabled -- larger change. Making `CliRunner` stop waiting for EOF -- affects every VS/UI tool,
 can truncate output, and leaves non-MCP callers affected.
+
+## 2026-10-16 -- Cross-process window discovery is read-only and capped
+
+**Decision:** `list-windows` / `wait-for-window-change` gain `--all` and `--processName` scopes
+(mutually exclusive with `--pid`) plus title/class filters, via one shared
+`UiaHelper.QueryTopLevelWindows` still built on Win32 `EnumWindows` (see 2026-09-18). Discovery
+never changes session context. Only cross-process modes exclude cloaked, untitled (unless
+`--includeUntitled`), and zero-area windows by default. `list-windows` caps returned results with
+`--limit` (default 50, max 200) in every scope; `wait-for-window-change` caps returned lists only
+in cross-process modes while polling the full set. Pid/context modes keep their unfiltered
+results, and
+`ListTopLevelWindows(int pid)` is unchanged for its existing callers.
+
+`wait-for-window-change` behavior notes: in settle mode, `windowsAfter` now reflects the latest
+poll (the snapshot is refreshed every poll rather than only when the set changes; since success
+requires an unchanged hwnd set, this differs only in per-window details such as title or bounds).
+Wait responses (success and timeout) always include `truncated`, including pid/context modes
+where it is always false.
+
+**Rationale:** Callers need to find windows opened by other processes without guessing a pid.
+Keeping discovery read-only avoids silently retargeting later pid-based verbs. Desktop-wide
+enumeration otherwise returns many invisible-in-practice (cloaked/shell) windows and every
+window title on the desktop; default exclusions plus a cap limit noise and accidental exposure of
+sensitive titles.
+
+**Alternatives considered:** Having discovery set the session context -- rejected, surprising
+side effect for a read-only tool. Applying the default exclusions in pid mode -- rejected,
+changes existing results. UIA desktop-tree enumeration -- rejected for the same reasons as the
+2026-09-18 decision.

@@ -3,6 +3,23 @@
 User-curated list of open, unresolved findings intentionally deferred rather than fixed
 immediately. Entries are only added, edited, or removed at the user's explicit request.
 
+## UI window discovery was limited to a single process - RESOLVED
+
+- **First seen:** 2026-10-16
+- **Last seen:** 2026-10-16
+- **Occurrences:** 1
+- **Resolved:** 2026-10-16
+
+**Description:** `list-windows` and `wait-for-window-change` (and their MCP tools) only covered
+the explicit or session-context pid. A window opened by another process (for example a helper or
+broker process) could not be found or waited on without first guessing its process.
+
+**Fix applied:** both verbs and MCP tools accept `--all` / `--processName` scopes plus
+`--titleContains` / `--className` filters, with default exclusions (cloaked, untitled, zero-area)
+and a `--limit` cap in cross-process modes. `wait-for-window-change` adds `--until match`,
+`--excludeHwnds`, and `changed`. `WindowInfo` gains `processName`. Pid and context modes keep
+their behavior (no default exclusions).
+
 ## Console launch held the caller's output pipe open via inherited handles - RESOLVED
 
 - **First seen:** 2026-10-14

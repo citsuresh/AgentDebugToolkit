@@ -168,6 +168,9 @@ internal static class NativeMethods
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
 
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmGetWindowAttribute(IntPtr hwnd, uint dwAttribute, out int pvAttribute, uint cbAttribute);
+
     [DllImport("user32.dll")]
     public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
@@ -193,6 +196,7 @@ internal static class NativeMethods
     public const uint GA_ROOT = 2;
     public const uint SMTO_ABORTIFHUNG = 0x0002;
     public const uint WM_NULL = 0x0000;
+    private const uint DWMWA_CLOAKED = 14;
 
     public static List<IntPtr> EnumerateVisibleTopLevelWindows(int pid)
     {
@@ -208,6 +212,42 @@ internal static class NativeMethods
             return true;
         }, IntPtr.Zero);
         return windows;
+    }
+
+    public static List<(IntPtr Hwnd, int Pid)> EnumerateVisibleTopLevelWindows()
+    {
+        var windows = new List<(IntPtr Hwnd, int Pid)>();
+        EnumWindows((hwnd, _) =>
+        {
+            if (IsWindowVisible(hwnd))
+            {
+                GetWindowThreadProcessId(hwnd, out var windowPid);
+                if (windowPid > 0 && windowPid <= int.MaxValue)
+                {
+                    windows.Add((hwnd, (int)windowPid));
+                }
+            }
+
+            return true;
+        }, IntPtr.Zero);
+        return windows;
+    }
+
+    public static bool IsWindowCloaked(IntPtr hwnd)
+    {
+        try
+        {
+            return DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, out var cloaked, sizeof(int)) == 0
+                && cloaked != 0;
+        }
+        catch (DllNotFoundException)
+        {
+            return false;
+        }
+        catch (EntryPointNotFoundException)
+        {
+            return false;
+        }
     }
 
     public static string GetWindowTitle(IntPtr hwnd)

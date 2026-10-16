@@ -14,6 +14,7 @@ public class WindowInfo
     public string Title { get; set; } = string.Empty;
     public string ClassName { get; set; } = string.Empty;
     public int Pid { get; set; }
+    public string? ProcessName { get; set; }
     public string? OwnerHwnd { get; set; }
     public bool IsModal { get; set; }
     public bool IsForeground { get; set; }

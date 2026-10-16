@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -24,6 +26,17 @@ internal sealed class ClipboardUnavailableException : Exception
 /// </summary>
 internal static class UiaHelper
 {
+    internal sealed record WindowQueryOptions(
+        int? Pid,
+        bool AllProcesses,
+        string? ProcessName,
+        string? TitleContains,
+        string? ClassName,
+        bool IncludeUntitled)
+    {
+        public bool IsCrossProcess => AllProcesses || ProcessName is not null;
+    }
+
     public enum KeyFocusMode
     {
         SetFocus,
@@ -46,21 +59,84 @@ internal static class UiaHelper
     public static List<WindowInfo> ListTopLevelWindows(int pid)
     {
         var foreground = NativeMethods.GetForegroundWindow();
+        var processNameCache = new Dictionary<int, string?>();
         return NativeMethods.EnumerateVisibleTopLevelWindows(pid)
-            .Select(hwnd => ToWindowInfo(hwnd, pid, foreground))
+            .Select(hwnd => ToWindowInfo(hwnd, pid, foreground, processNameCache))
             .ToList();
     }
 
-    private static WindowInfo ToWindowInfo(IntPtr hwnd, int pid, IntPtr foreground)
+    internal static List<WindowInfo> QueryTopLevelWindows(
+        WindowQueryOptions options,
+        Dictionary<int, string?> processNameCache)
+    {
+        var windows = new List<WindowInfo>();
+        var foreground = NativeMethods.GetForegroundWindow();
+        var candidates = options.Pid is int pid
+            ? NativeMethods.EnumerateVisibleTopLevelWindows(pid).Select(hwnd => (Hwnd: hwnd, Pid: pid))
+            : NativeMethods.EnumerateVisibleTopLevelWindows();
+
+        foreach (var (hwnd, windowPid) in candidates)
+        {
+            if (options.IsCrossProcess && NativeMethods.IsWindowCloaked(hwnd))
+            {
+                continue;
+            }
+
+            var title = NativeMethods.GetWindowTitle(hwnd);
+            if (options.IsCrossProcess && !options.IncludeUntitled && title.Length == 0)
+            {
+                continue;
+            }
+
+            if (options.TitleContains is not null
+                && !title.Contains(options.TitleContains, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var className = NativeMethods.GetWindowClassName(hwnd);
+            if (options.ClassName is not null
+                && !className.Contains(options.ClassName, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (options.IsCrossProcess && NativeMethods.GetWindowRect(hwnd, out var bounds)
+                && (bounds.Right - bounds.Left <= 0 || bounds.Bottom - bounds.Top <= 0))
+            {
+                continue;
+            }
+
+            if (options.ProcessName is not null
+                && !string.Equals(GetProcessName(windowPid, processNameCache), options.ProcessName,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            windows.Add(ToWindowInfo(hwnd, windowPid, foreground, processNameCache, title, className));
+        }
+
+        return windows;
+    }
+
+    private static WindowInfo ToWindowInfo(
+        IntPtr hwnd,
+        int pid,
+        IntPtr foreground,
+        Dictionary<int, string?> processNameCache,
+        string? title = null,
+        string? className = null)
     {
         var ownerHwnd = NativeMethods.GetWindow(hwnd, NativeMethods.GW_OWNER);
         var hasBounds = NativeMethods.GetWindowRect(hwnd, out var bounds);
         return new WindowInfo
         {
             Hwnd = $"0x{hwnd.ToInt64():X}",
-            Title = NativeMethods.GetWindowTitle(hwnd),
-            ClassName = NativeMethods.GetWindowClassName(hwnd),
+            Title = title ?? NativeMethods.GetWindowTitle(hwnd),
+            ClassName = className ?? NativeMethods.GetWindowClassName(hwnd),
             Pid = pid,
+            ProcessName = GetProcessName(pid, processNameCache),
             OwnerHwnd = ownerHwnd != IntPtr.Zero ? $"0x{ownerHwnd.ToInt64():X}" : null,
             IsModal = ownerHwnd != IntPtr.Zero,
             IsForeground = hwnd == foreground,
@@ -74,6 +150,35 @@ internal static class UiaHelper
                 }
                 : null
         };
+    }
+
+    private static string? GetProcessName(int pid, Dictionary<int, string?> cache)
+    {
+        if (cache.TryGetValue(pid, out var processName))
+        {
+            return processName;
+        }
+
+        try
+        {
+            using var process = Process.GetProcessById(pid);
+            processName = process.ProcessName;
+        }
+        catch (ArgumentException)
+        {
+            return null;
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
+        catch (Win32Exception)
+        {
+            return null;
+        }
+
+        cache[pid] = processName;
+        return processName;
     }
 
     /// <summary>
