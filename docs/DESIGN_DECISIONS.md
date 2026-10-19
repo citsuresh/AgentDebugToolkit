@@ -158,3 +158,19 @@ outcome, and a vanished element is not misreported as a search miss.
 
 **Alternatives considered:** Catching all exceptions -- rejected; non-UIA bugs should still surface
 as `unhandled-exception`.
+
+## 2026-10-19 -- scroll-into-view empty-bounds, error-path and activation decisions
+
+**Decision:** Activation: the verb does not request foreground activation and makes no cursor or input calls. **Rationale:** The target's UI Automation provider may still activate its window during a scroll, as observed with WPF; this is documented, not fixed.
+
+**Decision:** Pattern failures: if `VirtualizedItemPattern.Realize` or `FindItemByProperty` throws `InvalidOperationException`, `ArgumentException`, or `COMException`, the verb falls through to scroll-search. **Rationale:** `ElementNotAvailableException` is still rethrown and reported as `stale-context`.
+
+**Decision:** Vanished window: a dead or closed `--hwnd` returns `window-not-responding` from the shared responsiveness check. **Rationale:** `element-not-found` means the hwnd has no window, while `element-not-found-after-scroll` means the element was not found or disappeared after scrolling.
+
+**Decision:** Empty or zero-area `BoundingRectangle`: any visibility decision in `scroll-into-view` that sees an empty or zero-area rectangle on the element or container throws `EmptyBoundsException`, reported as `scroll-provider-error` at stage `visibility-check`; the verb never returns `reachedEnd` for empty bounds. **Rationale:** A new helper, `IsFullyVisibleWithArea`, is used only by `scroll-into-view`, leaving `IsFullyVisible` unchanged for other callers.
+
+**Decision:** Container: a successful response always includes a non-null container object, using the scope element or the window element if there is no scrollable ancestor. **Rationale:** In scroll error summaries, a window-type container has its name blanked.
+
+**Decision:** Provider errors: `InvalidOperationException`, `ArgumentException`, and `COMException` during `scroll-into-view` are reported as `scroll-provider-error`. **Rationale:** These responses include `details.stage` and both percent fields.
+
+**Decision:** Errors after scrolling: error responses returned after scrolling started can report a scroll position the verb has already changed. **Rationale:** The position is not restored.
