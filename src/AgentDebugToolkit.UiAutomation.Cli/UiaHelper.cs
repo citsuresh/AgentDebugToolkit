@@ -359,17 +359,21 @@ internal static class UiaHelper
 
     internal sealed class ScrollSearchResult<T> where T : class
     {
-        public ScrollSearchResult(ScrollSearchStop stop, T? result, int steps)
+        public ScrollSearchResult(ScrollSearchStop stop, T? result, int steps, T? partialResult = null)
         {
             Stop = stop;
             Result = result;
             Steps = steps;
+            PartialResult = partialResult;
         }
 
         public ScrollSearchStop Stop { get; }
 
         /// <summary>The re-queried result after scrollIntoView; may be null even when Stop is Found.</summary>
         public T? Result { get; }
+
+        /// <summary>The most recent find result rejected by isSatisfied at termination; null without a predicate.</summary>
+        public T? PartialResult { get; }
 
         public int Steps { get; }
     }
@@ -378,10 +382,15 @@ internal static class UiaHelper
     /// Shared vertical scroll-search loop (set-grid-cell and scroll-into-view): scrolls to the top,
     /// then alternates find / scroll-by-<paramref name="step"/>, re-querying after every step
     /// because virtualized items are re-realized. On a hit it calls
-    /// <paramref name="scrollIntoView"/> and returns a fresh <paramref name="find"/> result. Stops
+    /// <paramref name="scrollIntoView"/> and returns a fresh <paramref name="find"/> result,
+    /// unless <paramref name="isSatisfied"/> is supplied, in which case it keeps searching until
+    /// the fresh result is non-null and satisfies that predicate. Stops
     /// when the vertical percent reaches 100 or stops advancing (ReachedEnd), and, only when
     /// supplied, at <paramref name="maxScrolls"/> steps or when <paramref name="isTimedOut"/>
-    /// returns true.
+    /// returns true. With <paramref name="isSatisfied"/>, three consecutive non-advancing scroll
+    /// steps are required before stopping; advancing resets the counter. On end, limit, or timeout,
+    /// PartialResult carries the most recent non-null find result if the predicate rejected it.
+    /// Without a predicate, one non-advancing step stops the search and PartialResult stays null.
     /// </summary>
     public static ScrollSearchResult<T> ScrollSearch<T>(
         ScrollPattern scroll,
@@ -389,40 +398,61 @@ internal static class UiaHelper
         Func<T?> find,
         Action<T> scrollIntoView,
         int? maxScrolls = null,
-        Func<bool>? isTimedOut = null) where T : class
+        Func<bool>? isTimedOut = null,
+        Func<T, bool>? isSatisfied = null) where T : class
     {
+        const int MaxConsecutiveNonAdvancingSteps = 3;
         scroll.SetScrollPercent(ScrollPattern.NoScroll, 0);
         var steps = 0;
+        var nonAdvancingSteps = 0;
+        T? partialResult = null;
         while (true)
         {
             var result = find();
             if (result is not null)
             {
                 scrollIntoView(result);
-                return new ScrollSearchResult<T>(ScrollSearchStop.Found, find(), steps);
+                var refreshed = find();
+                if (isSatisfied is null || (refreshed is not null && isSatisfied(refreshed)))
+                {
+                    return new ScrollSearchResult<T>(ScrollSearchStop.Found, refreshed, steps);
+                }
+
+                if (refreshed is not null)
+                {
+                    partialResult = refreshed;
+                }
             }
 
             var verticalPercentBeforeScroll = scroll.Current.VerticalScrollPercent;
             if (verticalPercentBeforeScroll >= 100)
             {
-                return new ScrollSearchResult<T>(ScrollSearchStop.ReachedEnd, null, steps);
+                return new ScrollSearchResult<T>(ScrollSearchStop.ReachedEnd, null, steps, partialResult);
             }
 
             if (maxScrolls is int max && steps >= max)
             {
-                return new ScrollSearchResult<T>(ScrollSearchStop.MaxScrolls, null, steps);
+                return new ScrollSearchResult<T>(ScrollSearchStop.MaxScrolls, null, steps, partialResult);
             }
 
             if (isTimedOut is not null && isTimedOut())
             {
-                return new ScrollSearchResult<T>(ScrollSearchStop.Timeout, null, steps);
+                return new ScrollSearchResult<T>(ScrollSearchStop.Timeout, null, steps, partialResult);
             }
 
             scroll.Scroll(ScrollAmount.NoAmount, step);
             steps++;
             if (scroll.Current.VerticalScrollPercent <= verticalPercentBeforeScroll)
             {
-                return new ScrollSearchResult<T>(ScrollSearchStop.ReachedEnd, null, steps);
+                nonAdvancingSteps++;
+                if (isSatisfied is null || nonAdvancingSteps >= MaxConsecutiveNonAdvancingSteps)
+                {
+                    return new ScrollSearchResult<T>(ScrollSearchStop.ReachedEnd, null, steps, partialResult);
+                }
+            }
+            else
+            {
+                nonAdvancingSteps = 0;
             }
         }
     }

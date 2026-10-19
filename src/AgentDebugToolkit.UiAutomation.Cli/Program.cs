@@ -2339,19 +2339,21 @@ internal static class Verbs
             () => { var found = UiaHelper.ResolveSelectorAll(container, selector); return found.Count == 0 ? null : found; },
             found => { if (found.Count == 1) { UiaHelper.TryScrollItemIntoView(found[0]); } },
             maxScrolls,
-            isTimedOut);
+            isTimedOut,
+            isSatisfied: found => found.Count > 1 || UiaHelper.IsFullyVisibleWithArea(found[0], container));
 
+        var reachedEnd = search.Stop == UiaHelper.ScrollSearchStop.ReachedEnd;
         if (search.Stop == UiaHelper.ScrollSearchStop.Timeout)
         {
             WriteScrollTimeout(selector, timeoutMs, search.Steps, container, containerPercentBefore);
             return 1;
         }
 
-        if (search.Stop == UiaHelper.ScrollSearchStop.Found)
+        if (search.Stop == UiaHelper.ScrollSearchStop.Found || search.PartialResult is not null)
         {
             // A virtualizing container can briefly drop the realized item after ScrollIntoView;
             // retry the re-query before reporting it as not found.
-            var found = search.Result;
+            var found = search.Result ?? search.PartialResult;
             var retryTimedOut = false;
             for (var attempt = 0; (found is null || found.Count == 0) && attempt < 5; attempt++)
             {
@@ -2412,21 +2414,20 @@ internal static class Verbs
 
                 if (UiaHelper.IsFullyVisibleWithArea(element, container))
                 {
-                    WriteScrollSuccess("scroll-search", search.Steps, false, element, container, containerPercentBefore, scope);
+                    WriteScrollSuccess("scroll-search", search.Steps, reachedEnd, element, container, containerPercentBefore, scope);
                     return 0;
                 }
 
-                WriteNotFoundAfterScroll(selector, search.Steps, false, container, containerPercentBefore,
+                WriteNotFoundAfterScroll(selector, search.Steps, reachedEnd, container, containerPercentBefore,
                     "the target was found but could not be brought fully into view");
                 return 1;
             }
 
-            WriteNotFoundAfterScroll(selector, search.Steps, false, container, containerPercentBefore,
+            WriteNotFoundAfterScroll(selector, search.Steps, reachedEnd, container, containerPercentBefore,
                 "the target was found during the scroll but was no longer available afterwards");
             return 1;
         }
 
-        var reachedEnd = search.Stop == UiaHelper.ScrollSearchStop.ReachedEnd;
         WriteNotFoundAfterScroll(selector, search.Steps, reachedEnd, container, containerPercentBefore,
             reachedEnd ? "reached the end of the container" : "stopped at --maxScrolls");
         return 1;
