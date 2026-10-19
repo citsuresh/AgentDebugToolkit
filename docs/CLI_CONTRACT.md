@@ -533,6 +533,9 @@ after editing.
 - Failure: `invalid-argument` for invalid/missing selectors, column index, editor control type, or
   incomplete Apply selector; `element-not-found` when the grid, row/cell, editor, or Apply element
   cannot be resolved; `window-not-responding` when the target window cannot be probed.
+- The virtualized-row search shares the scroll search used by `scroll-into-view` and has the same
+  provider behaviour: the target's UI Automation provider may activate its window during a scroll
+  (observed with WPF), although the verb itself does not request activation for the search.
 
 ---
 
@@ -947,6 +950,69 @@ performs its own client-side filtering (Name/AutomationId/ControlType checks) ov
 `inspect` dump, i.e. the app-specific logic already lived in the caller script, not the CLI. No
 existing caller depended on `has-pending-prompt`'s shape, so removing it is not a breaking change
 in practice.
+
+### `scroll-into-view --hwnd <h> --strategy <Name|AutomationId> --value <v> [--scopeStrategy <s> --scopeValue <v>] [--step small|large] [--maxScrolls <n>] [--timeoutMs <n>]`
+Uses UI Automation patterns only. It does not request activation and makes no cursor or input
+calls, but the target's UI Automation provider may activate its window during a scroll (observed
+with WPF). It does not restore the scroll position after the call. Run `find-all` first to check selector matches; use a
+scope to avoid choosing an unintended container or target.
+
+- `--scopeStrategy` and `--scopeValue` must both be supplied or neither. A supplied scope is both
+the search area and the scroll container; zero scope matches return `container-not-found`, and
+multiple scope matches return `ambiguous-container` with count and up to 10 candidates.
+- `--step` defaults to `large`; `small` uses `SmallIncrement`. `--maxScrolls` is 1..1000 (default
+100). `--timeoutMs` is a non-negative integer (default 10000), validated like `wait-for-element`.
+- If the target is already in the UIA tree, the verb first checks visibility and then tries
+`ScrollItemPattern` or a vertically scrollable ancestor. For a target absent from the tree, an
+explicit scope is used; otherwise the verb requires exactly one vertically scrollable descendant
+container. `ItemContainerPattern.FindItemByProperty` (Name or AutomationId) and `Realize` are
+tried before a scroll-search from the top; if `FindItemByProperty` or `Realize` fails with a provider
+error, the verb falls through to scroll-search. Scroll-search re-resolves the target after every step;
+if the post-scroll lookup is briefly empty, it retries within the configured timeout. Success is
+returned only when `fullyVisible` is true.
+- `--maxScrolls` stops with `element-not-found-after-scroll` and `reachedEnd: false`; reaching the
+end or a non-advancing scroll returns the same error with `reachedEnd: true`. A timeout returns
+`timeout`. Lazy-loading content may stop at `maxScrolls` before more items are loaded. Nested
+scrollers may require an explicit scope; custom controls without usable UIA scroll/item patterns
+return `not-scrollable`. The view is not restored, and horizontal virtualization is not searched.
+- Success includes `method` (`already-visible`, `scroll-item`, `ancestor-scroll`, `item-container`,
+or `scroll-search`), `scrollSteps`, `reachedEnd`, `fullyVisible`, `element`, `container`, and both
+`verticalScrollPercentBefore` and `verticalScrollPercentAfter`; `-1` means UIA reports no vertical
+scrolling (or no vertical scroller exists). `container` is always present as
+`{ "controlType": "..." }`: the scroll container used, or, when there is no scrollable ancestor,
+the scope element (or the window element when no scope was given).
+- Percent-field rule: every response produced after the window (and the scope, when given) has been
+looked up includes both `verticalScrollPercentBefore` and `verticalScrollPercentAfter`. This covers
+success and `timeout`, `element-not-found-after-scroll`, `not-scrollable`, `container-not-found`,
+`ambiguous-container`, `ambiguous-match`, `stale-context`, and `scroll-provider-error`; `-1` is used when no vertical
+scroller is known (for example `container-not-found`, or `ambiguous-container` both for an
+ambiguous scope and for auto-detect with several scrollable containers, because no single scroller
+was chosen). Early errors
+(`invalid-argument`, `window-not-responding`, and an hwnd that cannot be found) do not include the
+percent fields. A dead or closed `--hwnd` is
+reported as `window-not-responding` by the shared responsiveness check, the same as other verbs at
+HEAD; `element-not-found` is returned when the `--hwnd` has no window; `element-not-found-after-scroll`
+is returned when the element disappears or cannot be found after scrolling.
+- Failures include `invalid-argument`, `window-not-responding`, `element-not-found`, `stale-context`,
+`container-not-found`, `ambiguous-container`, `not-scrollable`, `ambiguous-match`, `timeout`,
+`element-not-found-after-scroll`, and `scroll-provider-error`. The `not-scrollable` message states
+that a mouse-wheel fallback is not implemented. `stale-context` is returned when a UIA element
+becomes unavailable mid-operation. `scroll-provider-error` is returned when the UIA provider throws
+any other `InvalidOperationException` or a `COMException` while scrolling, realizing, or scrolling
+into view (for example on a disabled or unsupported container); it includes `details.stage` (one of
+`resolve-scope`, `resolve-target`, `scroll-item`, `ancestor-scroll`, `container-detect`,
+`item-container`, `scroll-search`, `visibility-check`). Stage `visibility-check` is reported when
+the already-visible, item-container, scroll-search, or ancestor-scroll check finds the element's or
+the container's `BoundingRectangle` empty or of zero area, so visibility cannot be decided; it is
+never reported as `reachedEnd`. Example:
+`{ "success": false, "error": "scroll-provider-error", "message": "...", "details": { "stage": "scroll-search" }, "verticalScrollPercentBefore": -1, "verticalScrollPercentAfter": -1 }`.
+
+Observed on the synthetic WPF list: `ItemContainerPattern` was available; `FindItemByProperty`
+matched both Name (`Item 3000`) and AutomationId (`row-3000`), and `VirtualizedItemPattern.Realize`
+succeeded. Far targets were reported with method `item-container`. On a separate virtualized
+scroll-search list, a 56-target comparison found 56/56 with `large` and 48/56 with `small`; eight
+targets differed. A focused post-fix check found `E Item 070` with `small` in 54 steps. This does
+not establish parity for every virtualized list/provider.
 
 ## Conventions for future phases
 

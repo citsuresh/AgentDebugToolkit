@@ -197,6 +197,18 @@ MCP client can grant/prompt approval per tool rather than per call:
 | `ui_submit_chat_message` | `submit-chat-message` | Destructive; treat as high-impact (real submission) |
 | `ui_find_first` | `find-first` | Read-only |
 | `ui_find_all` | `find-all` | Read-only |
+| `ui_scroll_into_view` | `scroll-into-view` | Changes the target's scroll position; not restored; UIA-only |
+
+`ui_scroll_into_view` uses UIA patterns only; it does not request activation and makes no cursor or
+input calls, but the target's UI Automation provider may activate its window during a scroll
+(observed with WPF). It changes the target's scroll position, which is not restored. Run `ui_find_all` first.
+For virtualized lists, pass the list as `scopeStrategy` and `scopeValue`. Afterwards, re-resolve and
+verify with `ui_find_first` or `ui_get_text`. On `ambiguous-container` or `ambiguous-match`, narrow
+the scope rather than guessing. A `scroll-provider-error` result means the target application's UIA
+provider rejected a scroll, realize, or scroll-into-view call (for example on a disabled control);
+`details.stage` names where it happened. Do not retry blindly; check the control's state first. It
+is marked `readOnlyHint: false`, `destructiveHint: false`,
+`idempotentHint: true`, and `openWorldHint: false`.
 
 `ui_list_windows` and `ui_wait_for_window_change` send `all` and `includeUntitled` only when true (false or omitted sends nothing, so `all=false` with `pid` still works). The CLI alone validates scope exclusivity and values. Window titles can contain sensitive data: filter first and return only the rows needed. Discovery never changes the session context; use the returned `hwnd` with hwnd-based tools, or `ui_set_context` for pid-based tools.
 

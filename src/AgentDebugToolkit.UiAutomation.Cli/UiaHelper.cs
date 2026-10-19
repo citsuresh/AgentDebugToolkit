@@ -187,7 +187,7 @@ internal static class UiaHelper
     /// legitimately report for offscreen, virtualized, or not-yet-realized elements, and which
     /// System.Text.Json cannot serialize as a JSON number.
     /// </summary>
-    private static Rect? SafeRect(System.Windows.Rect r)
+    internal static Rect? SafeRect(System.Windows.Rect r)
     {
         if (!IsFinite(r.X) || !IsFinite(r.Y) || !IsFinite(r.Width) || !IsFinite(r.Height))
         {
@@ -342,30 +342,342 @@ internal static class UiaHelper
             return FindGridCellInRealizedRows(grid, rowSelector, columnIndex);
         }
 
+        return ScrollSearch(
+            scroll,
+            ScrollAmount.SmallIncrement,
+            () => FindGridCellInRealizedRows(grid, rowSelector, columnIndex),
+            result => ScrollCellIntoView(result.Cell)).Result;
+    }
+
+    internal enum ScrollSearchStop
+    {
+        Found,
+        ReachedEnd,
+        MaxScrolls,
+        Timeout,
+    }
+
+    internal sealed class ScrollSearchResult<T> where T : class
+    {
+        public ScrollSearchResult(ScrollSearchStop stop, T? result, int steps)
+        {
+            Stop = stop;
+            Result = result;
+            Steps = steps;
+        }
+
+        public ScrollSearchStop Stop { get; }
+
+        /// <summary>The re-queried result after scrollIntoView; may be null even when Stop is Found.</summary>
+        public T? Result { get; }
+
+        public int Steps { get; }
+    }
+
+    /// <summary>
+    /// Shared vertical scroll-search loop (set-grid-cell and scroll-into-view): scrolls to the top,
+    /// then alternates find / scroll-by-<paramref name="step"/>, re-querying after every step
+    /// because virtualized items are re-realized. On a hit it calls
+    /// <paramref name="scrollIntoView"/> and returns a fresh <paramref name="find"/> result. Stops
+    /// when the vertical percent reaches 100 or stops advancing (ReachedEnd), and, only when
+    /// supplied, at <paramref name="maxScrolls"/> steps or when <paramref name="isTimedOut"/>
+    /// returns true.
+    /// </summary>
+    public static ScrollSearchResult<T> ScrollSearch<T>(
+        ScrollPattern scroll,
+        ScrollAmount step,
+        Func<T?> find,
+        Action<T> scrollIntoView,
+        int? maxScrolls = null,
+        Func<bool>? isTimedOut = null) where T : class
+    {
         scroll.SetScrollPercent(ScrollPattern.NoScroll, 0);
+        var steps = 0;
         while (true)
         {
-            var result = FindGridCellInRealizedRows(grid, rowSelector, columnIndex);
+            var result = find();
             if (result is not null)
             {
-                ScrollCellIntoView(result.Cell);
-                return FindGridCellInRealizedRows(grid, rowSelector, columnIndex);
+                scrollIntoView(result);
+                return new ScrollSearchResult<T>(ScrollSearchStop.Found, find(), steps);
             }
 
             var verticalPercentBeforeScroll = scroll.Current.VerticalScrollPercent;
             if (verticalPercentBeforeScroll >= 100)
             {
-                break;
+                return new ScrollSearchResult<T>(ScrollSearchStop.ReachedEnd, null, steps);
             }
 
-            scroll.Scroll(ScrollAmount.NoAmount, ScrollAmount.SmallIncrement);
+            if (maxScrolls is int max && steps >= max)
+            {
+                return new ScrollSearchResult<T>(ScrollSearchStop.MaxScrolls, null, steps);
+            }
+
+            if (isTimedOut is not null && isTimedOut())
+            {
+                return new ScrollSearchResult<T>(ScrollSearchStop.Timeout, null, steps);
+            }
+
+            scroll.Scroll(ScrollAmount.NoAmount, step);
+            steps++;
             if (scroll.Current.VerticalScrollPercent <= verticalPercentBeforeScroll)
             {
-                break;
+                return new ScrollSearchResult<T>(ScrollSearchStop.ReachedEnd, null, steps);
             }
+        }
+    }
+
+    public static ScrollPattern? GetScrollPattern(AutomationElement? element)
+    {
+        return element is not null
+            && element.TryGetCurrentPattern(ScrollPattern.Pattern, out var scrollObject)
+            ? scrollObject as ScrollPattern
+            : null;
+    }
+
+    /// <summary>Vertical scroll percent, or -1 when the element has no vertically scrollable ScrollPattern.</summary>
+    public static double GetVerticalScrollPercent(AutomationElement? container)
+    {
+        var scroll = GetScrollPattern(container);
+        if (scroll is null || !scroll.Current.VerticallyScrollable)
+        {
+            return -1;
+        }
+
+        return Math.Round(scroll.Current.VerticalScrollPercent, 2);
+    }
+
+    /// <summary>
+    /// Nearest control-view ancestor with a vertically scrollable ScrollPattern, searching up to
+    /// and including <paramref name="boundary"/> (the scope element or window).
+    /// </summary>
+    public static AutomationElement? FindScrollableAncestor(AutomationElement element, AutomationElement boundary)
+    {
+        var walker = TreeWalker.ControlViewWalker;
+        var current = walker.GetParent(element);
+        while (current is not null)
+        {
+            var scroll = GetScrollPattern(current);
+            if (scroll is not null && scroll.Current.VerticallyScrollable)
+            {
+                return current;
+            }
+
+            if (current.Equals(boundary))
+            {
+                return null;
+            }
+
+            current = walker.GetParent(current);
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// True when the element is on-screen and its bounding rectangle lies inside the container's
+    /// bounding rectangle (or, with no container, when it is simply not offscreen).
+    /// </summary>
+    public static bool IsFullyVisible(AutomationElement element, AutomationElement? container)
+    {
+        var bounds = element.Current.BoundingRectangle;
+        if (bounds.IsEmpty || element.Current.IsOffscreen)
+        {
+            return false;
+        }
+
+        return container is null || container.Current.BoundingRectangle.Contains(bounds);
+    }
+
+    public static bool TryScrollItemIntoView(AutomationElement element)
+    {
+        if (element.TryGetCurrentPattern(ScrollItemPattern.Pattern, out var scrollItemObject)
+            && scrollItemObject is ScrollItemPattern scrollItem)
+        {
+            scrollItem.ScrollIntoView();
+            return true;
+        }
+
+        return false;
+    }
+
+    internal enum AncestorScrollStop
+    {
+        Visible,
+        ReachedEnd,
+        MaxScrolls,
+        Timeout,
+    }
+
+    /// <summary>
+    /// Raised when a BoundingRectangle needed for a visibility decision is empty or has zero area;
+    /// scroll-into-view reports it as scroll-provider-error at stage "visibility-check".
+    /// </summary>
+    internal sealed class EmptyBoundsException : InvalidOperationException
+    {
+        public EmptyBoundsException(string message)
+            : base(message)
+        {
+        }
+    }
+
+    private static bool HasNoArea(System.Windows.Rect rect)
+    {
+        return rect.IsEmpty || rect.Width <= 0 || rect.Height <= 0;
+    }
+
+    /// <summary>Throws <see cref="EmptyBoundsException"/> when the element's or container's BoundingRectangle has no area.</summary>
+    public static void EnsureBoundsHaveArea(AutomationElement element, AutomationElement? container)
+    {
+        if (HasNoArea(element.Current.BoundingRectangle))
+        {
+            throw new EmptyBoundsException(
+                "The element's BoundingRectangle is empty or has zero area, so its visibility cannot be determined.");
+        }
+
+        if (container is not null && HasNoArea(container.Current.BoundingRectangle))
+        {
+            throw new EmptyBoundsException(
+                "The scroll container's BoundingRectangle is empty or has zero area, so the element's visibility cannot be determined.");
+        }
+    }
+
+    /// <summary>
+    /// <see cref="IsFullyVisible"/> for scroll-into-view: throws <see cref="EmptyBoundsException"/>
+    /// instead of returning false when either BoundingRectangle has no area.
+    /// </summary>
+    public static bool IsFullyVisibleWithArea(AutomationElement element, AutomationElement? container)
+    {
+        EnsureBoundsHaveArea(element, container);
+        return IsFullyVisible(element, container);
+    }
+
+    /// <summary>
+    /// Steps the container's ScrollPattern vertically toward the element (direction from the
+    /// relative bounding rectangles) until the element is fully visible.
+    /// </summary>
+    public static (AncestorScrollStop stop, int steps) StepAncestorUntilVisible(
+        AutomationElement element,
+        AutomationElement container,
+        ScrollPattern scroll,
+        ScrollAmount step,
+        int maxScrolls,
+        Func<bool> isTimedOut)
+    {
+        var steps = 0;
+        var decrement = step == ScrollAmount.SmallIncrement
+            ? ScrollAmount.SmallDecrement
+            : ScrollAmount.LargeDecrement;
+        while (true)
+        {
+            if (IsFullyVisible(element, container))
+            {
+                return (AncestorScrollStop.Visible, steps);
+            }
+
+            EnsureBoundsHaveArea(element, container);
+            var elementBounds = element.Current.BoundingRectangle;
+            var containerBounds = container.Current.BoundingRectangle;
+
+            if (!scroll.Current.VerticallyScrollable)
+            {
+                return (AncestorScrollStop.ReachedEnd, steps);
+            }
+
+            if (steps >= maxScrolls)
+            {
+                return (AncestorScrollStop.MaxScrolls, steps);
+            }
+
+            if (isTimedOut())
+            {
+                return (AncestorScrollStop.Timeout, steps);
+            }
+
+            var before = scroll.Current.VerticalScrollPercent;
+            var up = elementBounds.Top < containerBounds.Top;
+            scroll.Scroll(ScrollAmount.NoAmount, up ? decrement : step);
+            steps++;
+            if (scroll.Current.VerticalScrollPercent == before)
+            {
+                EnsureBoundsHaveArea(element, container);
+                return (IsFullyVisible(element, container) ? AncestorScrollStop.Visible : AncestorScrollStop.ReachedEnd, steps);
+            }
+        }
+    }
+
+    public static List<AutomationElement> FindVerticallyScrollableDescendants(AutomationElement root)
+    {
+        var result = new List<AutomationElement>();
+        var candidates = root.FindAll(
+            TreeScope.Descendants,
+            new PropertyCondition(AutomationElement.IsScrollPatternAvailableProperty, true));
+        foreach (AutomationElement candidate in candidates)
+        {
+            var scroll = GetScrollPattern(candidate);
+            if (scroll is not null && scroll.Current.VerticallyScrollable)
+            {
+                result.Add(candidate);
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// ItemContainerPattern.FindItemByProperty on Name or AutomationId, then
+    /// VirtualizedItemPattern.Realize when available. Returns null when the pattern is missing,
+    /// the property is unsupported by the provider, or no item matches.
+    /// </summary>
+    public static AutomationElement? TryFindAndRealizeContainerItem(AutomationElement container, Selector selector)
+    {
+        if (!container.TryGetCurrentPattern(ItemContainerPattern.Pattern, out var itemContainerObject)
+            || itemContainerObject is not ItemContainerPattern itemContainer)
+        {
+            return null;
+        }
+
+        var property = selector.Strategy == SelectorStrategy.AutomationId
+            ? AutomationElement.AutomationIdProperty
+            : AutomationElement.NameProperty;
+        AutomationElement? item;
+        try
+        {
+            item = itemContainer.FindItemByProperty(null, property, selector.Value);
+        }
+        catch (ElementNotAvailableException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException
+            or ArgumentException
+            or System.Runtime.InteropServices.COMException)
+        {
+            return null;
+        }
+
+        if (item is not null
+            && item.TryGetCurrentPattern(VirtualizedItemPattern.Pattern, out var virtualizedObject)
+            && virtualizedObject is VirtualizedItemPattern virtualized)
+        {
+            try
+            {
+                virtualized.Realize();
+            }
+            catch (ElementNotAvailableException)
+            {
+                throw;
+            }
+            catch (Exception ex) when (ex is InvalidOperationException
+                or ArgumentException
+                or System.Runtime.InteropServices.COMException)
+            {
+                // Realize failed; the caller falls through to scroll-search.
+                return null;
+            }
+        }
+
+        return item;
     }
 
     public static AutomationElement? ResolveGridEditor(AutomationElement cell, ControlType editorControlType)

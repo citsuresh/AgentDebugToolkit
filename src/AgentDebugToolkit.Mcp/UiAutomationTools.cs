@@ -357,4 +357,27 @@ public sealed class UiAutomationTools
             "find-all",
             ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value),
             ("--scopeStrategy", scopeStrategy), ("--scopeValue", scopeValue), ("--excludeValue", excludeValue)), null, cancellationToken);
+
+    [McpServerTool(Name = "ui_scroll_into_view", ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false),
+     Description("Scrolls an element into view using UI Automation patterns only (ScrollItemPattern, ItemContainerPattern, ScrollPattern): it does not request activation and makes no cursor or input calls, but the target's UI Automation provider may activate its window during a scroll. It changes the target's scroll position, which is NOT restored afterwards. Run ui_find_all first to check the selector. For virtualized lists (items not yet in the tree) pass the list itself as scopeStrategy/scopeValue. Afterwards, re-resolve and verify with the normal read tools (ui_find_first, ui_get_text). On ambiguous-container or ambiguous-match, narrow the scope rather than guessing. Returns method (already-visible, scroll-item, ancestor-scroll, item-container, scroll-search), scrollSteps, reachedEnd, fullyVisible and verticalScrollPercentBefore/After (-1 when not vertically scrollable). Errors include not-scrollable (no mouse-wheel fallback yet), element-not-found-after-scroll, container-not-found, ambiguous-container, ambiguous-match and timeout.")]
+    public Task<ToolInvocationResult> ScrollIntoView(
+        [Description("Window handle to search within.")] string hwnd,
+        [Description("Selector strategy: Name or AutomationId.")] string strategy,
+        [Description("Selector value to match.")] string value,
+        [Description("Optional scope selector strategy. The scope element is both the search area and the scroll container. Must be supplied together with scopeValue.")] string? scopeStrategy = null,
+        [Description("Optional scope selector value. Required together with scopeStrategy.")] string? scopeValue = null,
+        [Description("Scroll step: large (default, LargeIncrement) or small (SmallIncrement).")] string? step = null,
+        [Description("Maximum scroll steps, 1..1000 (default 100).")] int? maxScrolls = null,
+        [Description("Maximum time in milliseconds (default 10000). Capped at 120000 for this tool.")] int? timeoutMs = null,
+        CancellationToken cancellationToken = default)
+    {
+        const int MaxWaitMs = 120_000;
+        var cappedTimeoutMs = timeoutMs is null ? (int?)null : Math.Clamp(timeoutMs.Value, 0, MaxWaitMs);
+        var args = BuildArgs(
+            "scroll-into-view",
+            ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value),
+            ("--scopeStrategy", scopeStrategy), ("--scopeValue", scopeValue),
+            ("--step", step), ("--maxScrolls", maxScrolls?.ToString()), ("--timeoutMs", cappedTimeoutMs?.ToString()));
+        return RunAsync(args, (cappedTimeoutMs ?? 10_000) + 10_000, cancellationToken);
+    }
 }

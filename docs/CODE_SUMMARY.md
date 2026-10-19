@@ -29,7 +29,7 @@ graph LR
 | Symbol | File | Responsibility |
 |---|---|---|
 | `Program` / `Verbs` (top-level) | `Program.cs` | Parses args and dispatches UI Automation verbs, including grid-cell edits; shared action-target resolution rejects ambiguous matches |
-| `UiaHelper` | `UiaHelper.cs` | Enumerates windows through Win32; resolves selectors and virtualized grid cells/editors; builds and filters `ElementInfo` trees while preserving ancestors; performs pattern-based or synthetic interaction |
+| `UiaHelper` | `UiaHelper.cs` | Enumerates windows through Win32; resolves selectors, virtualized grid cells/editors, and scroll targets; shares vertical scroll-search; builds and filters `ElementInfo` trees while preserving ancestors; performs pattern-based or synthetic interaction |
 | `SessionContext` | `SessionContext.cs` | Persists the "current" pid to a temp JSON file so subsequent CLI invocations (separate processes) can omit `--pid` after `attach` |
 | `ScreenshotHelper` | `ScreenshotHelper.cs` | Captures a PNG screenshot of an element's bounding rect to local app data |
 | `NativeMethods` | `NativeMethods.cs` | P/Invoke user32 helpers for Win32 window enumeration/metadata, synthetic mouse/keyboard input, and window queries; primary interaction mechanism since target apps often support no UIA patterns |

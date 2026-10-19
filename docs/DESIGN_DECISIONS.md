@@ -118,3 +118,43 @@ sensitive titles.
 side effect for a read-only tool. Applying the default exclusions in pid mode -- rejected,
 changes existing results. UIA desktop-tree enumeration -- rejected for the same reasons as the
 2026-09-18 decision.
+
+## 2026-10-16 -- Scroll targets with UIA patterns only
+
+**Decision:** `scroll-into-view` uses UIA `ScrollPattern`, `ScrollItemPattern`, and
+`ItemContainerPattern`; it does not request foreground activation, makes no cursor or input calls,
+and does not restore the scroll position. The target's UI Automation provider may still activate its
+window during a scroll (observed with WPF; see `KNOWN_OPEN_FINDINGS.md`). The wheel fallback is
+deferred.
+
+**Rationale:** UIA scrolling is structural and can realize virtualized items without injecting
+mouse input or changing foreground state. Returning the resulting scroll position lets callers
+inspect the target in place; automatic restoration could hide it again or race with virtualization.
+
+**Alternatives considered:** Foreground activation and mouse-wheel input -- rejected for this verb
+because UIA-only behavior is predictable and avoids interacting with another application.
+
+**Observed WPF results:** `FindItemByProperty` hit both Name and AutomationId on the synthetic
+virtualizing list, and `Realize` succeeded; far targets reported `item-container`. In a separate
+56-target scroll-search comparison, `large` found 56 and `small` found 48; a focused post-fix
+`small` check found a target in 54 steps. The comparison showed provider-dependent step behavior,
+not parity across all targets.
+
+## 2026-10-19 -- scroll-into-view error handling fix-up
+
+**Decision:** (1) Provider `InvalidOperationException`s raised during scroll-into-view (other than
+`ElementNotAvailableException`, which stays `stale-context` and is caught first) map to
+`scroll-provider-error` with `details.stage`, instead of reaching the top-level
+`unhandled-exception` handler. (2) The item-container lookup rethrows
+`ElementNotAvailableException` so it reports `stale-context` rather than silently falling through
+to scroll-search; other `InvalidOperationException`/`ArgumentException` still fall through.
+(3) The `not-scrollable` message distinguishes "no ScrollItemPattern" from "ScrollItemPattern
+present but still not visible". (4) Both vertical percent fields are present on every response
+after window/scope lookup (`-1` when no vertical scroller is known); early validation and window
+errors omit them.
+
+**Rationale:** Callers get a documented code and a stable payload shape for every scroll-stage
+outcome, and a vanished element is not misreported as a search miss.
+
+**Alternatives considered:** Catching all exceptions -- rejected; non-UIA bugs should still surface
+as `unhandled-exception`.

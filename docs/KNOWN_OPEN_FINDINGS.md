@@ -3,6 +3,77 @@
 User-curated list of open, unresolved findings intentionally deferred rather than fixed
 immediately. Entries are only added, edited, or removed at the user's explicit request.
 
+## UIA scroll-to-element capability was missing - RESOLVED
+
+- **First seen:** 2026-10-16
+- **Last seen:** 2026-10-16
+- **Occurrences:** 1
+- **Resolved:** 2026-10-16
+
+**Description:** The UI CLI had no verb for bringing an existing or virtualized element into view
+without requesting foreground activation or using mouse input; the target's provider may still
+activate its window (see the WPF activation finding below).
+
+**Fix applied:** Added `scroll-into-view` and MCP `ui_scroll_into_view`. The CLI uses UIA scroll,
+scroll-item, and item-container patterns; a bounded re-query handles a temporarily empty UIA result
+after scrolling, observes the requested timeout, and reports success only for a fully visible
+target. The scroll position is not restored. See the separate open small-increment finding below
+and the deferred limitations in `docs/CLI_CONTRACT.md`.
+
+## Scroll-search can miss targets with small increments - OPEN
+
+- **First seen:** 2026-10-16
+- **Last seen:** 2026-10-16
+- **Occurrences:** 1
+
+**Description:** In a synthetic WPF virtualizing list without `ItemContainerPattern`, a 56-target
+comparison found all 56 targets with `--step large`, but only 48 with `--step small`. Eight target
+results differed. A focused rerun of one target (`E Item 246`) still returned
+`element-not-found-after-scroll` after 230 steps with `reachedEnd: false`; another focused check
+of `E Item 070` succeeded after 54 steps following the retry fix. This is provider- and
+virtualization-sensitive and has not been fully resolved.
+
+**Current handling:** `scroll-into-view` retries the selector briefly when a target is found but
+its post-scroll UIA re-query is temporarily empty. Retries are bounded by `timeoutMs`, and success
+requires full visibility. The shared `ScrollSearch` is unchanged, preserving `set-grid-cell`
+behavior. The retry does not fix the separate small-increment misses above.
+
+**Still open:** The mouse-wheel fallback, horizontal virtualization during scroll-search, and
+starting from the current position rather than always searching from the top remain deferred.
+
+## scroll-into-view timeout and visibility limits - OPEN
+
+- **First seen:** 2026-10-19
+- **Last seen:** 2026-10-19
+- **Occurrences:** 1
+
+**Description:**
+- (a) `timeoutMs` is checked only between steps, so a single slow `ResolveSelectorAll` or
+  `FindVerticallyScrollableDescendants` call can exceed the requested timeout.
+- (b) `already-visible` (and `fullyVisible`) use only the nearest vertically scrollable ancestor,
+  so an element inside an inner list that is clipped by an outer pane can report
+  `fullyVisible: true`.
+- (c) When no scrollable ancestor exists, visibility relies only on `IsOffscreen` (already known;
+  deferred to a fresh focused context).
+
+**Status:** Not resolved.
+
+## WPF provider may activate window during scroll - OPEN
+
+- **First seen:** 2026-10-19
+- **Last seen:** 2026-10-19
+- **Occurrences:** 1
+
+**Observation:** On a synthetic WPF test window, a direct `ScrollPattern.SetScrollPercent` call
+(outside the CLI) made the target window the foreground window. `scroll-into-view` scroll-search
+showed the same change, while a control run without verb calls did not.
+
+**Scope:** The verb (and the shared scroll search used by `set-grid-cell`) makes no activation
+request and no cursor or input calls; the activation comes from the target's UI Automation
+provider.
+
+**Status:** Not fixed; documented in `docs/CLI_CONTRACT.md` and `docs/MCP_SERVER.md`.
+
 ## UI window discovery was limited to a single process - RESOLVED
 
 - **First seen:** 2026-10-16

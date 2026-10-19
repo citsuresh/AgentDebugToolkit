@@ -29,3 +29,5 @@ Program.Verbs.Activate -> ResolveWindowHwnd -> NativeMethods.SetForegroundWindow
 Program.Verbs.SendKeys -> ResolveWindowHwnd -> Program.Verbs.ResolveElement -> UiaHelper.SendKeys (NativeMethods.Click + NativeMethods.SendKeysRaw)
 
 Program.Verbs.SubmitChatMessage -> ResolveWindowHwnd -> UiaHelper.FindWindowByHwnd -> UiaHelper.ResolveSelector (input) -> NativeMethods.Click -> UiaHelper.Type -> UiaHelper.GetText (conditional verify) -> UiaHelper.ResolveSelector (Send) -> UiaHelper.Click
+
+Program.Verbs.ScrollIntoView -> ResolveWindowHwnd -> UiaHelper.ResolveSelectorAll -> UiaHelper.TryFindAndRealizeContainerItem/ScrollSearch -> UIA scroll patterns -> JsonOutput.WriteSuccess/WriteError

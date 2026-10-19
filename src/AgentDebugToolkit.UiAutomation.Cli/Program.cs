@@ -102,6 +102,8 @@ try
             return Verbs.FindFirst(opts);
         case "find-all":
             return Verbs.FindAll(opts);
+        case "scroll-into-view":
+            return Verbs.ScrollIntoView(opts);
         case "wait-for-window-change":
             return Verbs.WaitForWindowChange(opts);
         case "wait-for-process-responding":
@@ -1992,6 +1994,544 @@ internal static class Verbs
         return 0;
     }
 
+    /// <summary>
+    /// Brings an element into view using UI Automation patterns only: it does not request
+    /// activation and makes no cursor or input calls (the target's UIA provider may still activate
+    /// its window during a scroll). Stages: element already in the tree (already-visible,
+    /// scroll-item, ancestor-scroll); ItemContainerPattern lookup (item-container); vertical
+    /// scroll-search from the top (scroll-search). The scroll position is not restored afterwards.
+    /// </summary>
+    public static int ScrollIntoView(Dictionary<string, string> opts)
+    {
+        opts.TryGetValue("strategy", out var strategyText);
+        if (!UiaHelper.TryParseImplementedSelectorStrategy(strategyText, out var strategy, out var strategyError))
+        {
+            JsonOutput.WriteError("invalid-argument", $"--strategy is required and {strategyError}");
+            return 1;
+        }
+
+        if (!opts.TryGetValue("value", out var value))
+        {
+            JsonOutput.WriteError("invalid-argument", "--value is required.");
+            return 1;
+        }
+
+        var hasScopeStrategy = opts.TryGetValue("scopeStrategy", out var scopeStrategyText);
+        var hasScopeValue = opts.TryGetValue("scopeValue", out var scopeValue);
+        if (hasScopeStrategy != hasScopeValue)
+        {
+            JsonOutput.WriteError("invalid-argument", "--scopeStrategy and --scopeValue must both be supplied, or neither.");
+            return 1;
+        }
+
+        var scopeStrategy = default(SelectorStrategy);
+        if (hasScopeStrategy
+            && !UiaHelper.TryParseImplementedSelectorStrategy(scopeStrategyText, out scopeStrategy, out var scopeStrategyError))
+        {
+            JsonOutput.WriteError("invalid-argument", $"--scopeStrategy {scopeStrategyError}");
+            return 1;
+        }
+
+        var step = ScrollAmount.LargeIncrement;
+        if (opts.TryGetValue("step", out var stepText))
+        {
+            if (stepText is not ("small" or "large"))
+            {
+                JsonOutput.WriteError("invalid-argument", "--step must be one of: small, large.");
+                return 1;
+            }
+
+            step = stepText == "small" ? ScrollAmount.SmallIncrement : ScrollAmount.LargeIncrement;
+        }
+
+        var maxScrolls = 100;
+        if (opts.TryGetValue("maxScrolls", out var maxScrollsText)
+            && (!int.TryParse(maxScrollsText, out maxScrolls) || maxScrolls < 1 || maxScrolls > 1000))
+        {
+            JsonOutput.WriteError("invalid-argument", "--maxScrolls must be an integer between 1 and 1000.");
+            return 1;
+        }
+
+        if (opts.TryGetValue("timeoutMs", out var tText)
+            && (!int.TryParse(tText, out var parsedTimeoutMs) || parsedTimeoutMs < 0))
+        {
+            JsonOutput.WriteError("invalid-argument", "--timeoutMs must be a non-negative integer.");
+            return 1;
+        }
+
+        var timeoutMs = opts.TryGetValue("timeoutMs", out var t2) ? int.Parse(t2) : 10000;
+        var clock = Stopwatch.StartNew();
+        bool IsTimedOut() => clock.ElapsedMilliseconds >= timeoutMs;
+        int GetRemainingMs()
+        {
+            var remaining = timeoutMs - clock.ElapsedMilliseconds;
+            return remaining > 0 ? (int)Math.Min(remaining, int.MaxValue) : 0;
+        }
+
+        var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
+        if (errorCode is not null)
+        {
+            JsonOutput.WriteError(errorCode!, error!);
+            return 1;
+        }
+
+        if (!NativeMethods.IsResponding(windowHwnd, timeoutMs: 250))
+        {
+            JsonOutput.WriteError("window-not-responding", "The target window is not responding.");
+            return 1;
+        }
+
+        var context = new ScrollContext();
+        try
+        {
+            return ScrollIntoViewCore(
+                windowHwnd, new Selector { Strategy = strategy, Value = value },
+                hasScopeStrategy ? new Selector { Strategy = scopeStrategy, Value = scopeValue! } : null,
+                step, maxScrolls, timeoutMs, IsTimedOut, GetRemainingMs, context);
+        }
+        catch (ElementNotAvailableException ex)
+        {
+            JsonOutput.WriteError("stale-context",
+                $"A UI Automation element became unavailable while scrolling: {ex.Message}",
+                new
+                {
+                    verticalScrollPercentBefore = context.PercentBefore,
+                    verticalScrollPercentAfter = SafeVerticalScrollPercent(context.Scroller),
+                });
+            return 1;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException
+            or ArgumentException
+            or System.Runtime.InteropServices.COMException)
+        {
+            // Provider failures (e.g. SetScrollPercent/Scroll/ScrollIntoView/Realize on a disabled or unsupported container, or an empty bounding rectangle during a visibility check).
+            // ElementNotAvailableException is a separate type and is handled by the catch above.
+            var stage = ex is UiaHelper.EmptyBoundsException ? "visibility-check" : context.Stage;
+            JsonOutput.WriteError("scroll-provider-error",
+                $"The UI Automation provider failed during '{stage}': {ex.Message}",
+                new
+                {
+                    details = new { stage },
+                    verticalScrollPercentBefore = context.PercentBefore,
+                    verticalScrollPercentAfter = SafeVerticalScrollPercent(context.Scroller),
+                });
+            return 1;
+        }
+    }
+
+    private sealed class ScrollContext
+    {
+        public string Stage { get; set; } = "resolve-window";
+
+        public AutomationElement? Scroller { get; set; }
+
+        public double PercentBefore { get; set; } = -1;
+
+        public void Track(string stage, AutomationElement? scroller, double percentBefore)
+        {
+            Stage = stage;
+            Scroller = scroller;
+            PercentBefore = percentBefore;
+        }
+    }
+
+    private static double SafeVerticalScrollPercent(AutomationElement? scroller)
+    {
+        try
+        {
+            return UiaHelper.GetVerticalScrollPercent(scroller);
+        }
+        catch (Exception ex) when (ex is ElementNotAvailableException
+            or InvalidOperationException
+            or System.Runtime.InteropServices.COMException)
+        {
+            return -1;
+        }
+    }
+
+    private static int ScrollIntoViewCore(
+        IntPtr windowHwnd, Selector selector, Selector? scopeSelector,
+        ScrollAmount step, int maxScrolls, int timeoutMs, Func<bool> isTimedOut, Func<int> getRemainingMs,
+        ScrollContext context)
+    {
+        var window = UiaHelper.FindWindowByHwnd($"0x{windowHwnd.ToInt64():X}");
+        if (window is null)
+        {
+            JsonOutput.WriteError("element-not-found", $"No window found for hwnd '0x{windowHwnd.ToInt64():X}'.");
+            return 1;
+        }
+
+        var scope = window;
+        if (scopeSelector is not null)
+        {
+            context.Track("resolve-scope", null, -1);
+            var scopeMatches = UiaHelper.ResolveSelectorAll(window, scopeSelector);
+            if (scopeMatches.Count == 0)
+            {
+                JsonOutput.WriteError("container-not-found",
+                    $"No scope element found for --scopeStrategy '{scopeSelector.Strategy}' --scopeValue '{scopeSelector.Value}'.",
+                    new { verticalScrollPercentBefore = -1d, verticalScrollPercentAfter = -1d });
+                return 1;
+            }
+
+            if (scopeMatches.Count > 1)
+            {
+                var (scopeCandidates, scopeLimitMessage) = CreateCandidates(scopeMatches);
+                JsonOutput.WriteError("ambiguous-container",
+                    $"Scope selector [{scopeSelector.Strategy}] '{scopeSelector.Value}' matched {scopeMatches.Count} elements.{scopeLimitMessage} Narrow --scopeStrategy/--scopeValue.",
+                    new
+                    {
+                        count = scopeMatches.Count,
+                        candidates = scopeCandidates,
+                        verticalScrollPercentBefore = -1d,
+                        verticalScrollPercentAfter = -1d,
+                    });
+                return 1;
+            }
+
+            scope = scopeMatches[0];
+        }
+
+        // Stage 1: the target is already in the UIA tree.
+        context.Track("resolve-target", scope, -1);
+        var scopePercentBefore = UiaHelper.GetVerticalScrollPercent(scope);
+        context.Track("resolve-target", scope, scopePercentBefore);
+        var matches = UiaHelper.ResolveSelectorAll(scope, selector);
+        if (matches.Count > 1)
+        {
+            WriteScrollAmbiguousMatch(selector, matches, scope, scopePercentBefore);
+            return 1;
+        }
+
+        if (matches.Count == 1)
+        {
+            var element = matches[0];
+            var ancestor = UiaHelper.FindScrollableAncestor(element, scope);
+            var percentBefore = UiaHelper.GetVerticalScrollPercent(ancestor);
+            context.Track("resolve-target", ancestor, percentBefore);
+            if (UiaHelper.IsFullyVisibleWithArea(element, ancestor))
+            {
+                WriteScrollSuccess("already-visible", 0, false, element, ancestor, percentBefore, scope);
+                return 0;
+            }
+
+            context.Stage = "scroll-item";
+            var hasScrollItem = UiaHelper.TryScrollItemIntoView(element);
+            if (hasScrollItem)
+            {
+                var refreshed = ResolveSingle(scope, selector);
+                var refreshedAncestor = refreshed is null
+                    ? ancestor
+                    : UiaHelper.FindScrollableAncestor(refreshed, scope) ?? ancestor;
+                if (refreshed is not null && UiaHelper.IsFullyVisibleWithArea(refreshed, refreshedAncestor))
+                {
+                    WriteScrollSuccess("scroll-item", 0, false, refreshed, refreshedAncestor, percentBefore, scope);
+                    return 0;
+                }
+            }
+
+            var ancestorScroll = UiaHelper.GetScrollPattern(ancestor);
+            if (ancestor is null || ancestorScroll is null || !ancestorScroll.Current.VerticallyScrollable)
+            {
+                WriteNotScrollable(
+                    hasScrollItem
+                        ? "The element supports ScrollItemPattern but is still not visible, and it has no vertically scrollable ancestor."
+                        : "The element is off-view and has no ScrollItemPattern or vertically scrollable ancestor.",
+                    ancestor, percentBefore);
+                return 1;
+            }
+
+            context.Stage = "ancestor-scroll";
+            var (stop, steps) = UiaHelper.StepAncestorUntilVisible(
+                element, ancestor, ancestorScroll, step, maxScrolls, isTimedOut);
+            if (stop == UiaHelper.AncestorScrollStop.Timeout)
+            {
+                WriteScrollTimeout(selector, timeoutMs, steps, ancestor, percentBefore);
+                return 1;
+            }
+
+            if (stop != UiaHelper.AncestorScrollStop.Visible)
+            {
+                WriteNotFoundAfterScroll(selector, steps, stop == UiaHelper.AncestorScrollStop.ReachedEnd, ancestor, percentBefore,
+                    "the element exists but could not be brought fully into view");
+                return 1;
+            }
+
+            WriteScrollSuccess("ancestor-scroll", steps, false, element, ancestor, percentBefore, scope);
+            return 0;
+        }
+
+        // Stage 2: the target is not in the tree (e.g. virtualized); pick the container.
+        var container = scope;
+        if (scopeSelector is null)
+        {
+            context.Track("container-detect", null, -1);
+            var scrollables = UiaHelper.FindVerticallyScrollableDescendants(window);
+            if (scrollables.Count == 0)
+            {
+                WriteNotScrollable("The target was not found and the window has no vertically scrollable container.", null, -1);
+                return 1;
+            }
+
+            if (scrollables.Count > 1)
+            {
+                const int candidateLimit = 10;
+                var candidates = scrollables.Take(candidateLimit).Select(ToElementSummary).ToArray();
+                var limitMessage = scrollables.Count > candidateLimit
+                    ? $" Only the first {candidateLimit} candidates are shown."
+                    : string.Empty;
+                JsonOutput.WriteError("ambiguous-container",
+                    $"The target was not found and the window has {scrollables.Count} vertically scrollable containers.{limitMessage} Pass --scopeStrategy/--scopeValue to choose one.",
+                    new
+                    {
+                        count = scrollables.Count,
+                        candidates,
+                        verticalScrollPercentBefore = -1d,
+                        verticalScrollPercentAfter = -1d,
+                    });
+                return 1;
+            }
+
+            container = scrollables[0];
+        }
+
+        context.Track("item-container", container, -1);
+        var containerPercentBefore = UiaHelper.GetVerticalScrollPercent(container);
+        context.Track("item-container", container, containerPercentBefore);
+        var item = UiaHelper.TryFindAndRealizeContainerItem(container, selector);
+        if (item is not null)
+        {
+            var realized = UiaHelper.ResolveSelectorAll(container, selector);
+            if (realized.Count > 1)
+            {
+                WriteScrollAmbiguousMatch(selector, realized, container, containerPercentBefore);
+                return 1;
+            }
+
+            if (realized.Count == 1)
+            {
+                context.Stage = "scroll-item";
+                if (UiaHelper.TryScrollItemIntoView(realized[0]))
+                {
+                    var refreshed = ResolveSingle(container, selector) ?? realized[0];
+                    if (UiaHelper.IsFullyVisibleWithArea(refreshed, container))
+                    {
+                        WriteScrollSuccess("item-container", 0, false, refreshed, container, containerPercentBefore, scope);
+                        return 0;
+                    }
+                }
+            }
+        }
+
+        // Stage 3: scroll-search from the top.
+        context.Stage = "scroll-search";
+        var containerScroll = UiaHelper.GetScrollPattern(container);
+        if (containerScroll is null || !containerScroll.Current.VerticallyScrollable)
+        {
+            WriteNotScrollable("The target was not found and the container has no vertically scrollable ScrollPattern.",
+                container, containerPercentBefore);
+            return 1;
+        }
+
+        var search = UiaHelper.ScrollSearch(
+            containerScroll,
+            step,
+            () => { var found = UiaHelper.ResolveSelectorAll(container, selector); return found.Count == 0 ? null : found; },
+            found => { if (found.Count == 1) { UiaHelper.TryScrollItemIntoView(found[0]); } },
+            maxScrolls,
+            isTimedOut);
+
+        if (search.Stop == UiaHelper.ScrollSearchStop.Timeout)
+        {
+            WriteScrollTimeout(selector, timeoutMs, search.Steps, container, containerPercentBefore);
+            return 1;
+        }
+
+        if (search.Stop == UiaHelper.ScrollSearchStop.Found)
+        {
+            // A virtualizing container can briefly drop the realized item after ScrollIntoView;
+            // retry the re-query before reporting it as not found.
+            var found = search.Result;
+            var retryTimedOut = false;
+            for (var attempt = 0; (found is null || found.Count == 0) && attempt < 5; attempt++)
+            {
+                var remainingMs = getRemainingMs();
+                if (remainingMs <= 0)
+                {
+                    retryTimedOut = true;
+                    break;
+                }
+
+                Thread.Sleep(Math.Min(100, remainingMs));
+                if (isTimedOut())
+                {
+                    retryTimedOut = true;
+                    break;
+                }
+
+                var retry = UiaHelper.ResolveSelectorAll(container, selector);
+                if (isTimedOut())
+                {
+                    retryTimedOut = true;
+                    break;
+                }
+
+                found = retry.Count == 0 ? null : retry;
+            }
+
+            if (retryTimedOut)
+            {
+                WriteScrollTimeout(selector, timeoutMs, search.Steps, container, containerPercentBefore);
+                return 1;
+            }
+
+            if (found is not null && found.Count > 1)
+            {
+                WriteScrollAmbiguousMatch(selector, found, container, containerPercentBefore);
+                return 1;
+            }
+
+            if (found is not null && found.Count == 1)
+            {
+                var element = found[0];
+                if (!UiaHelper.IsFullyVisibleWithArea(element, container)
+                    && UiaHelper.TryScrollItemIntoView(element))
+                {
+                    var refreshed = UiaHelper.ResolveSelectorAll(container, selector);
+                    if (refreshed.Count > 1)
+                    {
+                        WriteScrollAmbiguousMatch(selector, refreshed, container, containerPercentBefore);
+                        return 1;
+                    }
+
+                    if (refreshed.Count == 1)
+                    {
+                        element = refreshed[0];
+                    }
+                }
+
+                if (UiaHelper.IsFullyVisibleWithArea(element, container))
+                {
+                    WriteScrollSuccess("scroll-search", search.Steps, false, element, container, containerPercentBefore, scope);
+                    return 0;
+                }
+
+                WriteNotFoundAfterScroll(selector, search.Steps, false, container, containerPercentBefore,
+                    "the target was found but could not be brought fully into view");
+                return 1;
+            }
+
+            WriteNotFoundAfterScroll(selector, search.Steps, false, container, containerPercentBefore,
+                "the target was found during the scroll but was no longer available afterwards");
+            return 1;
+        }
+
+        var reachedEnd = search.Stop == UiaHelper.ScrollSearchStop.ReachedEnd;
+        WriteNotFoundAfterScroll(selector, search.Steps, reachedEnd, container, containerPercentBefore,
+            reachedEnd ? "reached the end of the container" : "stopped at --maxScrolls");
+        return 1;
+    }
+
+    private static void WriteNotFoundAfterScroll(
+        Selector selector, int scrollSteps, bool reachedEnd, AutomationElement container, double percentBefore, string reason)
+    {
+        JsonOutput.WriteError("element-not-found-after-scroll",
+            $"No element found in view for selector [{selector.Strategy}] '{selector.Value}' after {scrollSteps} scroll step(s); {reason}.",
+            new
+            {
+                scrollSteps,
+                reachedEnd,
+                container = ToScrollContainerSummary(container),
+                verticalScrollPercentBefore = percentBefore,
+                verticalScrollPercentAfter = UiaHelper.GetVerticalScrollPercent(container),
+            });
+    }
+
+    private static AutomationElement? ResolveSingle(AutomationElement scope, Selector selector)
+    {
+        var matches = UiaHelper.ResolveSelectorAll(scope, selector);
+        return matches.Count == 1 ? matches[0] : null;
+    }
+
+    private static void WriteScrollSuccess(
+        string method, int scrollSteps, bool reachedEnd, AutomationElement element,
+        AutomationElement? container, double percentBefore, AutomationElement scopeOrWindow)
+    {
+        var reportedContainer = container ?? scopeOrWindow;
+        JsonOutput.WriteSuccess(new
+        {
+            method,
+            scrollSteps,
+            reachedEnd,
+            fullyVisible = UiaHelper.IsFullyVisible(element, container),
+            verticalScrollPercentBefore = percentBefore,
+            verticalScrollPercentAfter = UiaHelper.GetVerticalScrollPercent(container),
+            element = new
+            {
+                name = element.Current.Name ?? string.Empty,
+                controlType = element.Current.ControlType?.ProgrammaticName ?? string.Empty,
+                automationId = element.Current.AutomationId ?? string.Empty,
+                isOffscreen = element.Current.IsOffscreen,
+                boundingRect = UiaHelper.SafeRect(element.Current.BoundingRectangle),
+            },
+            container = new { controlType = reportedContainer.Current.ControlType?.ProgrammaticName ?? string.Empty },
+        }, preserveNullFields: true);
+    }
+
+    private static void WriteScrollAmbiguousMatch(
+        Selector selector, AutomationElementCollection matches, AutomationElement? scroller, double percentBefore)
+    {
+        var (candidates, limitMessage) = CreateCandidates(matches);
+        JsonOutput.WriteError("ambiguous-match",
+            $"Selector [{selector.Strategy}] '{selector.Value}' matched {matches.Count} elements.{limitMessage} Use find-all to pre-check matches and --scopeStrategy/--scopeValue to narrow the search.",
+            new
+            {
+                count = matches.Count,
+                candidates,
+                verticalScrollPercentBefore = percentBefore,
+                verticalScrollPercentAfter = UiaHelper.GetVerticalScrollPercent(scroller),
+            });
+    }
+
+    private static void WriteNotScrollable(string reason, AutomationElement? scroller, double percentBefore)
+    {
+        JsonOutput.WriteError("not-scrollable",
+            $"{reason} UI Automation cannot scroll it; a mouse-wheel fallback is not implemented yet.",
+            new
+            {
+                verticalScrollPercentBefore = percentBefore,
+                verticalScrollPercentAfter = UiaHelper.GetVerticalScrollPercent(scroller),
+            });
+    }
+
+    private static void WriteScrollTimeout(
+        Selector selector, int timeoutMs, int scrollSteps, AutomationElement container, double percentBefore)
+    {
+        JsonOutput.WriteError("timeout",
+            $"Element [{selector.Strategy}] '{selector.Value}' was not scrolled into view within {timeoutMs}ms.",
+            new
+            {
+                scrollSteps,
+                reachedEnd = false,
+                container = ToScrollContainerSummary(container),
+                verticalScrollPercentBefore = percentBefore,
+                verticalScrollPercentAfter = UiaHelper.GetVerticalScrollPercent(container),
+            });
+    }
+
+    /// <summary>ToElementSummary for scroll-into-view errors; a window's name (its title) is emitted empty.</summary>
+    private static object ToScrollContainerSummary(AutomationElement element)
+    {
+        var isWindow = element.Current.ControlType == ControlType.Window;
+        return new
+        {
+            name = isWindow ? string.Empty : element.Current.Name ?? string.Empty,
+            automationId = element.Current.AutomationId ?? string.Empty,
+            controlType = element.Current.ControlType?.ProgrammaticName ?? string.Empty,
+            className = element.Current.ClassName ?? string.Empty,
+        };
+    }
+
     private static object ToElementSummary(AutomationElement element)
     {
         return new
@@ -2173,20 +2713,26 @@ internal static class Verbs
 
         if (matches.Count > 1)
         {
-            const int candidateLimit = 10;
-            var candidates = matches.Cast<AutomationElement>()
-                .Take(candidateLimit)
-                .Select(ToElementSummary)
-                .ToArray();
-            var limitMessage = matches.Count > candidateLimit
-                ? $" Only the first {candidateLimit} candidates are shown."
-                : string.Empty;
+            var (candidates, limitMessage) = CreateCandidates(matches);
             return (null, "ambiguous-match",
                 $"Selector [{strategy}] '{value}' matched {matches.Count} elements.{limitMessage} Use find-all to pre-check matches and --scopeHwnd to narrow the search.",
                 new { count = matches.Count, candidates });
         }
 
         return (matches[0], null, null, null);
+    }
+
+    private static (object[] candidates, string limitMessage) CreateCandidates(AutomationElementCollection matches)
+    {
+        const int candidateLimit = 10;
+        var candidates = matches.Cast<AutomationElement>()
+            .Take(candidateLimit)
+            .Select(ToElementSummary)
+            .ToArray();
+        var limitMessage = matches.Count > candidateLimit
+            ? $" Only the first {candidateLimit} candidates are shown."
+            : string.Empty;
+        return (candidates, limitMessage);
     }
 
     private static (AutomationElement? element, string? errorCode, string? error) ResolveWindow(
