@@ -968,11 +968,18 @@ explicit scope is used; otherwise the verb requires exactly one vertically scrol
 container. `ItemContainerPattern.FindItemByProperty` (Name or AutomationId) and `Realize` are
 tried before a scroll-search from the top; if `FindItemByProperty` or `Realize` fails with a provider
 error, the verb falls through to scroll-search. Scroll-search re-resolves the target after every step;
-if the post-scroll lookup is briefly empty, it retries within the configured timeout. Success is
+a partly visible match does not end the search: it attempts `ScrollItemPattern`, re-resolves the
+match, and keeps stepping until the target is fully visible or a stop condition is reached.
+If the post-scroll lookup is briefly empty, it retries within the configured timeout. Success is
 returned only when `fullyVisible` is true.
-- `--maxScrolls` stops with `element-not-found-after-scroll` and `reachedEnd: false`; reaching the
-end or a non-advancing scroll returns the same error with `reachedEnd: true`. A timeout returns
-`timeout`. Lazy-loading content may stop at `maxScrolls` before more items are loaded. Nested
+- `--maxScrolls` stops with `element-not-found-after-scroll` and `reachedEnd: false`; reaching
+100% vertical scroll or three consecutive non-advancing scroll steps returns the same error with
+`reachedEnd: true`. Advancing the vertical scroll percent resets the non-advancing-step counter.
+The latest non-null match rejected as not fully visible is retained across empty lookups; at the
+end or scroll limit, it goes through the existing visibility fallback and, if still partly visible,
+reports that the target was found but could not be brought fully into view, with `reachedEnd`
+preserved. A timeout still returns `timeout`, even when a partial match was retained.
+Lazy-loading content may stop at `maxScrolls` before more items are loaded. Nested
 scrollers may require an explicit scope; custom controls without usable UIA scroll/item patterns
 return `not-scrollable`. The view is not restored, and horizontal virtualization is not searched.
 Error responses returned after scrolling started, including `ambiguous-match`, `element-not-found-after-scroll`, and `timeout`, can report a scroll position the verb has already changed; the percent fields show the position before and after that change.

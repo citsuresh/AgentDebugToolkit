@@ -174,3 +174,20 @@ as `unhandled-exception`.
 **Decision:** Provider errors: `InvalidOperationException`, `ArgumentException`, and `COMException` during `scroll-into-view` are reported as `scroll-provider-error`. **Rationale:** These responses include `details.stage` and both percent fields.
 
 **Decision:** Errors after scrolling: error responses returned after scrolling started can report a scroll position the verb has already changed. **Rationale:** The position is not restored.
+
+## 2026-10-19 -- scroll-search requires full visibility and tolerates transient stalls
+
+**Decision:** `scroll-into-view` supplies an optional satisfaction predicate to the shared
+`ScrollSearch` loop: a match is scrolled into view and re-resolved, and searching continues if
+it is still partly visible. With this predicate, three consecutive non-advancing scroll steps
+are required to report `ReachedEnd`; advancement resets the counter, while reaching 100%
+vertical scroll still ends the search. The latest non-null rejected match is retained as
+`PartialResult` across empty lookups for the existing visibility fallback on end or scroll limit,
+without changing the stop-derived `reachedEnd` value. Timeout reporting remains unconditional.
+Without a predicate, behavior is unchanged: one non-advancing step ends the search and
+`PartialResult` stays null; `set-grid-cell` does not supply the predicate.
+
+**Rationale:** A first match can be only partly visible, and one non-advancing step can occur
+before the end of a list, so neither should prematurely terminate this verb's search; retaining
+the partial match preserves its specific error while leaving other callers and timeout signals
+unchanged.
