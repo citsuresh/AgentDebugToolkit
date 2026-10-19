@@ -975,6 +975,7 @@ end or a non-advancing scroll returns the same error with `reachedEnd: true`. A 
 `timeout`. Lazy-loading content may stop at `maxScrolls` before more items are loaded. Nested
 scrollers may require an explicit scope; custom controls without usable UIA scroll/item patterns
 return `not-scrollable`. The view is not restored, and horizontal virtualization is not searched.
+Error responses returned after scrolling started, including `ambiguous-match`, `element-not-found-after-scroll`, and `timeout`, can report a scroll position the verb has already changed; the percent fields show the position before and after that change.
 - Success includes `method` (`already-visible`, `scroll-item`, `ancestor-scroll`, `item-container`,
 or `scroll-search`), `scrollSteps`, `reachedEnd`, `fullyVisible`, `element`, `container`, and both
 `verticalScrollPercentBefore` and `verticalScrollPercentAfter`; `-1` means UIA reports no vertical
