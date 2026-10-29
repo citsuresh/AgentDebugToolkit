@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Windows.Automation;
 using AgentDebugToolkit.Core;
 using AgentDebugToolkit.Core.Models;
@@ -77,6 +78,8 @@ try
             return Verbs.MoveMouse(opts);
         case "get-cursor-pos":
             return Verbs.GetCursorPos(opts);
+        case "cursor-session":
+            return Verbs.CursorSessionVerb(args.Skip(1).ToArray());
         case "right-click":
             return Verbs.RightClick(opts);
         case "double-click":
@@ -195,6 +198,79 @@ static bool IsBooleanFlag(string name) => name.Equals("screenshot", StringCompar
 
 internal static class Verbs
 {
+    internal static bool TryParseCursorSessionArguments(string[] arguments, out bool start,
+        out CursorSessionKind? kind, out string? error)
+    {
+        start = arguments.Length > 0 && arguments[0] == "start";
+        kind = null;
+        error = null;
+        if (arguments.Length == 0 || arguments[0] is not ("start" or "stop"))
+        {
+            error = "Use cursor-session start|stop [--kind UiAutomation|Orchestrator].";
+            return false;
+        }
+
+        string? value = null;
+        if (arguments.Length == 2 && arguments[1].StartsWith("--kind=", StringComparison.OrdinalIgnoreCase))
+        {
+            value = arguments[1]["--kind=".Length..];
+        }
+        else if (arguments.Length == 3 && arguments[1].Equals("--kind", StringComparison.OrdinalIgnoreCase))
+        {
+            value = arguments[2];
+        }
+        else if (arguments.Length != 1)
+        {
+            error = "Use cursor-session start|stop [--kind UiAutomation|Orchestrator].";
+            return false;
+        }
+
+        if (value is not null)
+        {
+            if (value.Equals(nameof(CursorSessionKind.UiAutomation), StringComparison.OrdinalIgnoreCase))
+            {
+                kind = CursorSessionKind.UiAutomation;
+            }
+            else if (value.Equals(nameof(CursorSessionKind.Orchestrator), StringComparison.OrdinalIgnoreCase))
+            {
+                kind = CursorSessionKind.Orchestrator;
+            }
+            else
+            {
+                error = "--kind must be UiAutomation or Orchestrator.";
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public static int CursorSessionVerb(string[] arguments)
+    {
+        if (!TryParseCursorSessionArguments(arguments, out var start, out var kind, out var error))
+        {
+            JsonOutput.WriteError("invalid-argument", error!);
+            return 1;
+        }
+
+        var session = new CursorSession(new SystemCursorOperations(),
+            CursorSession.FlagPath(Environment.GetEnvironmentVariable("TEMP"), Path.GetTempPath()));
+        var result = start
+            ? session.Start(kind ?? CursorSessionKind.UiAutomation)
+            : session.Stop(kind);
+        var payload = new Dictionary<string, object?>
+        {
+            ["kind"] = result.Kind,
+            ["owner"] = result.Owner,
+            ["changed"] = result.Changed
+        };
+        if (result.Warning is not null)
+        {
+            payload["warning"] = result.Warning;
+        }
+        JsonOutput.WriteSuccess(payload, preserveNullFields: true);
+        return 0;
+    }
+
     public static int Attach(Dictionary<string, string> opts)
     {
         if (!opts.TryGetValue("process", out var processName))

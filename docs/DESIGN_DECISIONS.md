@@ -207,3 +207,23 @@ Without a predicate, behavior is unchanged: one non-advancing step ends the sear
 before the end of a list, so neither should prematurely terminate this verb's search; retaining
 the partial match preserves its specific error while leaving other callers and timeout signals
 unchanged.
+
+## 2026-10-29 -- Cursor sessions share the script's cross-process flag
+
+**Decision:** Implement the blue/green cursor-session indicators directly in the UI CLI using
+Win32 cursor APIs, with injectable cursor operations for tests. Use the same
+`%TEMP%\agent-cursor-session.flag` and `kind=<Kind> pid=<pid> started=<ISO time>` format as
+`AgentCursor.ps1`.
+
+**Rationale:** MCP tools and independent CLI invocations need the indicator without invoking a
+PowerShell script. Sharing the flag preserves the script's first-owner rule across both callers;
+injecting cursor operations and a flag path permits tests without changing the user's cursors
+or real session state.
+
+**Alternative considered:** Launching `AgentCursor.ps1` from the CLI -- rejected because it adds
+a shell dependency and prevents the CLI from owning and testing the behavior directly.
+
+**Known limitation:** Like the existing script, the flag check, write, and cursor update are not
+atomic across processes. Concurrent starts can disagree about ownership; a mutex in the CLI alone
+would not protect script callers. Coordinating both implementations would require updating the
+external script, which is deliberately outside this change.

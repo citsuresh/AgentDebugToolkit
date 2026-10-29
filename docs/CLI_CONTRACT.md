@@ -334,6 +334,25 @@ Returns the current cursor position via `GetCursorPos`. Takes no arguments — n
 resolution involved.
 - Success: `{ "success": true, "x": n, "y": n }`.
 
+### `cursor-session start [--kind UiAutomation|Orchestrator]` / `cursor-session stop [--kind UiAutomation|Orchestrator]`
+Shows a coloured dot on the system arrow, hand, and I-beam cursors while monitoring or driving a
+UI. Start defaults to `UiAutomation` (green); `Orchestrator` is blue. The first active kind owns
+the cursor: starting another kind reports the current owner without changing it, and stopping
+the wrong kind leaves the session alone. Stop without `--kind` clears any session and restores
+the user's cursor scheme. A repeated start of the owning kind refreshes the session and mark.
+The session is shared with `AgentCursor.ps1` through `%TEMP%\agent-cursor-session.flag` in the
+format `kind=<Kind> pid=<pid> started=<ISO time>`; flags at least 12 hours old are ignored, and
+legacy flags without a kind count as `Orchestrator`. Either `--kind <value>` or
+`--kind=<value>` is accepted. Do not leave a session active after handing control back to the
+user; use `cursor-session stop` without a kind for recovery.
+- Success: `{ "success": true, "kind": "UiAutomation" | "Orchestrator" | null,
+  "owner": "UiAutomation" | "Orchestrator" | null, "changed": true | false }`.
+  `kind` is the requested kind (or null for an unqualified stop), and `owner` is the active
+  owner afterward (or null once cleared). A native marking or restoration failure still returns
+  success with a `warning` field explaining that the cursor indicator or restoration failed.
+- Failure: `invalid-argument` for unknown actions, kinds, options, or stray arguments; file I/O
+  failures are reported through the CLI's `unhandled-exception` error envelope.
+
 ### `type --hwnd <h> --strategy <s> --value <v> (--text <input> | --clear) [--scopeHwnd <h2>] [--verify] [--paste]`
 - Fails with `ambiguous-match` instead of typing into the first of several matches. Pre-check
   the count with `find-all`; narrow the search with `--scopeHwnd`.

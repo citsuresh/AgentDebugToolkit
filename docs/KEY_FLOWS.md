@@ -33,3 +33,5 @@ Program.Verbs.SubmitChatMessage -> ResolveWindowHwnd -> UiaHelper.FindWindowByHw
 Program.Verbs.ScrollContainer -> ResolveWindowHwnd -> UiaHelper.ResolveSelectorAll -> UiaHelper.GetScrollPattern/SetScrollPercent -> bounded position polling -> JsonOutput.WriteSuccess/WriteError
 
 Program.Verbs.ScrollIntoView -> ResolveWindowHwnd -> UiaHelper.ResolveSelectorAll -> UiaHelper.TryFindAndRealizeContainerItem/ScrollSearch -> UIA scroll patterns -> JsonOutput.WriteSuccess/WriteError
+
+UiAutomationTools.CursorSessionStart/Stop -> CliRunner.RunAsync -> Program.Verbs.CursorSessionVerb -> CursorSession.Start/Stop -> SystemCursorOperations.Mark/Restore -> JsonOutput.WriteSuccess

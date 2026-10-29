@@ -116,6 +116,9 @@ MCP client can grant/prompt approval per tool rather than per call:
     `ui_find_first`, `ui_find_all`.
   - `ui_screenshot` is **not** read-only (`readOnlyHint: false`): although it does not change
     target application state, it writes a new PNG file to disk, which is a side effect.
+  - `ui_cursor_session_start` and `ui_cursor_session_stop` are not read-only: they alter the
+    system cursor scheme and a shared session flag, but are marked non-destructive because the
+    scheme can be restored by stopping without a kind.
   - **Destructive** (`destructiveHint: true`): `vs_start_debugging` (launches a new debuggee
     process), `vs_stop_debugging` (terminates the debuggee, unlike `vs_detach`),
     `vs_set_breakpoint`/`vs_remove_breakpoint` (change debugger state), `vs_attach_process`
@@ -182,6 +185,8 @@ MCP client can grant/prompt approval per tool rather than per call:
 | `ui_drag` | `drag` | Destructive |
 | `ui_move_mouse` | `move-mouse` | |
 | `ui_get_cursor_pos` | `get-cursor-pos` | Read-only |
+| `ui_cursor_session_start` | `cursor-session start` | Optional `kind` (default `UiAutomation`); first active kind owns the cursor |
+| `ui_cursor_session_stop` | `cursor-session stop` | Optional `kind`; omitted kind clears any session and restores cursors |
 | `ui_type` | `type` | Destructive; optional `text`, `clear`, `scopeHwnd`, `verify`, and `paste` parameters |
 | `ui_get_text` | `get-text` | Read-only; optional `controlType` and `scopeHwnd` narrow the selector search |
 | `ui_set_grid_cell` | `set-grid-cell` | Destructive |
@@ -201,6 +206,11 @@ MCP client can grant/prompt approval per tool rather than per call:
 | `ui_scroll_into_view` | `scroll-into-view` | Changes the target's scroll position; not restored; UIA-only |
 
 `ui_scroll_container` takes a container selector (`strategy`, `value`), `verticalPercent` from 0 to 100, and optional `scopeHwnd`; it rejects missing or ambiguous containers, does not call `SetScrollPercent` when already at the requested position, and re-reads the final position for up to 500 ms. It reports `verticalScrollPercentBefore`, `verticalScrollPercentAfter`, `boundaryReached`, and `changed`. Errors include `not-scrollable`, `stale-context`, and `scroll-provider-error`.
+
+`ui_cursor_session_start` and `ui_cursor_session_stop` relay the CLI's `success`, `kind`,
+`owner`, `changed`, and optional `warning` fields. They share the script's temp flag, so the
+first active kind controls the dot; stop without `kind` clears it for recovery. They change the
+system cursor scheme (arrow, hand and I-beam), not the mouse position or target application.
 
 `ui_scroll_into_view` uses UIA patterns only;
 input calls, but the target's UI Automation provider may activate its window during a scroll

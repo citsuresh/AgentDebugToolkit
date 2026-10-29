@@ -44,6 +44,13 @@ public sealed class UiAutomationTools
     // Emits a boolean flag only when true, so false/null never adds a scope flag.
     private static string? TrueOnly(bool? value) => value == true ? "true" : null;
 
+    private static List<string> CursorSessionArgs(string action, string? kind)
+    {
+        var args = BuildArgs("cursor-session", ("--kind", kind));
+        args.Insert(1, action);
+        return args;
+    }
+
     private const string WindowDiscoveryNotes =
         " Window titles can contain sensitive data: filter first (titleContains/className/processName) and return only the rows you need. " +
         "Scope options pid, all and processName are mutually exclusive (the CLI rejects combinations). " +
@@ -155,6 +162,20 @@ public sealed class UiAutomationTools
      Description("Returns the current cursor position. Read-only, no arguments.")]
     public Task<ToolInvocationResult> GetCursorPos(CancellationToken cancellationToken = default)
         => RunAsync(BuildArgs("get-cursor-pos"), null, cancellationToken);
+
+    [McpServerTool(Name = "ui_cursor_session_start", ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false),
+     Description("Shows a colored dot on the system cursors and shares a session flag with AgentCursor.ps1. The first active kind owns the cursor; a nested start of another kind leaves it unchanged. Default kind is UiAutomation (green); Orchestrator is blue. Stop the session when monitoring ends.")]
+    public Task<ToolInvocationResult> CursorSessionStart(
+        [Description("UiAutomation (default) or Orchestrator.")] string? kind = null,
+        CancellationToken cancellationToken = default)
+        => RunAsync(CursorSessionArgs("start", kind), null, cancellationToken);
+
+    [McpServerTool(Name = "ui_cursor_session_stop", ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false),
+     Description("Restores the user's cursor scheme and clears the shared session flag. If kind is specified, only that kind can stop its session; without kind, clears any session.")]
+    public Task<ToolInvocationResult> CursorSessionStop(
+        [Description("UiAutomation or Orchestrator. Omit to clear any session.")] string? kind = null,
+        CancellationToken cancellationToken = default)
+        => RunAsync(CursorSessionArgs("stop", kind), null, cancellationToken);
 
     [McpServerTool(Name = "ui_type", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false),
      Description("Resolves an element and types text into it (ValuePattern, falling back to click-to-focus plus synthetic keyboard input, or clipboard paste). When ValuePattern is used (method: \"pattern\"), this REPLACES the control's entire existing value and typically leaves the caret at position 0, not at the end. To append instead, use ui_send_keys (send ^{END} first to move the caret to the end). To empty a control use clear=true; an empty text string is also passed correctly. Changes target application state. If the selector matches more than one element this fails with ambiguous-match (count plus up to 10 candidates) and does nothing; narrow with scopeHwnd or pre-check with ui_find_all.")]

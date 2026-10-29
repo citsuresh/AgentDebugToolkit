@@ -4,22 +4,14 @@
 
 ## Current Focus
 
-2026-10-22: Investigating intermittent `set-grid-cell` R0075 row/cell resolution failures.
-Use pre-fix baseline `d7bec54`; `968cfe8` already includes the `isSatisfied` change and is not
-an appropriate pre-fix baseline. Product HEAD is `968cfe8`; scroll-search fix `f4c467f` and
-contract/decision docs `968cfe8` were committed and pushed during this session.
-
-`scroll-into-view` searches until fully visible with an optional satisfaction predicate,
-tolerates three consecutive non-advancing steps, and retains the latest rejected non-null
-partial result. Timeout remains timeout. `set-grid-cell` supplies no predicate, so its original
-single non-advancing-step termination remains unchanged. The verb does not request activation
-and makes no cursor or input calls, but the target's UI Automation provider may activate its
-window during a scroll.
+2026-10-29: Adding cursor-session CLI/MCP support with injectable cursor operations and a shared
+flag compatible with `AgentCursor.ps1`. Changes are uncommitted; validation uses a separate
+artifacts path. Earlier intermittent `set-grid-cell` R0075 row-resolution failures remain open.
 
 ## Verification and Diagnostic Evidence
 
-- Full solution build on 2026-10-19: 0 warnings, 0 errors; UI CLI and MCP executable timestamps
-  were later than the final source edit. No UiaHelper/ScrollSearch unit tests or test projects found.
+- Cursor-session isolated full solution build after final changes: 6 NU1900 warnings, 0 errors;
+  UI tests: 34 passed, 0 failed; `git diff --check` passed.
 - R0075/R0003/R9999 comparison against `d7bec54`: the complete rerun matched, including edited
   value readback and `element-not-found` for R9999, but an initial baseline R0075 failure occurred.
 - Five reset-controlled alternating R0075 pairs initially passed 5/5 on both builds. On 2026-10-22,
@@ -39,6 +31,9 @@ window during a scroll.
 - Do not call set-grid-cell parity consistently demonstrated: intermittent row resolution
   failures occurred on both builds. Diagnose internal termination and provider/layout timing
   without inferring root cause from snapshots alone.
+- Cursor-session concurrent-start ownership race matches the external script and remains a
+  documented limitation by user decision; cross-process concurrency and real cursor drawing
+  remain unverified.
 - `scripts\agent\Rebuild-Mcp.ps1` closes Claude and rebuilds MCP only; it does not rebuild the UI
   CLI. Rebuild the solution or UI project separately when UI source changes, and verify timestamps.
 - Prior unresolved items, not revalidated: installed vs-debug skill update, fresh-chat MCP schema
@@ -50,10 +45,8 @@ window during a scroll.
 
 ## Recently Changed Files
 
-- `src\AgentDebugToolkit.UiAutomation.Cli\UiaHelper.cs`, `Program.cs` -- scroll-search fix (`f4c467f`).
-- `scripts\agent\Rebuild-Mcp.ps1`, `docs\SCRIPTS.md` -- reusable MCP rebuild script (`f4c467f`).
-- `docs\CLI_CONTRACT.md`, `docs\DESIGN_DECISIONS.md` -- scrolling behavior docs (`968cfe8` and earlier entries).
-- `.github\copilot-instructions.md` -- memory skill Bootstrap refresh to v23 (uncommitted).
-- `docs\PROJECT_STATE.md` -- current session snapshot (uncommitted).
-- `docs\full-graph.agentdebugtoolkit.json`, `docs\project-dependencies.agentdebugtoolkit.json`
-  -- Bootstrap full graph refresh, followed by End Session incremental update (uncommitted).
+- `src\AgentDebugToolkit.UiAutomation.Cli\Program.cs`, `CursorSession.cs` -- new cursor CLI and Win32 port.
+- `src\AgentDebugToolkit.Mcp\UiAutomationTools.cs` -- start/stop MCP tools.
+- `tests\AgentDebugToolkit.UiAutomation.Tests\CursorSessionTests.cs` -- isolated cursor session tests.
+- `docs\CLI_CONTRACT.md`, `docs\MCP_SERVER.md`, `docs\DESIGN_DECISIONS.md`, `docs\CODE_SUMMARY.md`,
+  `docs\KEY_FLOWS.md`, `docs\PROJECT_STATE.md` -- feature contract and memory updates.
