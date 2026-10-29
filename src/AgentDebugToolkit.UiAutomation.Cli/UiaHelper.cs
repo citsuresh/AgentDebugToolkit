@@ -278,46 +278,39 @@ internal static class UiaHelper
         return false;
     }
 
-    public static AutomationElement? ResolveSelector(AutomationElement scope, Selector selector)
+    public static AutomationElement? ResolveSelector(
+        AutomationElement scope, Selector selector, ControlType? controlType = null)
     {
-        return selector.Strategy switch
-        {
-            SelectorStrategy.Name => scope.FindFirst(
-                TreeScope.Descendants,
-                new PropertyCondition(AutomationElement.NameProperty, selector.Value)),
-
-            SelectorStrategy.AutomationId => scope.FindFirst(
-                TreeScope.Descendants,
-                new PropertyCondition(AutomationElement.AutomationIdProperty, selector.Value)),
-
-            // NameRegex / ControlTypeIndex / Coordinates are not implemented yet — see
-            // docs/KNOWN_OPEN_FINDINGS.md.
-            _ => throw new NotSupportedException(
-                $"Selector strategy '{selector.Strategy}' is not implemented.")
-        };
+        return scope.FindFirst(TreeScope.Descendants, CreateSelectorCondition(selector, controlType));
     }
 
     /// <summary>
     /// Same strategy support as <see cref="ResolveSelector"/>, but returns every matching
     /// descendant (<c>FindAll</c>) instead of stopping at the first match.
     /// </summary>
-    public static AutomationElementCollection ResolveSelectorAll(AutomationElement scope, Selector selector)
+    public static AutomationElementCollection ResolveSelectorAll(
+        AutomationElement scope, Selector selector, ControlType? controlType = null)
     {
-        return selector.Strategy switch
+        return scope.FindAll(TreeScope.Descendants, CreateSelectorCondition(selector, controlType));
+    }
+
+    private static Condition CreateSelectorCondition(Selector selector, ControlType? controlType)
+    {
+        Condition selectorCondition = selector.Strategy switch
         {
-            SelectorStrategy.Name => scope.FindAll(
-                TreeScope.Descendants,
-                new PropertyCondition(AutomationElement.NameProperty, selector.Value)),
-
-            SelectorStrategy.AutomationId => scope.FindAll(
-                TreeScope.Descendants,
-                new PropertyCondition(AutomationElement.AutomationIdProperty, selector.Value)),
-
+            SelectorStrategy.Name => new PropertyCondition(AutomationElement.NameProperty, selector.Value),
+            SelectorStrategy.AutomationId => new PropertyCondition(AutomationElement.AutomationIdProperty, selector.Value),
             // NameRegex / ControlTypeIndex / Coordinates are not implemented yet — see
             // docs/KNOWN_OPEN_FINDINGS.md.
             _ => throw new NotSupportedException(
                 $"Selector strategy '{selector.Strategy}' is not implemented.")
         };
+
+        return controlType is null
+            ? selectorCondition
+            : new AndCondition(
+                selectorCondition,
+                new PropertyCondition(AutomationElement.ControlTypeProperty, controlType));
     }
 
     /// <summary>

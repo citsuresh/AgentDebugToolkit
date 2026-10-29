@@ -175,6 +175,22 @@ as `unhandled-exception`.
 
 **Decision:** Errors after scrolling: error responses returned after scrolling started can report a scroll position the verb has already changed. **Rationale:** The position is not restored.
 
+## 2026-10-27 -- Absolute container scrolling uses ScrollPattern only
+
+**Decision:** `scroll-container` resolves exactly one container from a selector and sets its
+vertical percentage with `ScrollPattern.SetScrollPercent`; it sends no input and does not request
+window activation. It skips the setter when already at the requested percentage and polls the
+reported position for up to 500 ms after a change. The verb reports before/after percent, whether a
+requested boundary was reached, and whether the reported position changed.
+
+**Rationale:** Direct absolute scrolling handles containers whose contents are virtualized without
+introducing cursor/keyboard side effects or guessing the number of incremental steps. Skipping an
+already-satisfied value avoids an unnecessary provider operation, and bounded polling accounts for
+providers that update their scroll properties asynchronously.
+
+**Alternatives considered:** Mouse-wheel input and relative-step scrolling -- rejected because the
+caller specifically needs absolute vertical positioning without input or window activation.
+
 ## 2026-10-19 -- scroll-search requires full visibility and tolerates transient stalls
 
 **Decision:** `scroll-into-view` supplies an optional satisfaction predicate to the shared

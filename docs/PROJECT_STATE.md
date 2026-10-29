@@ -4,71 +4,56 @@
 
 ## Current Focus
 
-2026-10-16: Cross-process window discovery for `agentdebug-ui` (`list-windows` /
-`wait-for-window-change`: `--all`, `--processName`, title/class filters, default exclusions,
-`--limit`, `--until match`, `--excludeHwnds`) and the matching MCP tool parameters. Uncommitted,
-pending review.
+2026-10-22: Investigating intermittent `set-grid-cell` R0075 row/cell resolution failures.
+Use pre-fix baseline `d7bec54`; `968cfe8` already includes the `isSatisfied` change and is not
+an appropriate pre-fix baseline. Product HEAD is `968cfe8`; scroll-search fix `f4c467f` and
+contract/decision docs `968cfe8` were committed and pushed during this session.
 
-2026-10-14: Fixed MCP `console_launch` timing out after 30000 ms even though the session was
-created. Root cause:
-inherited the CLI's own standard handles (the MCP runner's pipe ends). `CliRunner`'s
-`WaitForExitAsync` waits for stream EOF, so it waited on the long-lived broker. Pre-existing
-since `f918009`; unrelated to the `9e37bb2` parser change.
+`scroll-into-view` searches until fully visible with an optional satisfaction predicate,
+tolerates three consecutive non-advancing steps, and retains the latest rejected non-null
+partial result. Timeout remains timeout. `set-grid-cell` supplies no predicate, so its original
+single non-advancing-step termination remains unchanged. The verb does not request activation
+and makes no cursor or input calls, but the target's UI Automation provider may activate its
+window during a scroll.
 
-Fix `4f1a3c4`: `ConsoleVerbs.ClearStandardHandleInheritance()` clears `HANDLE_FLAG_INHERIT`
-on the CLI's std handles right before `Process.Start` (best effort; P/Invokes in
-`NativeConPty`). The broker's private stdio redirection is unchanged. Full solution build
-passed (0 warnings, 0 errors). Disposable PS 5.1 check: launch returned `success:true` in
-~3.3 s, wait-for-text/is-running/stop worked, no leftover broker. The user confirmed the MCP
-`console_launch` positive-path test passes through Claude Desktop.
+## Verification and Diagnostic Evidence
 
-The temporary `ping.exe` allowlist in the Claude Desktop config was reverted to its original
-placeholder (outside the repo; backups kept beside the config).
-
-Housekeeping: added root `CLAUDE.md` (`8120921`, pushed) with MCP server guidance and rules for
-Claude sessions (sub-agents for agentdebug MCP calls, read-only by default, no workarounds or
-prompt approvals, redaction, console allowlist, rebuild with Claude Desktop closed). The
-`vs-debug` skill was bumped to v6 in the Skills repo to document VS strict option parsing
-(`--expression=--i`); the user committed it. No skill named `agentdebug-mcp-subagent-workflow`
-exists anywhere.
+- Full solution build on 2026-10-19: 0 warnings, 0 errors; UI CLI and MCP executable timestamps
+  were later than the final source edit. No UiaHelper/ScrollSearch unit tests or test projects found.
+- R0075/R0003/R9999 comparison against `d7bec54`: the complete rerun matched, including edited
+  value readback and `element-not-found` for R9999, but an initial baseline R0075 failure occurred.
+- Five reset-controlled alternating R0075 pairs initially passed 5/5 on both builds. On 2026-10-22,
+  a fresh harness gave baseline 2/5, current 5/5; the next rerun gave baseline 5/5, current 4/5.
+- Temp-only provider tracing, with an instrumented ScrollViewer peer/template: baseline 4/5,
+  current 3/5. Every success passed readback after 62 scroll calls. Failures: current pair 1
+  (second), 7 calls; current pair 4 (first), 43 calls; baseline pair 4 (second), 56 calls.
+  R0075 was absent at those failures; all returned "No grid cell was found for row selector
+  [Name] 'R0075' and column 1." The traces are provider snapshots, not private CLI lookup/branch
+  traces, and instrumentation may affect timing. Exact internal termination cause is unconfirmed.
+- External baseline worktrees removed. Diagnostic source/logs removed; both GridTrace harness
+  executables were subsequently deleted and verified absent. No product code changed during
+  parity diagnostics; no process was forcibly stopped during those runs; gap-check app untouched.
 
 ## Open Tasks / Known Issues
 
-The installed `~/.copilot/skills/vs-debug` copy is still v5 until `Install-Skills.ps1` is run.
-The stale-schema-after-rebuild note in `CLAUDE.md` is user-reported, not verified.
-
-No project tests are registered in Test Explorer. Live VS evaluation and broker transport
-for the strict-parser change (`9e37bb2`) remain untested beyond disposable checks.
-
-Cross-process window discovery (2026-10-16): MCP tools not yet exercised from a fresh Claude
-Desktop chat. `tools/Test-McpServer.ps1` was deliberately not run (it prints raw window titles).
-
-The `isModal` field still treats ownership as modal state, so owned modeless windows are
-misclassified; deferred to future multi-window/dialog-awareness work. Graph caller queries
-can fail with `An item with the same key has already been added. Key: Program`; fall back to
-text search.
+- Do not call set-grid-cell parity consistently demonstrated: intermittent row resolution
+  failures occurred on both builds. Diagnose internal termination and provider/layout timing
+  without inferring root cause from snapshots alone.
+- `scripts\agent\Rebuild-Mcp.ps1` closes Claude and rebuilds MCP only; it does not rebuild the UI
+  CLI. Rebuild the solution or UI project separately when UI source changes, and verify timestamps.
+- Prior unresolved items, not revalidated: installed vs-debug skill update, fresh-chat MCP schema
+  checks, cross-process discovery MCP validation, strict-parser live VS/broker checks, and owned
+  modeless windows misclassified by `isModal`. `tools\Test-McpServer.ps1` was not run or modified.
+- Graph queries previously returned symbol-not-found for ScrollSearch/ResolveGridCell; prior
+  caller queries reported duplicate key `Program`. Graph is refreshed during Bootstrap/End Session;
+  do not assume those query limitations are resolved without checking.
 
 ## Recently Changed Files
 
-- `src/AgentDebugToolkit.UiAutomation.Cli/Program.cs`, `UiaHelper.cs`, `NativeMethods.cs`,
-  `src/AgentDebugToolkit.Core/Models/WindowAndElementInfo.cs` -- cross-process window discovery
-  (`--all`, `--processName`, filters, `--limit`, `--until match`, `--excludeHwnds`,
-  `WindowInfo.processName`).
-- `src/AgentDebugToolkit.Mcp/UiAutomationTools.cs` -- matching `ui_list_windows` /
-  `ui_wait_for_window_change` parameters.
-- `docs/CLI_CONTRACT.md`, `docs/MCP_SERVER.md`, `docs/KNOWN_OPEN_FINDINGS.md`,
-  `docs/DESIGN_DECISIONS.md` -- cross-process window discovery.
-- `tools/Watch-CopilotChat.ps1` -- synced from the skills repo (`7788b24`).
-- `CLAUDE.md` -- new: MCP server guidance and rules for Claude sessions.
-- `src/AgentDebugToolkit.ConsoleAutomation.Cli/ConsoleVerbs.cs` -- std-handle inheritance
-  cleared before starting the broker.
-- `src/AgentDebugToolkit.ConsoleAutomation.Cli/NativeConPty.cs` -- `GetStdHandle` /
-  `SetHandleInformation` P/Invokes.
-- `docs/CLI_CONTRACT.md` -- broker has private stdio pipes; launch returns promptly when
-  output is captured.
-- `docs/KNOWN_OPEN_FINDINGS.md` -- RESOLVED console launch inherited-handle timeout.
-- `docs/DESIGN_DECISIONS.md` -- broker must not inherit the caller's standard handles.
-- `docs/KEY_FLOWS.md` -- parser and shared argument-formatting flows.
-- `docs/PROJECT_STATE.md` -- session snapshot.
-- `docs/full-graph.agentdebugtoolkit.json`, `docs/project-dependencies.agentdebugtoolkit.json`
-  -- incremental graph refresh.
+- `src\AgentDebugToolkit.UiAutomation.Cli\UiaHelper.cs`, `Program.cs` -- scroll-search fix (`f4c467f`).
+- `scripts\agent\Rebuild-Mcp.ps1`, `docs\SCRIPTS.md` -- reusable MCP rebuild script (`f4c467f`).
+- `docs\CLI_CONTRACT.md`, `docs\DESIGN_DECISIONS.md` -- scrolling behavior docs (`968cfe8` and earlier entries).
+- `.github\copilot-instructions.md` -- memory skill Bootstrap refresh to v23 (uncommitted).
+- `docs\PROJECT_STATE.md` -- current session snapshot (uncommitted).
+- `docs\full-graph.agentdebugtoolkit.json`, `docs\project-dependencies.agentdebugtoolkit.json`
+  -- Bootstrap full graph refresh, followed by End Session incremental update (uncommitted).

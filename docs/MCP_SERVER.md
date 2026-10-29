@@ -176,17 +176,17 @@ MCP client can grant/prompt approval per tool rather than per call:
 | `ui_attach` | `attach` | |
 | `ui_list_windows` | `list-windows` | Read-only; optional `pid`, `all`, `processName` (mutually exclusive scopes), `titleContains`, `className`, `limit`, `includeUntitled`. Never changes session context |
 | `ui_inspect` | `inspect` | Read-only; `nameContains` and `controlType` filters return a pruned tree with `matchCount`; unfiltered output has no `matchCount`; a window-name match returns the whole tree; unknown control types fail with `invalid-argument` |
-| `ui_click` | `click` | Destructive |
+| `ui_click` | `click` | Destructive; optional `controlType` narrows selector candidates before ambiguity checking |
 | `ui_right_click` | `right-click` | Destructive |
 | `ui_double_click` | `double-click` | Destructive |
 | `ui_drag` | `drag` | Destructive |
 | `ui_move_mouse` | `move-mouse` | |
 | `ui_get_cursor_pos` | `get-cursor-pos` | Read-only |
 | `ui_type` | `type` | Destructive; optional `text`, `clear`, `scopeHwnd`, `verify`, and `paste` parameters |
-| `ui_get_text` | `get-text` | Read-only; optional `scopeHwnd` narrows the selector search |
+| `ui_get_text` | `get-text` | Read-only; optional `controlType` and `scopeHwnd` narrow the selector search |
 | `ui_set_grid_cell` | `set-grid-cell` | Destructive |
 | `ui_wait_for_window_change` | `wait-for-window-change` | Read-only; `timeoutMs` capped at 120000; same scope/filter parameters as `ui_list_windows` plus `until` (`settle`/`match`) and `excludeHwnds` |
-| `ui_wait_for_element` | `wait-for-element` | Read-only; `timeoutMs` capped at 120000 |
+| `ui_wait_for_element` | `wait-for-element` | Read-only; optional `controlType`; `timeoutMs` capped at 120000 |
 | `ui_wait_for_process_responding` | `wait-for-process-responding` | Read-only; `timeoutMs` capped at 120000 |
 | `ui_delay` | `delay` | |
 | `ui_set_context` | `set-context` | |
@@ -195,11 +195,14 @@ MCP client can grant/prompt approval per tool rather than per call:
 | `ui_activate` | `activate` | Destructive (steals foreground focus) |
 | `ui_send_keys` | `send-keys` | Destructive |
 | `ui_submit_chat_message` | `submit-chat-message` | Destructive; treat as high-impact (real submission) |
-| `ui_find_first` | `find-first` | Read-only |
-| `ui_find_all` | `find-all` | Read-only |
+| `ui_find_first` | `find-first` | Read-only; optional `controlType` filters candidates before lookup |
+| `ui_find_all` | `find-all` | Read-only; optional `controlType` filters candidates before lookup |
+| `ui_scroll_container` | `scroll-container` | Sets an absolute vertical percent with `ScrollPattern` only; no activation or input; ambiguous containers are rejected |
 | `ui_scroll_into_view` | `scroll-into-view` | Changes the target's scroll position; not restored; UIA-only |
 
-`ui_scroll_into_view` uses UIA patterns only; it does not request activation and makes no cursor or
+`ui_scroll_container` takes a container selector (`strategy`, `value`), `verticalPercent` from 0 to 100, and optional `scopeHwnd`; it rejects missing or ambiguous containers, does not call `SetScrollPercent` when already at the requested position, and re-reads the final position for up to 500 ms. It reports `verticalScrollPercentBefore`, `verticalScrollPercentAfter`, `boundaryReached`, and `changed`. Errors include `not-scrollable`, `stale-context`, and `scroll-provider-error`.
+
+`ui_scroll_into_view` uses UIA patterns only;
 input calls, but the target's UI Automation provider may activate its window during a scroll
 (observed with WPF). It changes the target's scroll position, which is not restored. Run `ui_find_all` first.
 For virtualized lists, pass the list as `scopeStrategy` and `scopeValue`. Afterwards, re-resolve and
@@ -212,7 +215,7 @@ is marked `readOnlyHint: false`, `destructiveHint: false`,
 
 `ui_list_windows` and `ui_wait_for_window_change` send `all` and `includeUntitled` only when true (false or omitted sends nothing, so `all=false` with `pid` still works). The CLI alone validates scope exclusivity and values. Window titles can contain sensitive data: filter first and return only the rows needed. Discovery never changes the session context; use the returned `hwnd` with hwnd-based tools, or `ui_set_context` for pid-based tools.
 
-Ambiguous selectors in `ui_click`, `ui_right_click`, `ui_double_click`, `ui_drag`, the selector form of `ui_move_mouse`, `ui_type`, `ui_get_text`, and `ui_send_keys` fail with `ambiguous-match` (count plus up to 10 candidates) and do nothing. Narrow with `scopeHwnd` or pre-check with `ui_find_all`.
+Ambiguous selectors in `ui_click`, `ui_right_click`, `ui_double_click`, `ui_drag`, the selector form of `ui_move_mouse`, `ui_type`, `ui_get_text`, and `ui_send_keys` fail with `ambiguous-match` (count plus up to 10 candidates) and do nothing. `ui_click` and `ui_get_text` can additionally narrow candidates with `controlType`; repeated matches of that type remain ambiguous. Narrow with `scopeHwnd` or pre-check with `ui_find_all`.
 
 For all UI, VS, and console tools, included empty values and values beginning with `--` are passed as a single `--flag=value` argument, preserving them across native process argument parsing. This includes console launch arguments; optional VS solution values that are empty or whitespace remain omitted.
 

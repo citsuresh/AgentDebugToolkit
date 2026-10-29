@@ -6,4 +6,5 @@
     <Project Path="src/AgentDebugToolkit.ConsoleAutomation.Cli/AgentDebugToolkit.ConsoleAutomation.Cli.csproj" />
     <Project Path="src/AgentDebugToolkit.Mcp/AgentDebugToolkit.Mcp.csproj" />
   </Folder>
+  <Project Path="tests/AgentDebugToolkit.UiAutomation.Tests/AgentDebugToolkit.UiAutomation.Tests.csproj" />
 </Solution>

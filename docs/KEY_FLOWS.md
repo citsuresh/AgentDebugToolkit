@@ -30,4 +30,6 @@ Program.Verbs.SendKeys -> ResolveWindowHwnd -> Program.Verbs.ResolveElement -> U
 
 Program.Verbs.SubmitChatMessage -> ResolveWindowHwnd -> UiaHelper.FindWindowByHwnd -> UiaHelper.ResolveSelector (input) -> NativeMethods.Click -> UiaHelper.Type -> UiaHelper.GetText (conditional verify) -> UiaHelper.ResolveSelector (Send) -> UiaHelper.Click
 
+Program.Verbs.ScrollContainer -> ResolveWindowHwnd -> UiaHelper.ResolveSelectorAll -> UiaHelper.GetScrollPattern/SetScrollPercent -> bounded position polling -> JsonOutput.WriteSuccess/WriteError
+
 Program.Verbs.ScrollIntoView -> ResolveWindowHwnd -> UiaHelper.ResolveSelectorAll -> UiaHelper.TryFindAndRealizeContainerItem/ScrollSearch -> UIA scroll patterns -> JsonOutput.WriteSuccess/WriteError

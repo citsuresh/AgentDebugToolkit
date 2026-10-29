@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Globalization;
 using ModelContextProtocol.Server;
 
 namespace AgentDebugToolkit.Mcp;
@@ -89,9 +90,10 @@ public sealed class UiAutomationTools
         [Description("Window handle to resolve the selector against.")] string hwnd,
         [Description("Selector strategy: Name or AutomationId.")] string strategy,
         [Description("Selector value to match.")] string value,
+        [Description("Optional UIA control type filter, e.g. Button or Text. Unrecognized values return invalid-argument.")] string? controlType = null,
         [Description("Optional narrower scope window/element handle to search within instead of hwnd.")] string? scopeHwnd = null,
         CancellationToken cancellationToken = default)
-        => RunAsync(BuildArgs("click", ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value), ("--scopeHwnd", scopeHwnd)), null, cancellationToken);
+        => RunAsync(BuildArgs("click", ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value), ("--controlType", controlType), ("--scopeHwnd", scopeHwnd)), null, cancellationToken);
 
     [McpServerTool(Name = "ui_right_click", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false),
      Description("Resolves an element via selector and performs a synthetic right-click at its bounding-rect center (e.g. to open a context menu). Changes target application state. If the selector matches more than one element this fails with ambiguous-match (count plus up to 10 candidates) and does nothing; narrow with scopeHwnd or pre-check with ui_find_all.")]
@@ -177,9 +179,10 @@ public sealed class UiAutomationTools
         [Description("Window handle to resolve the selector against.")] string hwnd,
         [Description("Selector strategy: Name or AutomationId.")] string strategy,
         [Description("Selector value to match.")] string value,
+        [Description("Optional UIA control type filter, e.g. Button or Text. Unrecognized values return invalid-argument.")] string? controlType = null,
         [Description("Optional narrower scope window/element handle to search within instead of hwnd.")] string? scopeHwnd = null,
         CancellationToken cancellationToken = default)
-        => RunAsync(BuildArgs("get-text", ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value), ("--scopeHwnd", scopeHwnd)), null, cancellationToken);
+        => RunAsync(BuildArgs("get-text", ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value), ("--controlType", controlType), ("--scopeHwnd", scopeHwnd)), null, cancellationToken);
 
     [McpServerTool(Name = "ui_set_grid_cell", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false),
      Description("Edits a cell in a UIA DataGrid (locates grid/row/column, scrolls virtualized grids into view, edits via ValuePattern/TogglePattern or synthetic input, optionally invokes an Apply action). Changes target application state.")]
@@ -237,6 +240,7 @@ public sealed class UiAutomationTools
         [Description("Target state to wait for: appeared (default), disappeared, or enabled.")] string? state = null,
         [Description("Maximum time to wait, in milliseconds (default 5000). Capped at 120000 for this tool.")] int? timeoutMs = null,
         [Description("Poll interval in milliseconds (default 250).")] int? pollMs = null,
+        [Description("Optional UIA control type filter, e.g. Button or Text. Unrecognized values return invalid-argument.")] string? controlType = null,
         CancellationToken cancellationToken = default)
     {
         const int MaxWaitMs = 120_000;
@@ -244,7 +248,8 @@ public sealed class UiAutomationTools
         var args = BuildArgs(
             "wait-for-element",
             ("--strategy", strategy), ("--value", value), ("--hwnd", hwnd), ("--pid", pid?.ToString()),
-            ("--state", state), ("--timeoutMs", cappedTimeoutMs?.ToString()), ("--pollMs", pollMs?.ToString()));
+            ("--state", state), ("--timeoutMs", cappedTimeoutMs?.ToString()), ("--pollMs", pollMs?.ToString()),
+            ("--controlType", controlType));
         return RunAsync(args, (cappedTimeoutMs ?? 5000) + 10_000, cancellationToken);
     }
 
@@ -335,12 +340,13 @@ public sealed class UiAutomationTools
         [Description("Window handle to search within.")] string hwnd,
         [Description("Selector strategy: Name or AutomationId.")] string strategy,
         [Description("Selector value to match.")] string value,
+        [Description("Optional UIA control type filter, e.g. Button or Text. Unrecognized values return invalid-argument.")] string? controlType = null,
         [Description("Optional scope selector strategy to narrow the search to a descendant subtree first. Must be supplied together with scopeValue.")] string? scopeStrategy = null,
         [Description("Optional scope selector value. Required together with scopeStrategy.")] string? scopeValue = null,
         CancellationToken cancellationToken = default)
         => RunAsync(BuildArgs(
             "find-first",
-            ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value),
+            ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value), ("--controlType", controlType),
             ("--scopeStrategy", scopeStrategy), ("--scopeValue", scopeValue)), null, cancellationToken);
 
     [McpServerTool(Name = "ui_find_all", ReadOnly = true, Destructive = false, OpenWorld = false),
@@ -349,14 +355,27 @@ public sealed class UiAutomationTools
         [Description("Window handle to search within.")] string hwnd,
         [Description("Selector strategy: Name or AutomationId.")] string strategy,
         [Description("Selector value to match.")] string value,
+        [Description("Optional UIA control type filter, e.g. Button or Text. Unrecognized values return invalid-argument.")] string? controlType = null,
         [Description("Optional scope selector strategy to narrow the search to a descendant subtree first. Must be supplied together with scopeValue.")] string? scopeStrategy = null,
         [Description("Optional scope selector value. Required together with scopeStrategy.")] string? scopeValue = null,
         [Description("Skip any matched element whose Name equals this value (e.g. to filter out a catch-all placeholder option).")] string? excludeValue = null,
         CancellationToken cancellationToken = default)
         => RunAsync(BuildArgs(
             "find-all",
-            ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value),
+            ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value), ("--controlType", controlType),
             ("--scopeStrategy", scopeStrategy), ("--scopeValue", scopeValue), ("--excludeValue", excludeValue)), null, cancellationToken);
+
+    [McpServerTool(Name = "ui_scroll_container", ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false),
+     Description("Sets a selected container's vertical scroll percent through ScrollPattern only. It does not activate the window or send mouse/keyboard input. An ambiguous container is rejected; an already-requested position is left untouched, and the final position is re-read for up to 500 ms. Returns before/after percentages, boundaryReached, and changed.")]
+    public Task<ToolInvocationResult> ScrollContainer(
+        [Description("Window handle to search within.")] string hwnd,
+        [Description("Container selector strategy: Name or AutomationId.")] string strategy,
+        [Description("Container selector value.")] string value,
+        [Description("Requested vertical scroll percentage, from 0 to 100.")] double verticalPercent,
+        [Description("Optional narrower scope window/element handle to search within instead of hwnd.")] string? scopeHwnd = null,
+        CancellationToken cancellationToken = default)
+        => RunAsync(BuildArgs("scroll-container", ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value),
+            ("--verticalPercent", verticalPercent.ToString(CultureInfo.InvariantCulture)), ("--scopeHwnd", scopeHwnd)), null, cancellationToken);
 
     [McpServerTool(Name = "ui_scroll_into_view", ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false),
      Description("Scrolls an element into view using UI Automation patterns only (ScrollItemPattern, ItemContainerPattern, ScrollPattern): it does not request activation and makes no cursor or input calls, but the target's UI Automation provider may activate its window during a scroll. It changes the target's scroll position, which is NOT restored afterwards. Run ui_find_all first to check the selector. For virtualized lists (items not yet in the tree) pass the list itself as scopeStrategy/scopeValue. Afterwards, re-resolve and verify with the normal read tools (ui_find_first, ui_get_text). On ambiguous-container or ambiguous-match, narrow the scope rather than guessing. Returns method (already-visible, scroll-item, ancestor-scroll, item-container, scroll-search), scrollSteps, reachedEnd, fullyVisible and verticalScrollPercentBefore/After (-1 when not vertically scrollable). Errors include not-scrollable (no mouse-wheel fallback yet), element-not-found-after-scroll, container-not-found, ambiguous-container, ambiguous-match and timeout.")]

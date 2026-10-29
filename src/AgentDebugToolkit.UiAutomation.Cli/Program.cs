@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Globalization;
 using System.Windows.Automation;
 using AgentDebugToolkit.Core;
 using AgentDebugToolkit.Core.Models;
@@ -104,6 +105,8 @@ try
             return Verbs.FindAll(opts);
         case "scroll-into-view":
             return Verbs.ScrollIntoView(opts);
+        case "scroll-container":
+            return Verbs.ScrollContainer(opts);
         case "wait-for-window-change":
             return Verbs.WaitForWindowChange(opts);
         case "wait-for-process-responding":
@@ -636,7 +639,8 @@ internal static class Verbs
             return 1;
         }
 
-        var (element, elementErrorCode, elementError, elementErrorDetails) = ResolveElement(windowHwnd, opts);
+        var (element, elementErrorCode, elementError, elementErrorDetails) =
+            ResolveElement(windowHwnd, opts, includeControlType: true);
         if (element is null)
         {
             JsonOutput.WriteError(elementErrorCode!, elementError!, elementErrorDetails);
@@ -1404,7 +1408,8 @@ internal static class Verbs
             return 1;
         }
 
-        var (element, elementErrorCode, elementError, elementErrorDetails) = ResolveElement(windowHwnd, opts);
+        var (element, elementErrorCode, elementError, elementErrorDetails) =
+            ResolveElement(windowHwnd, opts, includeControlType: true);
         if (element is null)
         {
             JsonOutput.WriteError(elementErrorCode!, elementError!, elementErrorDetails);
@@ -1428,6 +1433,13 @@ internal static class Verbs
         if (!opts.TryGetValue("value", out var value))
         {
             JsonOutput.WriteError("invalid-argument", "--value is required.");
+            return 1;
+        }
+
+        var (controlType, controlTypeError) = ParseOptionalControlType(opts);
+        if (controlTypeError is not null)
+        {
+            JsonOutput.WriteError("invalid-argument", controlTypeError);
             return 1;
         }
 
@@ -1492,7 +1504,7 @@ internal static class Verbs
             AutomationElement? element = null;
             if (UiaHelper.IsWindowAlive(windowHwnd))
             {
-                element = UiaHelper.ResolveSelector(scope, selector);
+                element = UiaHelper.ResolveSelector(scope, selector, controlType);
             }
 
             var satisfied = state switch
@@ -1942,7 +1954,15 @@ internal static class Verbs
             return 1;
         }
 
-        var match = UiaHelper.ResolveSelector(scope, new Selector { Strategy = strategy, Value = value! });
+        var (controlType, controlTypeError) = ParseOptionalControlType(opts);
+        if (controlTypeError is not null)
+        {
+            JsonOutput.WriteError("invalid-argument", controlTypeError);
+            return 1;
+        }
+
+        var match = UiaHelper.ResolveSelector(
+            scope, new Selector { Strategy = strategy, Value = value! }, controlType);
         if (match is null)
         {
             JsonOutput.WriteSuccess(new { found = false });
@@ -1976,9 +1996,17 @@ internal static class Verbs
             return 1;
         }
 
+        var (controlType, controlTypeError) = ParseOptionalControlType(opts);
+        if (controlTypeError is not null)
+        {
+            JsonOutput.WriteError("invalid-argument", controlTypeError);
+            return 1;
+        }
+
         opts.TryGetValue("excludeValue", out var excludeValue);
 
-        var matches = UiaHelper.ResolveSelectorAll(scope, new Selector { Strategy = strategy, Value = value! });
+        var matches = UiaHelper.ResolveSelectorAll(
+            scope, new Selector { Strategy = strategy, Value = value! }, controlType);
         var elements = new List<object>();
         foreach (AutomationElement match in matches)
         {
@@ -1992,6 +2020,190 @@ internal static class Verbs
 
         JsonOutput.WriteSuccess(new { count = elements.Count, elements });
         return 0;
+    }
+
+    internal static double PollForScrollPosition(
+        Func<double> readPosition,
+        double requestedPercent,
+        Func<long> elapsedMilliseconds,
+        Action<int> sleep)
+    {
+        var percentAfter = -1d;
+        while (elapsedMilliseconds() < 500)
+        {
+            percentAfter = readPosition();
+            if (Math.Abs(percentAfter - requestedPercent) < 0.01)
+            {
+                break;
+            }
+
+            var remainingMilliseconds = 500 - elapsedMilliseconds();
+            if (remainingMilliseconds <= 0)
+            {
+                break;
+            }
+
+            sleep((int)Math.Min(25, remainingMilliseconds));
+        }
+
+        return percentAfter;
+    }
+
+    public static int ScrollContainer(Dictionary<string, string> opts)
+    {
+        opts.TryGetValue("strategy", out var strategyText);
+        if (!UiaHelper.TryParseImplementedSelectorStrategy(strategyText, out var strategy, out var strategyError))
+        {
+            JsonOutput.WriteError("invalid-argument", $"--strategy is required and {strategyError}");
+            return 1;
+        }
+
+        if (!opts.TryGetValue("value", out var value))
+        {
+            JsonOutput.WriteError("invalid-argument", "--value is required.");
+            return 1;
+        }
+
+        if (!opts.TryGetValue("verticalPercent", out var percentText)
+            || !double.TryParse(percentText, NumberStyles.Float, CultureInfo.InvariantCulture, out var requestedPercent)
+            || !double.IsFinite(requestedPercent)
+            || requestedPercent is < 0 or > 100)
+        {
+            JsonOutput.WriteError("invalid-argument", "--verticalPercent is required and must be a number between 0 and 100.");
+            return 1;
+        }
+
+        var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
+        if (errorCode is not null)
+        {
+            JsonOutput.WriteError(errorCode!, error!);
+            return 1;
+        }
+
+        if (!NativeMethods.IsResponding(windowHwnd, timeoutMs: 250))
+        {
+            JsonOutput.WriteError("window-not-responding", "The target window is not responding.");
+            return 1;
+        }
+
+        AutomationElement? container = null;
+        var percentBefore = -1d;
+        var stage = "resolve-window";
+        try
+        {
+            var window = UiaHelper.FindWindowByHwnd($"0x{windowHwnd.ToInt64():X}");
+            if (window is null)
+            {
+                JsonOutput.WriteError("stale-context", "The target window is no longer available.");
+                return 1;
+            }
+
+            var scope = window;
+            if (opts.TryGetValue("scopeHwnd", out var scopeHwndText))
+            {
+                IntPtr scopeHwnd;
+                try
+                {
+                    scopeHwnd = UiaHelper.ParseHwnd(scopeHwndText);
+                }
+                catch (Exception ex) when (ex is FormatException or OverflowException)
+                {
+                    JsonOutput.WriteError("invalid-argument", $"Invalid scopeHwnd '{scopeHwndText}'.");
+                    return 1;
+                }
+
+                scope = UiaHelper.FindWindowByHwnd($"0x{scopeHwnd.ToInt64():X}");
+                if (scope is null)
+                {
+                    JsonOutput.WriteError("container-not-found", "No scope element found for --scopeHwnd.");
+                    return 1;
+                }
+            }
+
+            stage = "resolve-container";
+            var selector = new Selector { Strategy = strategy, Value = value };
+            var matches = UiaHelper.ResolveSelectorAll(scope, selector);
+            if (matches.Count == 0)
+            {
+                JsonOutput.WriteError("container-not-found", $"No container found for selector [{strategy}] '{value}'.");
+                return 1;
+            }
+
+            if (matches.Count > 1)
+            {
+                var (candidates, limitMessage) = CreateCandidates(matches);
+                JsonOutput.WriteError("ambiguous-container",
+                    $"Container selector [{strategy}] '{value}' matched {matches.Count} elements.{limitMessage} Narrow the selector or --scopeHwnd.",
+                    new { count = matches.Count, candidates });
+                return 1;
+            }
+
+            container = matches[0];
+            stage = "get-scroll-pattern";
+            var scroll = UiaHelper.GetScrollPattern(container);
+            if (scroll is null || !scroll.Current.VerticallyScrollable)
+            {
+                JsonOutput.WriteError("not-scrollable", "The selected container does not support vertical UI Automation scrolling.",
+                    new { verticalScrollPercentBefore = -1d, verticalScrollPercentAfter = -1d });
+                return 1;
+            }
+
+            percentBefore = UiaHelper.GetVerticalScrollPercent(container);
+            stage = "set-scroll-percent";
+            var alreadyAtRequestedPosition = Math.Abs(percentBefore - requestedPercent) < 0.01;
+            if (!alreadyAtRequestedPosition)
+            {
+                scroll.SetScrollPercent(ScrollPattern.NoScroll, requestedPercent);
+            }
+
+            var percentAfter = percentBefore;
+            if (!alreadyAtRequestedPosition)
+            {
+                stage = "wait-for-position";
+                var pollClock = Stopwatch.StartNew();
+                percentAfter = PollForScrollPosition(
+                    () => UiaHelper.GetVerticalScrollPercent(container),
+                    requestedPercent,
+                    () => pollClock.ElapsedMilliseconds,
+                    Thread.Sleep);
+            }
+
+            var boundaryReached = requestedPercent == 0 && percentAfter == 0
+                || requestedPercent == 100 && percentAfter == 100;
+            JsonOutput.WriteSuccess(new
+            {
+                container = ToScrollContainerSummary(container),
+                verticalScrollPercentBefore = percentBefore,
+                verticalScrollPercentAfter = percentAfter,
+                boundaryReached,
+                changed = Math.Abs(percentAfter - percentBefore) >= 0.01,
+            });
+            return 0;
+        }
+        catch (ElementNotAvailableException ex)
+        {
+            JsonOutput.WriteError("stale-context", $"The selected UI Automation container became unavailable during '{stage}': {ex.Message}",
+                new
+                {
+                    details = new { stage },
+                    verticalScrollPercentBefore = percentBefore,
+                    verticalScrollPercentAfter = SafeVerticalScrollPercent(container),
+                });
+            return 1;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException
+            or ArgumentException
+            or System.Runtime.InteropServices.COMException)
+        {
+            JsonOutput.WriteError("scroll-provider-error", $"The UI Automation provider failed during '{stage}': {ex.Message}",
+                new
+                {
+                    details = new { stage },
+                    verticalScrollPercentBefore = percentBefore,
+                    verticalScrollPercentAfter = SafeVerticalScrollPercent(container),
+                });
+            return 1;
+        }
     }
 
     /// <summary>
@@ -2544,6 +2756,19 @@ internal static class Verbs
         };
     }
 
+    private static (ControlType? controlType, string? error) ParseOptionalControlType(
+        Dictionary<string, string> opts)
+    {
+        if (!opts.TryGetValue("controlType", out var controlTypeText))
+        {
+            return (null, null);
+        }
+
+        return UiaHelper.TryParseControlType(controlTypeText, out var controlType)
+            ? (controlType, null)
+            : (null, "--controlType must be a recognized short UIA control type name, such as Button or Edit.");
+    }
+
     private static (SelectorStrategy strategy, string? value, string? errorCode, string? error) ParseSelectorArgs(
         Dictionary<string, string> opts)
     {
@@ -2658,7 +2883,8 @@ internal static class Verbs
     }
 
     private static (AutomationElement? element, string? errorCode, string? error, object? errorDetails) ResolveElement(
-        IntPtr windowHwnd, Dictionary<string, string> opts, string strategyKey = "strategy", string valueKey = "value")
+        IntPtr windowHwnd, Dictionary<string, string> opts, string strategyKey = "strategy", string valueKey = "value",
+        bool includeControlType = false)
     {
         // --scopeHwnd, when given, narrows the search to that element (and its subtree) instead
         // of the primary --hwnd/session-context window -- e.g. a specific pane/panel handle
@@ -2680,17 +2906,18 @@ internal static class Verbs
             var scopeElement = UiaHelper.FindWindowByHwnd($"0x{scopeHwnd.ToInt64():X}");
             return scopeElement is null
                 ? (null, "element-not-found", $"No scope element found for scopeHwnd '0x{scopeHwnd.ToInt64():X}'.", null)
-                : ResolveElement(scopeElement, opts, strategyKey, valueKey);
+                : ResolveElement(scopeElement, opts, strategyKey, valueKey, includeControlType);
         }
 
         var scope = UiaHelper.FindWindowByHwnd($"0x{windowHwnd.ToInt64():X}");
         return scope is null
             ? (null, "element-not-found", $"No window found for hwnd '0x{windowHwnd.ToInt64():X}'.", null)
-            : ResolveElement(scope, opts, strategyKey, valueKey);
+            : ResolveElement(scope, opts, strategyKey, valueKey, includeControlType);
     }
 
     private static (AutomationElement? element, string? errorCode, string? error, object? errorDetails) ResolveElement(
-        AutomationElement scope, Dictionary<string, string> opts, string strategyKey = "strategy", string valueKey = "value")
+        AutomationElement scope, Dictionary<string, string> opts, string strategyKey = "strategy", string valueKey = "value",
+        bool includeControlType = false)
     {
         opts.TryGetValue(strategyKey, out var strategyText);
         if (!UiaHelper.TryParseImplementedSelectorStrategy(strategyText, out var strategy, out var strategyError))
@@ -2704,8 +2931,20 @@ internal static class Verbs
             return (null, "invalid-argument", $"--{valueKey} is required.", null);
         }
 
+        ControlType? controlType = null;
+        if (includeControlType)
+        {
+            var parsedControlType = ParseOptionalControlType(opts);
+            if (parsedControlType.error is not null)
+            {
+                return (null, "invalid-argument", parsedControlType.error, null);
+            }
+
+            controlType = parsedControlType.controlType;
+        }
+
         var selector = new Selector { Strategy = strategy, Value = value };
-        var matches = UiaHelper.ResolveSelectorAll(scope, selector);
+        var matches = UiaHelper.ResolveSelectorAll(scope, selector, controlType);
         if (matches.Count == 0)
         {
             return (null, "element-not-found",

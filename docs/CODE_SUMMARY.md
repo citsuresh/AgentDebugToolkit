@@ -28,8 +28,8 @@ graph LR
 
 | Symbol | File | Responsibility |
 |---|---|---|
-| `Program` / `Verbs` (top-level) | `Program.cs` | Parses args and dispatches UI Automation verbs, including grid-cell edits; shared action-target resolution rejects ambiguous matches |
-| `UiaHelper` | `UiaHelper.cs` | Enumerates windows through Win32; resolves selectors, virtualized grid cells/editors, and scroll targets; shares vertical scroll-search; builds and filters `ElementInfo` trees while preserving ancestors; performs pattern-based or synthetic interaction |
+| `Program` / `Verbs` (top-level) | `Program.cs` | Parses args and dispatches UI Automation verbs, including grid-cell edits and absolute container scrolling; shared action-target resolution rejects ambiguous matches |
+| `UiaHelper` | `UiaHelper.cs` | Enumerates windows through Win32; resolves selectors, virtualized grid cells/editors, and scroll targets; shares vertical scroll-search and ScrollPattern access; builds and filters `ElementInfo` trees while preserving ancestors; performs pattern-based or synthetic interaction |
 | `SessionContext` | `SessionContext.cs` | Persists the "current" pid to a temp JSON file so subsequent CLI invocations (separate processes) can omit `--pid` after `attach` |
 | `ScreenshotHelper` | `ScreenshotHelper.cs` | Captures a PNG screenshot of an element's bounding rect to local app data |
 | `NativeMethods` | `NativeMethods.cs` | P/Invoke user32 helpers for Win32 window enumeration/metadata, synthetic mouse/keyboard input, and window queries; primary interaction mechanism since target apps often support no UIA patterns |
@@ -57,7 +57,7 @@ graph LR
 | `Program` | `Program.cs` | Starts the stdio MCP server and registers requested VS/UI/console tool groups; console is opt-in |
 | `CliRunner` | `CliRunner.cs` | Launches existing CLI executables, relays JSON, and reports wrapper-level failures |
 | `ArgumentFormatting` | `ArgumentFormatting.cs` | Shared option serialization for empty and `--`-prefixed values across all three MCP tool builders |
-| `VsDebuggerTools` / `UiAutomationTools` / `ConsoleTools` | `VsDebuggerTools.cs`, `UiAutomationTools.cs`, `ConsoleTools.cs` | Exposes CLI verbs as MCP tools; console launch is gated by an explicit executable allowlist |
+| `VsDebuggerTools` / `UiAutomationTools` / `ConsoleTools` | `VsDebuggerTools.cs`, `UiAutomationTools.cs`, `ConsoleTools.cs` | Exposes CLI verbs as MCP tools, including UIA-only absolute container scrolling; console launch is gated by an explicit executable allowlist |
 
 See `docs/KEY_FLOWS.md` for traced end-to-end call flows.
 

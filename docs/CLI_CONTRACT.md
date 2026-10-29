@@ -215,9 +215,11 @@ screenshot.
   not just matching controls.
 - Screenshots save to a standard folder, e.g. `%LOCALAPPDATA%\AgentDebugToolkit\screenshots\`.
 
-### `click --hwnd <h> --strategy <s> --value <v> [--scopeHwnd <h2>]`
-- Fails with `ambiguous-match` instead of clicking the first of several matches. Pre-check the
-  count with `find-all`; narrow the search with `--scopeHwnd`.
+### `click --hwnd <h> --strategy <s> --value <v> [--controlType <type>] [--scopeHwnd <h2>]`
+- Optional `--controlType` narrows candidates to the named UIA control type before ambiguity is
+  checked. Unrecognized short type names return `invalid-argument`; multiple matches of the same
+  type still return `ambiguous-match`. Pre-check the count with `find-all`; narrow the search with
+  `--scopeHwnd`.
 Resolves the element via selector (scoped to `--scopeHwnd` if given, else `--hwnd`), attempts
 `InvokePattern`/`TogglePattern`, falls back to synthetic click at `BoundingRectangle` center.
 - **Fixed 2026-09-15:** `--scopeHwnd` is now actually honored — previously it was accepted as an
@@ -506,9 +508,11 @@ keyboard input.
     verification, and clipboard-restore paths all worked correctly against the actual motivating
     target (a control with no `ValuePattern`).
 
-### `get-text --hwnd <h> --strategy <s> --value <v> [--scopeHwnd <h2>]`
-- Fails with `ambiguous-match` instead of reading the first of several matches. Pre-check the
-  count with `find-all`; narrow the search with `--scopeHwnd` (now honored by `get-text` too).
+### `get-text --hwnd <h> --strategy <s> --value <v> [--controlType <type>] [--scopeHwnd <h2>]`
+- Optional `--controlType` narrows candidates to the named UIA control type before ambiguity is
+  checked. Unrecognized short type names return `invalid-argument`; multiple matches of the same
+  type still return `ambiguous-match`. Pre-check the count with `find-all`; narrow the search with
+  `--scopeHwnd` (now honored by `get-text` too).
 Reads current `Name` or `ValuePattern.Value` (whichever is more appropriate/available) of the
 resolved element.
 - Success: `{ "success": true, "text": "10.176.100.248" }`
@@ -573,13 +577,15 @@ returned list contains only windows that pass them. Polling compares hwnd sets o
   pass them to `--excludeHwnds`, or wait with `--until match` on a distinctive title (for example
   `--titleContains "Sample Report"`).
 
-### `wait-for-element --strategy <s> --value <v> [--hwnd <h> | --pid <n>] [--state appeared|disappeared|enabled] [--timeoutMs <n>] [--pollMs <n>]`
+### `wait-for-element --strategy <s> --value <v> [--controlType <type>] [--hwnd <h> | --pid <n>] [--state appeared|disappeared|enabled] [--timeoutMs <n>] [--pollMs <n>]`
 Resolves the target window **once, up front**, the same way as `click`/`type` (explicit `--hwnd`,
 else `--pid`, else the persisted session context) — a resolution failure here (bad `--hwnd`/
 `--pid`, no session context, ambiguous window) fails immediately and is not retried across the
 poll loop. `--timeoutMs` (default `5000`) must be a non-negative integer and `--pollMs` (default
 `250`) must be a positive integer, validated before polling begins. Then polls the given selector
-within that window until it reaches `--state` (default `appeared`) or `--timeoutMs` elapses.
+within that window until it reaches `--state` (default `appeared`) or `--timeoutMs` elapses. The
+optional `--controlType` filters candidates before each poll; unrecognized short type names return
+`invalid-argument`.
 - `appeared`: element resolves via the selector (scope window assumed to persist).
 - `disappeared`: the scope window itself closes, or the element no longer resolves within it.
 - `enabled`: element resolves and `IsEnabled` is true (scope window assumed to persist).
@@ -640,12 +646,32 @@ added to let the agent inspect visible text and capture screenshots from an exis
 
 ### `read-visible-text --hwnd <h> [--maxDepth <n>]`
 Traverses the UIA subtree rooted at the given window handle (bounded depth/breadth/node-count,
-mirroring `inspect`'s traversal caps) and returns de-duplicated, ordered visible text extracted
+mirroring `inspect`'s traversal caps) and returns de-duplicated, ordered text extracted
 opportunistically from `TextPattern`, `ValuePattern`, and element `Name`. `--maxDepth` defaults
 to `8` (same default as `inspect`) and must be a non-negative integer if given. Internally capped
 at 200 children per element, 5000 total visited nodes, and 2000 characters per extracted text
-value; `truncated` is `true` if any of these caps were hit, so callers can distinguish a
-genuinely exhaustive result from a capped one.
+value. `truncated` reports these explicit caps, but does not currently prove that every provider
+branch was read successfully or that all transcript content is exposed.
+- Text assessment (2026-10-27): `read-visible-text` reads `TextPattern.DocumentRange.GetText(2000)`.
+  Newlines within the returned text (including code-block line breaks) remain within that string;
+  identical extracted strings are de-duplicated. Because the provider call already limits the
+  result to 2000 characters, the later `Length > 2000` check cannot detect TextPattern truncation,
+  so that cutoff is currently silent. The traversal does not exclude off-screen elements. Missing
+  patterns fall back to other text sources; exceptions from `GetText` and child `FindAll` are
+  swallowed, so provider failures can also leave incomplete output without setting `truncated`.
+- The separate `get-text` verb does not use `TextPattern`: it returns `ValuePattern.Value` when
+  available, otherwise the element `Name`, without this 2000-character cap. Newlines in those
+  property values are returned as provided.
+- Proposed minimal implementation change (not made in this assessment): request 2001 characters
+  from `DocumentRange.GetText`, then apply the existing 2000-character trim and truncation flag.
+  Track provider read/enumeration failures as incomplete output rather than presenting them as
+  complete. Suggested tests: multiline prose and code blocks preserve embedded line breaks; text
+  longer than 2000 characters is trimmed and sets `truncated`; unavailable patterns use fallback
+  text; off-screen and virtualized content behavior is explicit; provider failures are reported as
+  incomplete (or with the established error result), not silently represented as complete.
+- A visible transcript is not proof of a complete record: collapsed tool-call details may not be
+  exposed in the UI Automation tree, and `read-visible-text` cannot recover content the provider
+  does not expose.
 - Success: `{ "success": true, "lines": ["...", "..."], "truncated": false }`
 - Failure: `invalid-argument`, `stale-context`, `ambiguous-window`, `element-not-found` (same
   window-resolution errors as `inspect`), or `window-not-responding` (checked up front, since
@@ -891,7 +917,7 @@ an `AutomationId`-based Send-button click or keyboard input to the input element
   landing in and being processed by the live chat session. No `--sendAutomationId`/Send-button
   resolution was needed for this path.
 
-### `find-first --hwnd <h> --strategy <S> --value <V> [--scopeStrategy <S> --scopeValue <V>]` (Phase 13, 2026-09-15)
+### `find-first --hwnd <h> --strategy <S> --value <V> [--controlType <type>] [--scopeStrategy <S> --scopeValue <V>]` (Phase 13, 2026-09-15)
 Generic, shallow-cost single-match lookup: a single `FindFirst` against the resolved window (or a
 narrower scope, if `--scopeStrategy`/`--scopeValue` are both supplied) — no fixed-depth tree
 walk/serialization the way `inspect --maxDepth N` does. This is a general-purpose UIA primitive
@@ -902,6 +928,8 @@ control types) in caller-side scripts/config rather than baked into this exe.
 - `--strategy`/`--value`: same `Selector` semantics as `click`/`type`/etc. (`Name`, `AutomationId`
   today; `NameRegex`/`ControlTypeIndex`/`Coordinates` are accepted by the enum but not yet
   implemented — see "Common types" above and `docs/KNOWN_OPEN_FINDINGS.md`).
+- Optional `--controlType` filters candidates to a recognized short UIA type name (e.g. `Button`)
+  before lookup; an unrecognized type returns `invalid-argument`.
 - `--scopeStrategy`/`--scopeValue` (optional, must both be supplied together or neither): resolves
   a descendant of the window first and searches under it instead of the whole window — useful to
   narrow a search to a specific panel, both for speed and to avoid ambiguous matches elsewhere in
@@ -915,9 +943,10 @@ control types) in caller-side scripts/config rather than baked into this exe.
   `click`/`type`/`send-keys`/`submit-chat-message`/`find-all`), and `invalid-argument` if
   `--scopeStrategy`/`--scopeValue` are only partially supplied.
 
-### `find-all --hwnd <h> --strategy <S> --value <V> [--scopeStrategy <S> --scopeValue <V>] [--excludeValue <V>]` (Phase 13, 2026-09-15)
+### `find-all --hwnd <h> --strategy <S> --value <V> [--controlType <type>] [--scopeStrategy <S> --scopeValue <V>] [--excludeValue <V>]` (Phase 13, 2026-09-15)
 Same scoping/strategy support as `find-first`, but uses `FindAll` to return every matching
-descendant instead of stopping at the first.
+descendant instead of stopping at the first. Its optional `--controlType` filter is applied before
+matching; unrecognized short type names return `invalid-argument`.
 - `--excludeValue` (optional): skips any matched element whose `Name` equals this value — a
   generic convenience for the common case of filtering out one known placeholder/fallback option
   (e.g. a catch-all "Other" choice in a list of real options). This is a plain string filter, not
@@ -950,6 +979,14 @@ performs its own client-side filtering (Name/AutomationId/ControlType checks) ov
 `inspect` dump, i.e. the app-specific logic already lived in the caller script, not the CLI. No
 existing caller depended on `has-pending-prompt`'s shape, so removing it is not a breaking change
 in practice.
+
+### `scroll-container --hwnd <h> --strategy <Name|AutomationId> --value <v> --verticalPercent <0..100> [--scopeHwnd <h2>]`
+Sets the selected container to an absolute vertical scroll percentage via UI Automation `ScrollPattern` only. It does not request window activation and sends no mouse or keyboard input. Container selection follows the standard selector rules: one matching descendant is required; zero matches return `container-not-found`, and multiple matches return `ambiguous-container` with candidate details. An optional `--scopeHwnd` narrows the search.
+
+- `--verticalPercent` is required and must be a finite number from 0 through 100; otherwise the CLI returns `invalid-argument`. No direction/relative-step mode is provided.
+- A container without a vertically scrollable `ScrollPattern` returns `not-scrollable`. A stale UIA element returns `stale-context`; provider failures return `scroll-provider-error` with `details.stage`. A closed or unresponsive hwnd returns `window-not-responding`.
+- When the current percent is already the requested percent, no `SetScrollPercent` call is made. After setting a new position, the CLI re-reads the percent for up to 500 ms to allow the provider to update.
+- Success: `{ "success": true, "container": { "name", "automationId", "controlType", "className" }, "verticalScrollPercentBefore": <number>, "verticalScrollPercentAfter": <number>, "boundaryReached": <bool>, "changed": <bool> }`. `boundaryReached` is true when the requested boundary (0 or 100) is reached; `changed` reflects whether the reported percent moved.
 
 ### `scroll-into-view --hwnd <h> --strategy <Name|AutomationId> --value <v> [--scopeStrategy <s> --scopeValue <v>] [--step small|large] [--maxScrolls <n>] [--timeoutMs <n>]`
 Uses UI Automation patterns only. It does not request activation and makes no cursor or input
