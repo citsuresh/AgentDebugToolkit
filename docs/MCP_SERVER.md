@@ -175,7 +175,7 @@ MCP client can grant/prompt approval per tool rather than per call:
 | --- | --- | --- |
 | `ui_attach` | `attach` | |
 | `ui_list_windows` | `list-windows` | Read-only; optional `pid`, `all`, `processName` (mutually exclusive scopes), `titleContains`, `className`, `limit`, `includeUntitled`. Never changes session context |
-| `ui_inspect` | `inspect` | Read-only; `nameContains` and `controlType` filters return a pruned tree with `matchCount`; unfiltered output has no `matchCount`; a window-name match returns the whole tree; unknown control types fail with `invalid-argument` |
+| `ui_inspect` | `inspect` | Read-only; a screenshot is saved only when `screenshot` is `true` (default off; `screenshotPath` is omitted otherwise); `nameContains` and `controlType` filters return a pruned tree with `matchCount`; unfiltered output has no `matchCount`; a window-name match returns the whole tree; unknown control types fail with `invalid-argument` |
 | `ui_click` | `click` | Destructive; optional `controlType` narrows selector candidates before ambiguity checking |
 | `ui_right_click` | `right-click` | Destructive |
 | `ui_double_click` | `double-click` | Destructive |

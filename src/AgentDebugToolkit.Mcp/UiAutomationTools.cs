@@ -74,11 +74,11 @@ public sealed class UiAutomationTools
             ("--includeUntitled", TrueOnly(includeUntitled))), null, cancellationToken);
 
     [McpServerTool(Name = "ui_inspect", ReadOnly = true, Destructive = false, OpenWorld = false),
-     Description("Dumps the UIA subtree rooted at the given window/element handle, optionally saving a screenshot. Read-only (does not interact with the UI). Prefer filtered inspection over a full dump; unfiltered output has no matchCount; if the window's own name matches nameContains the whole tree is returned.")]
+     Description("Dumps the UIA subtree rooted at the given window/element handle, optionally saving a screenshot. A screenshot is saved only when screenshot is true; the default is off and the response then has no screenshotPath. Read-only (does not interact with the UI). Prefer filtered inspection over a full dump; unfiltered output has no matchCount; if the window's own name matches nameContains the whole tree is returned.")]
     public Task<ToolInvocationResult> Inspect(
         [Description("Window handle, e.g. '0x00123456'.")] string hwnd,
         [Description("Maximum tree depth (default implementation-defined, capped internally).")] int? maxDepth = null,
-        [Description("Also save a screenshot of the window.")] bool? screenshot = null,
+        [Description("Save a screenshot of the window only when true (default false).")] bool? screenshot = null,
         [Description("Case-insensitive substring filter on element Name. Returns a pruned tree (matches plus ancestors) with a matchCount field.")] string? nameContains = null,
         [Description("UIA control type short name, e.g. Button or Edit. An unrecognized value returns invalid-argument.")] string? controlType = null,
         CancellationToken cancellationToken = default)

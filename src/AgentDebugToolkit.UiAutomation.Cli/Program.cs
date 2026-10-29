@@ -606,7 +606,8 @@ internal static class Verbs
         }
 
         var maxDepth = opts.TryGetValue("maxDepth", out var mdText) && int.TryParse(mdText, out var md) ? md : 8;
-        var takeScreenshot = !opts.TryGetValue("screenshot", out var ssText) || ssText != "false";
+        var takeScreenshot = opts.TryGetValue("screenshot", out var ssText)
+            && ssText.Equals("true", StringComparison.OrdinalIgnoreCase);
 
         var filtered = nameContains is not null || controlType is not null;
         var tree = UiaHelper.ToElementInfo(element, includeChildren: true, maxDepth: maxDepth,
@@ -615,7 +616,18 @@ internal static class Verbs
 
         if (filtered)
         {
-            JsonOutput.WriteSuccess(new { root = tree, screenshotPath, matchCount });
+            if (screenshotPath is null)
+            {
+                JsonOutput.WriteSuccess(new { root = tree, matchCount });
+            }
+            else
+            {
+                JsonOutput.WriteSuccess(new { root = tree, screenshotPath, matchCount });
+            }
+        }
+        else if (screenshotPath is null)
+        {
+            JsonOutput.WriteSuccess(new { root = tree });
         }
         else
         {
@@ -1014,8 +1026,9 @@ internal static class Verbs
             method = UiaHelper.Type(element, text!);
         }
 
-        // Optional read-back verification: --verify (matching --screenshot's boolean-flag
-        // convention: absent or "false" disables it, any other value enables it) re-reads the
+        // Optional read-back verification: --verify (a boolean flag: absent or "false"
+        // disables it, any other value enables it; unlike --screenshot, which saves only for
+        // "true") re-reads the
         // element's text after typing and fails with verify-mismatch if it doesn't match what was
         // sent. This exists to catch silent typing failures (e.g. a control that ignored or
         // truncated the input) that the plain success response cannot detect on its own.

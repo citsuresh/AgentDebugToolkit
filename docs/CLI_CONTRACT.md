@@ -196,7 +196,11 @@ filtering, in every mode. Order is Win32 `EnumWindows` order: top of the z-order
 ### `inspect --hwnd <h> [--maxDepth <n>] [--screenshot true|false] [--nameContains <substring>] [--controlType <short name>]`
 Dumps the UIA subtree rooted at the given window/element handle, and optionally saves a
 screenshot.
-- Success: `{ "success": true, "root": ElementInfo, "screenshotPath": "C:\\...\\shot_20260914...png" | null }`
+- `--screenshot` is off by default: a screenshot is saved only when `--screenshot true` (or a
+  bare `--screenshot`) is passed. Absent, `--screenshot false`, or any other value saves nothing.
+- Success: `{ "success": true, "root": ElementInfo }`, plus
+  `"screenshotPath": "C:\\...\\shot_20260914...png"` only when a screenshot was saved.
+  `screenshotPath` is omitted, not `null`, when nothing was saved.
 - `--maxDepth` defaults to `8`; the root is depth `0`. Filtering uses the same depth limit,
   without extending the traversal or resetting depth at each match.
 - `--nameContains`: case-insensitive substring match on a node's Name.
@@ -208,11 +212,11 @@ screenshot.
   result is not a flat list.
 - Filtered success adds `matchCount`, the number of matching nodes within the depth-limited
   traversal, not the number of retained ancestors or nonmatching descendants:
-  `{ "success": true, "root": ElementInfo, "matchCount": 2, "screenshotPath": "..." }`.
+  `{ "success": true, "root": ElementInfo, "matchCount": 2 }` (plus `"screenshotPath": "..."`
+  only when `--screenshot true` saved one).
   Zero matches still succeed with `matchCount: 0` and a root with `children: []`.
 - Without filters, the tree and response shape are unchanged (`matchCount` is absent).
-  `--hwnd` and `--screenshot` behavior is unchanged; screenshots capture the original root,
-  not just matching controls.
+  Screenshots capture the original root, not just matching controls.
 - Screenshots save to a standard folder, e.g. `%LOCALAPPDATA%\AgentDebugToolkit\screenshots\`.
 
 ### `click --hwnd <h> --strategy <s> --value <v> [--controlType <type>] [--scopeHwnd <h2>]`
@@ -355,9 +359,9 @@ keyboard input.
 - **`--verify` with `--clear`:** verification is performed only for `method: "pattern-clear"`,
   and succeeds only when read-back is the empty string. It is skipped for `synthetic-clear`, just
   as it is skipped for `synthetic-keyboard`.
-- **`--verify` (optional, Phase 9, added 2026-09-15):** boolean-style flag matching `inspect`'s
-  `--screenshot` convention — absent or `--verify false` disables it, any other value (including
-  a bare `--verify`) enables it. After typing, re-reads the element's text (same mechanism as
+- **`--verify` (optional, Phase 9, added 2026-09-15):** boolean-style flag — absent or
+  `--verify false` disables it, any other value (including a bare `--verify`) enables it.
+  (`inspect`'s `--screenshot` differs: it saves only when its value is `true`.) After typing, re-reads the element's text (same mechanism as
   `get-text`) and compares it to `--text`. **Verification is only performed when `method` is
   `"pattern"`** (i.e. `ValuePattern.SetValue` was used) — when `Type` falls back to
   `"synthetic-keyboard"`, the corresponding read-back (`get-text`) also has no `ValuePattern` to
@@ -373,8 +377,8 @@ keyboard input.
   not equal `--text`. Response includes `expected`/`actual` fields:
   `{ "success": false, "error": "verify-mismatch", "message": "...", "expected": "...", "actual": "..." }`.
   Found and fixed during Regression Audit: an initial version used presence-only detection
-  (`opts.ContainsKey("verify")`), which diverged from `--screenshot`'s convention (no way to pass
-  `--verify false` to disable it) — fixed to match. The audit also found the pattern-only
+  (`opts.ContainsKey("verify")`), which left no way to pass
+  `--verify false` to disable it — fixed so `false` disables it. The audit also found the pattern-only
   verification scoping described above was necessary to avoid the `synthetic-keyboard` false-positive
   described above; this was fixed before any live validation, not discovered live.
 - **Known limitation / mitigation — asynchronous post-paste mutation by the target control
