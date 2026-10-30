@@ -43,14 +43,26 @@ public sealed class ControlTypeSelectorTests
     [Fact]
     public void Click_ControlTypeDisambiguatesDifferentTypesButNotRepeatedSameTypeMatches()
     {
-        using (var window = CreateMixedFixture())
+        var clickCount = 0;
+        using (var window = CreateMixedFixture(() => clickCount++))
         {
             var ambiguous = UiCli.Run("click", "--hwnd", window.HwndArgument, "--strategy", "Name", "--value", SharedName);
             Assert.Equal("ambiguous-match", ambiguous.ErrorCode);
 
             var selected = UiCli.Run("click", "--hwnd", window.HwndArgument, "--strategy", "Name", "--value", SharedName,
                 "--controlType", "Button");
-            Assert.True(selected.Success || selected.ErrorCode == "foreground-activation-failed", selected.RawOutput);
+            if (selected.ErrorCode == "foreground-activation-failed")
+            {
+                Assert.False(selected.Success, selected.RawOutput);
+                Assert.Equal("foreground-activation-failed", selected.ErrorCode);
+                Assert.Equal(0, window.Invoke(() => clickCount));
+            }
+            else
+            {
+                Assert.True(selected.Success, selected.RawOutput);
+                Assert.Equal("ControlType.Button", selected.Json.GetProperty("elementFound").GetProperty("ControlType").GetString());
+                Assert.Equal(1, window.Invoke(() => clickCount));
+            }
         }
 
         using var duplicateButtons = CreateButtonFixture(2);
@@ -95,12 +107,16 @@ public sealed class ControlTypeSelectorTests
         Assert.Equal("invalid-argument", result.ErrorCode);
     }
 
-    private static FixtureWindow CreateMixedFixture()
+    private static FixtureWindow CreateMixedFixture(Action? onButtonClick = null)
     {
         return FixtureWindow.Create(() =>
         {
             var panel = new StackPanel();
             var button = new Button { Content = "Button" };
+            if (onButtonClick is not null)
+            {
+                button.Click += (_, _) => onButtonClick();
+            }
             var text = new TextBlock { Text = "Text" };
             AutomationProperties.SetName(button, SharedName);
             AutomationProperties.SetName(text, SharedName);

@@ -215,8 +215,9 @@ screenshot.
   `{ "success": true, "root": ElementInfo, "matchCount": 2 }` (plus `"screenshotPath": "..."`
   only when `--screenshot true` saved one).
   Zero matches still succeed with `matchCount: 0` and a root with `children: []`.
-- Without filters, the tree and response shape are unchanged (`matchCount` is absent).
-  Screenshots capture the original root, not just matching controls.
+- Without filters, the tree is unchanged and `matchCount` is absent; the default response
+  omits `screenshotPath` because no screenshot is taken. When requested, screenshots capture the
+  original root, not just matching controls.
 - Screenshots save to a standard folder, e.g. `%LOCALAPPDATA%\AgentDebugToolkit\screenshots\`.
 
 ### `click --hwnd <h> --strategy <s> --value <v> [--controlType <type>] [--scopeHwnd <h2>]`

@@ -80,8 +80,8 @@ public sealed class UiAutomationTools
             ("--titleContains", titleContains), ("--className", className), ("--limit", limit?.ToString()),
             ("--includeUntitled", TrueOnly(includeUntitled))), null, cancellationToken);
 
-    [McpServerTool(Name = "ui_inspect", ReadOnly = true, Destructive = false, OpenWorld = false),
-     Description("Dumps the UIA subtree rooted at the given window/element handle, optionally saving a screenshot. A screenshot is saved only when screenshot is true; the default is off and the response then has no screenshotPath. Read-only (does not interact with the UI). Prefer filtered inspection over a full dump; unfiltered output has no matchCount; if the window's own name matches nameContains the whole tree is returned.")]
+    [McpServerTool(Name = "ui_inspect", ReadOnly = false, Destructive = false, OpenWorld = false),
+     Description("Dumps the UIA subtree rooted at the given window/element handle, optionally saving a screenshot. A screenshot is saved only when screenshot is true; the default is off and the response then has no screenshotPath. Does not interact with the UI, but screenshot=true writes a PNG file. Prefer filtered inspection over a full dump; unfiltered output has no matchCount; if the window's own name matches nameContains the whole tree is returned.")]
     public Task<ToolInvocationResult> Inspect(
         [Description("Window handle, e.g. '0x00123456'.")] string hwnd,
         [Description("Maximum tree depth (default implementation-defined, capped internally).")] int? maxDepth = null,
