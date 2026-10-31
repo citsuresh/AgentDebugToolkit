@@ -114,7 +114,7 @@ owns the plan.
 ConPTY behavior and public console commands have been smoke-tested with local `cmd.exe` targets,
 including interactive input, immediate output, timeout handling, target exit code 259, malformed
 pipe-client isolation, and clean shutdown. Validation against the planned
-`CAMFWDownloadConsole.exe` target remains intentionally open.
+`SampleConsoleApp.exe` target remains intentionally open.
 
 ## Requirements and scope
 

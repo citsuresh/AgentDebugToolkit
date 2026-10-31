@@ -1,8 +1,8 @@
 # Validation Findings
 
 These findings come from a live UIA probe (PowerShell, `System.Windows.Automation`) run against
-the actual running FDM Mobile app (`Itron.Fdm.Mobile.SystemWorkflows.OpenWayCOSEM.PC`, process
-name `Fdm`) before any toolkit code was written. They establish the ground truth this toolkit's
+the actual running target app (`Contoso.Product.App`, process
+name `TargetApp`) before any toolkit code was written. They establish the ground truth this toolkit's
 design is based on. Update this file if future testing reveals different behavior in other
 screens or other target applications.
 

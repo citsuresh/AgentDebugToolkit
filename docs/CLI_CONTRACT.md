@@ -54,7 +54,7 @@ measurements) should stop doing so.
 ```
 - `Name`: exact match against `AutomationElement.Current.Name`.
 - `AutomationId`: exact match against `AutomationId` property (works for some target apps, not
-  reliably for the FDM app family — see VALIDATION_FINDINGS.md).
+  reliably for the target app family — see VALIDATION_FINDINGS.md).
 - `NameRegex`: value is a regex tested against `Name`. **Not yet implemented** — reserved for
   Phase 3. **Fixed 2026-09-15 (Phase 16):** `--strategy`/`--scopeStrategy` parsing across every
   selector-consuming verb now goes through a central helper
@@ -72,7 +72,7 @@ measurements) should stop doing so.
 ### WindowInfo
 ```json
 { "hwnd": "0x00123456", "title": "Field Deployment Manager", "className": "WindowsForms10...",
-  "pid": 12345, "processName": "Fdm", "ownerHwnd": "0x00000000" | null, "isModal": false,
+  "pid": 12345, "processName": "TargetApp", "ownerHwnd": "0x00000000" | null, "isModal": false,
   "isForeground": true, "boundingRect": { "x": 21, "y": 69, "width": 1253, "height": 900 } }
 ```
 (`ownerHwnd`/`isModal` fields added in Phase 4; omit or default false/null before then.)
@@ -150,11 +150,11 @@ activation.
 Resolves a running process by exact name match (no `.exe` suffix assumed either way — match
 flexibly). Persists session context and returns every visible top-level window owned by the
 process, including owned native dialogs.
-- **Fixed 2026-09-15:** a trailing `.exe` suffix on `--process` (e.g. `--process Fdm.exe`) is now
+- **Fixed 2026-09-15:** a trailing `.exe` suffix on `--process` (e.g. `--process TargetApp.exe`) is now
   stripped (case-insensitively) before matching against `Process.ProcessName` (which never includes
   it). Previously this silently produced `process-not-found` despite the "match flexibly" contract
   above — the flexible matching was documented but not actually implemented for the `.exe` case.
-- Success: `{ "success": true, "pid": 145376, "processName": "Fdm", "windows": [WindowInfo, ...] }`
+- Success: `{ "success": true, "pid": 145376, "processName": "TargetApp", "windows": [WindowInfo, ...] }`
 - Failure: `ambiguous-process` (include `"candidates": [{pid, title}, ...]`) or
   `"process-not-found"`.
 - **Fixed 2026-09-15 (Phase 15):** persisting session context (`SessionContext.Save`) retries a

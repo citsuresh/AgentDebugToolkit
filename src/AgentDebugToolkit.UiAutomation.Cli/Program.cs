@@ -280,7 +280,7 @@ internal static class Verbs
         }
 
         // Normalize a trailing ".exe" suffix before matching: Process.ProcessName never
-        // includes it, so a caller passing e.g. "--process Fdm.exe" would otherwise silently
+        // includes it, so a caller passing e.g. "--process TargetApp.exe" would otherwise silently
         // fail to match despite the documented "no .exe suffix assumed either way -- match
         // flexibly" contract.
         var normalizedProcessName = processName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)

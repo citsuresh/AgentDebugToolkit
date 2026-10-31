@@ -25,7 +25,7 @@ Both entries run `agentdebug-mcp.exe` (see "Sample Claude Desktop configuration"
   missing permission. Report it and stop.
 - Never click or approve permission prompts on the user's behalf; the user approves those
   themselves.
-- Redact secrets, tokens and personal data from anything you report back (Itron policy).
+- Redact secrets, tokens and personal data from anything you report back (company policy).
 - `console_launch` is gated in the MCP server by `AGENTDEBUG_CONSOLE_ALLOWED_EXE`: a
   `;`-separated list of full executable paths. Never allowlist an interpreter, shell or
   runner (`python.exe`, `node.exe`, `dotnet.exe`, `powershell.exe`, `cmd.exe` and similar):

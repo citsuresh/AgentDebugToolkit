@@ -54,9 +54,9 @@ Implementation notes:
 - No map file involvement at all in this phase — the agent (Claude) supplies raw selectors
   directly.
 
-**Exit criteria (manual validation against the real FDM app, mirroring the earlier PowerShell
+**Exit criteria (manual validation against the real target app, mirroring the earlier PowerShell
 probe):**
-1. `attach --process Fdm` returns a pid and window list.
+1. `attach --process TargetApp` returns a pid and window list.
 2. `inspect` on the main window returns a JSON tree + screenshot file that the agent can view.
 3. `click --strategy Name --value "OK"` on the login dialog succeeds and the app advances.
 4. Two more navigation clicks (e.g., into a device-type menu, then a workflow menu) succeed using
@@ -101,7 +101,7 @@ earlier scenario analysis (dynamic lists, icon-only controls, duplicate names).
   grid-specific selector logic speculatively — only if the spot-check shows it's needed.
 
 **Exit criteria:**
-- All 4 selector strategies demonstrated against real elements in the FDM app.
+- All 4 selector strategies demonstrated against real elements in the target app.
 - C1FlexGrid spot-check documented with a concrete recommendation (works via existing strategies,
   or needs a follow-up phase).
 
@@ -113,7 +113,7 @@ earlier scenario analysis (dynamic lists, icon-only controls, duplicate names).
   `isForeground`, per window.
 - Ensure all action/wait commands correctly scope to a specific hwnd rather than assuming a single
   top-level window per process.
-- Verify behavior against at least one real modal dialog in the FDM app and one owner-chain case
+- Verify behavior against at least one real modal dialog in the target app and one owner-chain case
   (e.g., a MessageBox or the earlier "Server" login-related dialog observed during validation).
 
 **Exit criteria:**
@@ -127,7 +127,7 @@ earlier scenario analysis (dynamic lists, icon-only controls, duplicate names).
 `NAVIGATION_MAP_SCHEMA.md`, using only the CLI verbs from Phases 1–4. The CLI itself remains map-
 agnostic per the earlier design decision.
 
-- Agent creates `docs/app-navigation-map/index.json` + per-screen files as it explores the FDM
+- Agent creates `docs/app-navigation-map/index.json` + per-screen files as it explores the target
   app, using `inspect`/`list-windows` output to determine `matchRule`s and elements.
 - Agent manually exercises: attach -> whereami-style reasoning (comparing `list-windows`/`inspect`
   output to the map) -> click via a selector pulled from a screen's map file -> wait -> confirm
@@ -158,20 +158,20 @@ helper that retries up to 3 times (100ms/200ms/300ms backoff) on `RPC_E_SERVERCA
 `start-debugging` validation hit a transient "VS busy" COM failure. Builds successfully and has
 been validated live against a real breakpoint hit and real start/stop debugging cycles.
 
-**Exit criteria (validated live against the FDM solution, 2026-09-14):**
-- [x] With a breakpoint hit in the FDM solution in Visual Studio, `debugger-status` correctly
+**Exit criteria (validated live against the target solution, 2026-09-14):**
+- [x] With a breakpoint hit in the target solution in Visual Studio, `debugger-status` correctly
   reports break mode (and, if hit via a real breakpoint, the active document/line). Verified:
-  hit a breakpoint in `COSEMConnectionPage.cs`, `debugger-status` reported
+  hit a breakpoint in `ConnectionPage.cs`, `debugger-status` reported
   `mode: "break"`, correct `activeDocument` path, and `activeLine: 176`.
 - [x] `get-callstack` returns real frame data for that break. Verified: returned the full,
   accurate 21-frame call stack from `SaveWorkflowData` through `Main`.
 - [x] `get-locals` returns real local variable data for the current frame. Verified: returned
-  `this` (the `COSEMConnectionPage` instance) with correct type.
+  `this` (the `ConnectionPage` instance) with correct type.
 - [x] `continue` resumes execution and `debugger-status` subsequently reports `run`/`design`.
   Verified: `continue` succeeded, subsequent `debugger-status` reported `mode: "run"`.
 - [x] `continue` with no active debug session returns a `no-active-session` error instead of
   starting a new debug session (F5 semantics) — verified no new process was launched.
-- [x] `start-debugging` from design mode successfully launches the FDM app and `debugger-status`
+- [x] `start-debugging` from design mode successfully launches the target app and `debugger-status`
   subsequently reports `mode: "run"`. Verified: `start-debugging` triggered a build + launch
   (VS was busy briefly, first attempt hit `RPC_E_SERVERCALL_RETRYLATER`; after adding the
   `ComRetry` wrapper, re-validated with several consecutive calls with no manual retry needed),
@@ -191,8 +191,8 @@ and the Visual Studio debugger bridge. Console apps have no UI Automation tree, 
 completely different mechanism: launch the target under a pseudoconsole (ConPTY) and interact
 via its text screen buffer, not UIA elements.
 
-**Validation target:** `CAMFWDownloadConsole` (in a separate solution/repo,
-`C:\ItronProjects\FDM\Repos\Solutions\CAMFWDownloadConsole`) — a real console app already
+**Validation target:** `SampleConsoleApp` (in a separate solution/repo,
+`<path to the sample console app>`) — a real console app already
 present in this environment, launched directly by exe path (no project reference needed).
 
 - `src/AgentDebugToolkit.ConsoleAutomation.Cli` is implemented as an independent
@@ -220,13 +220,13 @@ present in this environment, launched directly by exe path (no project reference
 - The full solution built successfully with `DOTNET_ROOT` cleared.
 
 **Exit criteria:**
-- [x] `launch --exe <path to CAMFWDownloadConsole.exe>` starts the process and `read-screen`
+- [x] `launch --exe <path to SampleConsoleApp.exe>` starts the process and `read-screen`
   returns real captured output. Verified: captured the device endpoint, meter-definition loading,
   connection attempt, connection error, and `Press any key to exit` prompt.
 - [x] `send-text`/`send-keys` inject terminal input. Verified: `send-text --text x` was echoed
   into the screen buffer and exited the target; `send-keys --keys ENTER` also exited the target.
 - [x] `wait-for-text` correctly detects an expected string without requiring a fixed sleep.
-  Verified: detected `Press any key to exit` from `CAMFWDownloadConsole`.
+  Verified: detected `Press any key to exit` from `SampleConsoleApp`.
 - [x] `is-running` correctly reports process liveness before and after the process exits.
   Verified: reported `running: true` before input and `running: false, exitCode: 0` afterward.
 

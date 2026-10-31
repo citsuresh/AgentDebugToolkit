@@ -33,7 +33,7 @@ act on that specific screen. This also keeps git diffs scoped to one screen at a
 
 ```json
 {
-  "application": "Itron.Fdm.Mobile.SystemWorkflows.OpenWayCOSEM.PC",
+  "application": "Contoso.Product.App",
   "screens": [
 	{ "screenId": "login-screen", "file": "screens/login-screen.json",
 	  "matchRule": { "titleRegex": "^Field Deployment Manager$",

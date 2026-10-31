@@ -97,7 +97,7 @@ per-part cadence. Neither mode waives the full-report or individual-fix-approval
 - If a change in this repo implies the `ui-debug-map` or `agent-orchestrator` Copilot skill needs
   updating (new verb, changed CLI contract, new gotcha discovered, etc.), edit the versioned copy
   at `C:\MyFiles\Git\Visual-Studio-Copilot-Skills\<skill-name>\SKILL.md` — never edit
-  `C:\Users\sveluswa\.copilot\skills\<skill-name>\SKILL.md` directly. The global `.copilot\skills`
+  `%USERPROFILE%\.copilot\skills\<skill-name>\SKILL.md` directly. The global `.copilot\skills`
   copy is the installed/active copy Copilot actually loads at runtime; it is not version controlled
   and should only ever be updated by running `Install-Skills.ps1` from the repo, after the repo
   change has been reviewed and committed — never edited in place.
