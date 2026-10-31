@@ -56,7 +56,10 @@ if (args.Length == 0)
 var verb = args[0];
 if (!TryParseOptions(args.Skip(1).ToArray(), out var opts, out var parseError))
 {
-    JsonOutput.WriteError("invalid-argument", parseError!);
+    var message = verb.Equals("list-windows", StringComparison.OrdinalIgnoreCase)
+        ? $"{parseError} Accepted list-windows flags: {Verbs.ListWindowsAcceptedFlags}."
+        : parseError!;
+    JsonOutput.WriteError("invalid-argument", message);
     return 1;
 }
 
@@ -198,6 +201,14 @@ static bool IsBooleanFlag(string name) => name.Equals("screenshot", StringCompar
 
 internal static class Verbs
 {
+    internal const string ListWindowsAcceptedFlags =
+        "--pid, --all, --processName, --titleContains, --className, --limit, --includeUntitled";
+
+    private static readonly HashSet<string> ListWindowsOptionNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "pid", "all", "processName", "titleContains", "className", "limit", "includeUntitled"
+    };
+
     internal static bool TryParseCursorSessionArguments(string[] arguments, out bool start,
         out CursorSessionKind? kind, out string? error)
     {
@@ -324,6 +335,14 @@ internal static class Verbs
 
     public static int ListWindows(Dictionary<string, string> opts)
     {
+        var unknownOption = opts.Keys.FirstOrDefault(key => !ListWindowsOptionNames.Contains(key));
+        if (unknownOption is not null)
+        {
+            JsonOutput.WriteError("invalid-argument",
+                $"Unknown flag '--{unknownOption}' for list-windows. Accepted flags: {ListWindowsAcceptedFlags}.");
+            return 1;
+        }
+
         var (query, errorCode, error) = ResolveWindowQuery(opts);
         if (query is null)
         {

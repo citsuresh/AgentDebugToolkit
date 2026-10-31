@@ -41,6 +41,7 @@ public sealed class ControlTypeSelectorTests
     }
 
     [Fact]
+    [Trait("Category", "InteractiveDesktop")]
     public void Click_ControlTypeDisambiguatesDifferentTypesButNotRepeatedSameTypeMatches()
     {
         var clickCount = 0;

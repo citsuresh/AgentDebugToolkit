@@ -62,7 +62,7 @@ cells by `GridItemPattern` column, then resolves the realized in-cell editor.
 UIA scroll, selection, grid, value, and invoke patterns provide a current, structural path.
 
 **Alternatives considered:** Coordinate-based grid clicking — rejected because it was flaky in
-live WindowWorks validation and cannot reliably distinguish a cell from its in-place editor.
+live SampleApp validation and cannot reliably distinguish a cell from its in-place editor.
 
 ## 2026-10-14 -- Strict public option parsing and shared MCP value formatting
 

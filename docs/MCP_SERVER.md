@@ -110,13 +110,11 @@ are annotated for every allowed call, so an MCP client can grant/prompt approval
   effect:
   - **Read-only** (`readOnlyHint: true`): `vs_debugger_status`, `vs_get_callstack`,
     `vs_get_locals`, `vs_get_exception_info`, `vs_list_breakpoints`, `vs_list_threads`,
-    `vs_evaluate`, `vs_wait_for_break`, `ui_list_windows`, `ui_get_cursor_pos`,
+    `vs_evaluate`, `vs_wait_for_break`, `ui_list_windows`, `ui_inspect`, `ui_get_cursor_pos`,
     `ui_get_text`, `ui_wait_for_window_change`, `ui_wait_for_element`,
     `ui_wait_for_process_responding`, `ui_delay`, `ui_read_visible_text`,
     `ui_find_first`, `ui_find_all`.
-  - `ui_inspect` and `ui_screenshot` are **not** read-only (`readOnlyHint: false`): although they
-    do not change target application state, `ui_inspect` can write a PNG when `screenshot` is
-    true, and `ui_screenshot` always writes one. The annotation covers every allowed call.
+  - `ui_screenshot` is **not** read-only (`readOnlyHint: false`): it writes a new PNG file to disk.
   - `ui_cursor_session_start` and `ui_cursor_session_stop` are not read-only: they alter the
     system cursor scheme and a shared session flag, but are marked non-destructive because the
     scheme can be restored by stopping without a kind.
@@ -179,7 +177,7 @@ are annotated for every allowed call, so an MCP client can grant/prompt approval
 | --- | --- | --- |
 | `ui_attach` | `attach` | |
 | `ui_list_windows` | `list-windows` | Read-only; optional `pid`, `all`, `processName` (mutually exclusive scopes), `titleContains`, `className`, `limit`, `includeUntitled`. Never changes session context |
-| `ui_inspect` | `inspect` | Not read-only because `screenshot=true` writes a PNG; otherwise observational (default off; `screenshotPath` is omitted); `nameContains` and `controlType` filters return a pruned tree with `matchCount`; unfiltered output has no `matchCount`; a window-name match returns the whole tree; unknown control types fail with `invalid-argument` |
+| `ui_inspect` | `inspect` | Read-only; MCP omits the CLI-only screenshot option; `nameContains` and `controlType` filters return a pruned tree with `matchCount`; unfiltered output has no `matchCount`; a window-name match returns the whole tree; unknown control types fail with `invalid-argument` |
 | `ui_click` | `click` | Destructive; optional `controlType` narrows selector candidates before ambiguity checking |
 | `ui_right_click` | `right-click` | Destructive |
 | `ui_double_click` | `double-click` | Destructive |

@@ -176,6 +176,10 @@ Scope (mutually exclusive; any combination returns `invalid-argument`):
 Filters (narrow any scope; case-insensitive substring; an empty value returns `invalid-argument`):
 `--titleContains`, `--className`.
 
+Unknown, misspelled, or misplaced flags and missing values return `invalid-argument` with the
+problem flag named and the accepted flags listed: `--pid`, `--all`, `--processName`,
+`--titleContains`, `--className`, `--limit`, and `--includeUntitled`.
+
 In `--all`/`--processName` modes only, these are excluded by default: DWM-cloaked windows
 (`DWMWA_CLOAKED`; an API failure counts as not cloaked), windows with an empty title, and windows
 with zero-area bounds. `--includeUntitled` re-includes empty-title windows only.
@@ -200,7 +204,8 @@ screenshot.
   bare `--screenshot`) is passed. Absent, `--screenshot false`, or any other value saves nothing.
 - Success: `{ "success": true, "root": ElementInfo }`, plus
   `"screenshotPath": "C:\\...\\shot_20260914...png"` only when a screenshot was saved.
-  `screenshotPath` is omitted, not `null`, when nothing was saved.
+  `screenshotPath` is omitted, not `null`, when nothing was saved. The MCP `ui_inspect` tool
+  omits the CLI-only `--screenshot` option and is read-only.
 - `--maxDepth` defaults to `8`; the root is depth `0`. Filtering uses the same depth limit,
   without extending the traversal or resetting depth at each match.
 - `--nameContains`: case-insensitive substring match on a node's Name.
@@ -539,7 +544,7 @@ keyboard input.
   `--scopeHwnd` (now honored by `get-text` too).
 Reads current `Name` or `ValuePattern.Value` (whichever is more appropriate/available) of the
 resolved element.
-- Success: `{ "success": true, "text": "10.176.100.248" }`
+- Success: `{ "success": true, "text": "192.0.2.10" }`
 
 ### `set-grid-cell --hwnd <h> --gridStrategy <s> --gridValue <v> --rowStrategy <s> --rowValue <v> --columnIndex <n> --text <input> [--editorControlType Edit|ComboBox|CheckBox] [--applyStrategy <s> --applyValue <v>]`
 Edits a cell in a UIA `DataGrid` without relying on a previously captured screen coordinate.
@@ -998,7 +1003,7 @@ control-type-based match, which `find-all` does not yet support as a `Selector` 
 strategy is implemented, a caller can fall back to `inspect` scoped narrowly (e.g. via
 `--scopeStrategy`/`--scopeValue` first, then a shallow `inspect` on just that scope) for that
 specific sub-lookup. This mirrors what
-`tools/Watch-CopilotChat.ps1` already does today — it never called `has-pending-prompt`; it
+`tools/Watch-CopilotChatV1.ps1` already does today — it never called `has-pending-prompt`; it
 performs its own client-side filtering (Name/AutomationId/ControlType checks) over a full
 `inspect` dump, i.e. the app-specific logic already lived in the caller script, not the CLI. No
 existing caller depended on `has-pending-prompt`'s shape, so removing it is not a breaking change

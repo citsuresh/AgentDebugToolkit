@@ -80,16 +80,15 @@ public sealed class UiAutomationTools
             ("--titleContains", titleContains), ("--className", className), ("--limit", limit?.ToString()),
             ("--includeUntitled", TrueOnly(includeUntitled))), null, cancellationToken);
 
-    [McpServerTool(Name = "ui_inspect", ReadOnly = false, Destructive = false, OpenWorld = false),
-     Description("Dumps the UIA subtree rooted at the given window/element handle, optionally saving a screenshot. A screenshot is saved only when screenshot is true; the default is off and the response then has no screenshotPath. Does not interact with the UI, but screenshot=true writes a PNG file. Prefer filtered inspection over a full dump; unfiltered output has no matchCount; if the window's own name matches nameContains the whole tree is returned.")]
+    [McpServerTool(Name = "ui_inspect", ReadOnly = true, Destructive = false, OpenWorld = false),
+     Description("Dumps the UIA subtree rooted at the given window/element handle without interacting with the UI or saving a screenshot. Prefer filtered inspection over a full dump; unfiltered output has no matchCount; if the window's own name matches nameContains the whole tree is returned.")]
     public Task<ToolInvocationResult> Inspect(
         [Description("Window handle, e.g. '0x00123456'.")] string hwnd,
         [Description("Maximum tree depth (default implementation-defined, capped internally).")] int? maxDepth = null,
-        [Description("Save a screenshot of the window only when true (default false).")] bool? screenshot = null,
         [Description("Case-insensitive substring filter on element Name. Returns a pruned tree (matches plus ancestors) with a matchCount field.")] string? nameContains = null,
         [Description("UIA control type short name, e.g. Button or Edit. An unrecognized value returns invalid-argument.")] string? controlType = null,
         CancellationToken cancellationToken = default)
-        => RunAsync(BuildArgs("inspect", ("--hwnd", hwnd), ("--maxDepth", maxDepth?.ToString()), ("--screenshot", Bool(screenshot)), ("--nameContains", nameContains), ("--controlType", controlType)), null, cancellationToken);
+        => RunAsync(BuildArgs("inspect", ("--hwnd", hwnd), ("--maxDepth", maxDepth?.ToString()), ("--nameContains", nameContains), ("--controlType", controlType)), null, cancellationToken);
 
     [McpServerTool(Name = "ui_click", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false),
      Description("Resolves an element via selector and clicks it (UIA pattern, falling back to a synthetic click). Changes target application state. If the selector matches more than one element this fails with ambiguous-match (count plus up to 10 candidates) and does nothing; narrow with scopeHwnd or pre-check with ui_find_all.")]

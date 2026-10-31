@@ -61,7 +61,7 @@ act on that specific screen. This also keeps git diffs scoped to one screen at a
   "parentScreenId": "main-tools-menu" | null,
   "transient": false,
   "elements": [
-	{ "elementId": "addressField", "selector": { "strategy": "Name", "value": "10.176.100.248" },
+	{ "elementId": "addressField", "selector": { "strategy": "Name", "value": "192.0.2.10" },
 	  "role": "input", "optional": false, "selectorConfidence": "high",
 	  "description": "IP address text field (name shown is placeholder/example value; verify by
 		get-text before relying on it)" },

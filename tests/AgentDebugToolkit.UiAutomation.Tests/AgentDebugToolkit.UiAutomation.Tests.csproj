@@ -18,6 +18,7 @@
   <ItemGroup>
     <!-- Referenced so agentdebug-ui.exe is built and copied next to the tests, which run it as a separate process. -->
     <ProjectReference Include="..\..\src\AgentDebugToolkit.UiAutomation.Cli\AgentDebugToolkit.UiAutomation.Cli.csproj" />
+    <ProjectReference Include="..\..\src\AgentDebugToolkit.Mcp\AgentDebugToolkit.Mcp.csproj" />
   </ItemGroup>
 
 </Project>

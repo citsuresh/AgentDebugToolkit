@@ -465,7 +465,7 @@ a native/managed transition region independently settable from this tool's side 
 does not expose one. What changed is that both failure shapes are now reported clearly (naming the
 real frame actually bound, where applicable) instead of a raw HRESULT or a silently wrong result.
 
-**Verification:** rebuilt clean (0 warnings/errors), reproduced against the live WindowWorks repro
+**Verification:** rebuilt clean (0 warnings/errors), reproduced against the live SampleApp repro
 with the debugger confirmed in break mode throughout: `select-frame --index 20` now returns the
 enriched `frame-selection-failed` message; `select-frame --index 3` now returns
 `frame-selection-mismatch` naming `Program.Main`/the app's own assembly as the frame actually

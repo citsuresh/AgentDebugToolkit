@@ -25,7 +25,7 @@ The toolkit must support both, with graceful fallback.
      `click --strategy Name --value Yes`; the click invoked the button and closed the dialog.
 
 0. **Virtualized WPF DataGrid editor resolution (validated 2026-09-19):**
-   - WindowWorks' `PropertyDataGrid` exposes `GridPattern`, `TablePattern`, `ItemContainerPattern`,
+   - SampleApp' `PropertyDataGrid` exposes `GridPattern`, `TablePattern`, `ItemContainerPattern`,
      and `ScrollPattern`. Rows expose `SelectionItemPattern`/`ScrollItemPattern`; cells expose
      `GridItemPattern`/`TableItemPattern`/`ValuePattern`.
    - `style.display` is exposed by a property cell in a `DataGridRow`; its editable value is a
@@ -41,7 +41,7 @@ The toolkit must support both, with graceful fallback.
    - `AutomationId` is a meaningless numeric runtime value (e.g., `11016060`), not derived from
 	 designer `.Name` — **do not rely on AutomationId** as a primary selector for this app.
    - `Name` property reliably carries real, human-meaningful text (e.g., "OK", "Exit",
-	 "1. Gen5 Riva Electricity Meter", "01. Device Control Panel").
+	 "1. Sample Device Type", "01. Device Control Panel").
    - No elements support `InvokePattern`/`TogglePattern`/`ValuePattern`.
    - **Verified working interaction:** locate element by `Name`, compute click point from
 	 `BoundingRectangle` center, issue a synthetic mouse click (`SetCursorPos` +

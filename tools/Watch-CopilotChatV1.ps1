@@ -4,6 +4,25 @@
     user input, goes idle with a new final message, or a timeout is reached.
 
 .DESCRIPTION
+    TEST CASES: tests\Watch-CopilotChatV1.tests.md next to this script.
+
+    WHICH WATCHER? This is V1, the full-tree watcher. Watch-CopilotChatV2.ps1 is the light one and the
+    default; use V1 only when you need what V2 does not return.
+
+    V1 pros:
+      - Returns the content of a Pending prompt: Question, Options, Recommended, MorePages, and the
+        prompt type (ChoicePrompt, FreeTextPrompt, PermissionPrompt).
+      - Detects an Idle chat that ends in a plain-text question or approval request (AwaitingReply,
+        LastMessageTail, -QuestionPattern), and returns LastMessage and the completion footer.
+      - Reports chat banners (workspace mismatch, workspace trust) in its Pending and Idle results.
+      - Recognizes more permission-prompt shapes (ExtraActionsButton, or sibling Allow* and Deny
+        buttons) and the older "Waiting..." marker; markers and patterns can be overridden.
+      - Console progress lines, -ProgressFile and -NotifyOnDone for a supervisor that cannot stream.
+    V1 cons:
+      - Dumps the whole UI tree on every poll: about 4 seconds per poll on a long chat and about 70
+        percent of one core at a 5 second interval, inside the Visual Studio process being driven.
+      - Needs agentdebug-ui.exe (built from the AgentDebugToolkit repo).
+      - Noisy: one console line per poll unless the output is redirected.
     Wraps repeated `inspect --hwnd <h>` calls, parses the resulting UIA tree, and reports a
     single-line status so a calling agent/session doesn't need to re-implement the polling
     loop and tree-walk logic every time.
@@ -54,7 +73,7 @@
     script (e.g. after you've answered a prompt) naturally resets back to this short interval.
 
 .PARAMETER MaxPollIntervalSeconds
-    Upper bound the adaptive poll interval is allowed to grow to. Default 60, or the initial
+    Upper bound the adaptive poll interval is allowed to grow to. Default 30, or the initial
     -PollIntervalSeconds when that is larger and this parameter is not explicitly supplied.
 
 .PARAMETER PollBackoffMultiplier
@@ -99,6 +118,21 @@
 .PARAMETER StopOnFirstIdleMessage
     Retained for compatibility. Confirmed Idle now always ends the watch.
 
+.PARAMETER ProgressFile
+    Append every [poll ...] line to this file as well as the console, so a supervisor that
+    runs the watcher as a blocking or background call can read progress while it runs.
+
+.PARAMETER NotifyOnDone
+    Play a short beep sequence when the watch ends (Pending, Idle or Timeout).
+
+.PARAMETER QuestionPattern
+    Regex applied to the last 600 characters of LastMessage when Idle is confirmed. A match
+    sets AwaitingReply, because an agent can end its turn by asking for approval in plain text
+    (no card), which is otherwise indistinguishable from a finished task. The default matches a
+    trailing question mark and phrases such as "please approve", "approve or decline",
+    "do you approve" and "let me know whether". It is a heuristic: a phrase anywhere in that
+    window can match, and a differently worded request can be missed.
+
 .OUTPUTS
     Writes a PSCustomObject to the pipeline (and as JSON to stdout if -AsJson) with:
       State            : "Pending" | "Working" | "Idle" | "Timeout" | "Error"
@@ -112,7 +146,13 @@
       Completed        : true if the last ChatMessageItem is a completion footer, if State=Idle
       CompletionFooter : latest completion footer text (model and cost), if State=Idle
       WorkingSeen      : true if Working or Pending was seen during this watch, if State=Idle
-      Note             : set when Idle was confirmed without a completion footer
+      AwaitingReply    : true when the last message looks like a plain-text question or approval
+                         request (see -QuestionPattern); Idle then does NOT mean the task is done
+      LastMessageTail  : the last 600 characters of the message, only when AwaitingReply is true;
+                         LastMessage keeps the start of the text, so a question at the end of a
+                         long reply can be cut off there
+      Note             : set when Idle was confirmed without a completion footer, or when
+                         AwaitingReply is true
       Banners          : chat-pane banners (any state), each with Id, Text and Buttons, e.g.
                          HarnessWorkspaceMismatchBanner (session working directory differs
                          from the open folder) or WorkspaceTrustWarningBanner
@@ -120,13 +160,13 @@
       ElapsedSeconds   : how long the loop ran before returning
 
 .EXAMPLE
-    .\Watch-CopilotChat.ps1 -Hwnd 0xCA18B2 -TimeoutSeconds 300
+    .\Watch-CopilotChatV1.ps1 -Hwnd 0xCA18B2 -TimeoutSeconds 300
 
 .EXAMPLE
-    .\Watch-CopilotChat.ps1 -Hwnd 0xCA18B2 -AsJson | ConvertFrom-Json
+    .\Watch-CopilotChatV1.ps1 -Hwnd 0xCA18B2 -AsJson | ConvertFrom-Json
 
 .EXAMPLE
-    .\Watch-CopilotChat.ps1 -Hwnd 0xCA18B2 -RequireWorkingFirst -PollIntervalSeconds 10
+    .\Watch-CopilotChatV1.ps1 -Hwnd 0xCA18B2 -RequireWorkingFirst -PollIntervalSeconds 10
 #>
 [CmdletBinding()]
 param(
@@ -141,7 +181,7 @@ param(
 
     [int]$PollIntervalSeconds = 12,
 
-    [int]$MaxPollIntervalSeconds = 60,
+    [int]$MaxPollIntervalSeconds = 30,
 
     [double]$PollBackoffMultiplier = 1.4,
 
@@ -166,7 +206,13 @@ param(
 
     [switch]$AsJson,
 
-    [switch]$StopOnFirstIdleMessage
+    [switch]$StopOnFirstIdleMessage,
+
+    [string]$ProgressFile,
+
+    [switch]$NotifyOnDone,
+
+    [string]$QuestionPattern = '\?\s*[*_)"\s]*$|\b(please (approve|confirm|decline|choose|reply|answer)|approve or decline|do you (approve|want)|let me know (whether|if)|awaiting (your )?(approval|confirmation|reply))\b'
 )
 
 # The inherited DOTNET_ROOT from VS breaks agentdebug-ui.exe; always clear it.
@@ -285,6 +331,23 @@ function Get-SleepMilliseconds {
     return [Math]::Min($RequestedMilliseconds, $remainingMilliseconds)
 }
 
+function Write-PollLine {
+    param(
+        [string]$Message,
+        [string]$ForegroundColor = 'Gray'
+    )
+
+    Write-Host $Message -ForegroundColor $ForegroundColor
+    if ($ProgressFile) {
+        Add-Content -LiteralPath $ProgressFile -Value $Message -Encoding UTF8
+    }
+}
+
+function Invoke-DoneSignal {
+    if (-not $NotifyOnDone) { return }
+    try { foreach ($f in 880, 1100, 1320) { [console]::Beep($f, 250) } } catch { }
+}
+
 $start = Get-Date
 $deadline = $start.AddSeconds($TimeoutSeconds)
 $lastMessageCount = -1
@@ -302,7 +365,7 @@ $currentInterval = $PollIntervalSeconds
 while ((Get-Date) -lt $deadline) {
     $pollNum++
     $elapsedNow = [int]((Get-Date) - $start).TotalSeconds
-    Write-Host "[poll #$pollNum @ ${elapsedNow}s] inspecting hwnd $Hwnd ..." -ForegroundColor Cyan
+    Write-PollLine "[poll #$pollNum @ ${elapsedNow}s] inspecting hwnd $Hwnd ..." -ForegroundColor Cyan
 
     & $ExePath inspect --hwnd $Hwnd --maxDepth $MaxDepth > $InspectJsonPath 2>&1
 
@@ -314,7 +377,7 @@ while ((Get-Date) -lt $deadline) {
 
     if (-not $data -or -not $data.root) {
         $sleepMilliseconds = Get-SleepMilliseconds -RequestedMilliseconds ($currentInterval * 1000) -Deadline $deadline
-        Write-Host "[poll #$pollNum] inspect returned no parseable data; sleeping $([Math]::Round($sleepMilliseconds / 1000, 3))s..." -ForegroundColor Yellow
+        Write-PollLine "[poll #$pollNum] inspect returned no parseable data; sleeping $([Math]::Round($sleepMilliseconds / 1000, 3))s..." -ForegroundColor Yellow
         if ($sleepMilliseconds -gt 0) {
             Start-Sleep -Milliseconds $sleepMilliseconds
         }
@@ -332,7 +395,7 @@ while ((Get-Date) -lt $deadline) {
     $hasNextQuestion = [bool]($all | Where-Object { $_.ControlType -eq 'ControlType.Button' -and $_.Name -eq 'Next question' -and $_.IsEnabled })
     $permission = Find-PermissionPrompt -Root $data.root
     $banners = Find-ChatBanners -All $all
-    foreach ($b in $banners) { Write-Host "[poll #$pollNum] banner $($b.Id): $($b.Text)" -ForegroundColor Yellow }
+    foreach ($b in $banners) { Write-PollLine "[poll #$pollNum] banner $($b.Id): $($b.Text)" -ForegroundColor Yellow }
     $isWaiting = [bool]($all | Where-Object { $_.Name -in $WaitingMarkers }) -or ($hasCardField -and ($hasSubmit -or $hasNextQuestion)) -or [bool]$permission
     $isWorking = [bool]($all | Where-Object { $_.Name -in $WorkingMarkers })
     $messages = @($all | Where-Object { $_.ClassName -eq 'ChatMessageItem' -and $_.Name -and $_.Name -notmatch $PlaceholderPattern })
@@ -349,7 +412,7 @@ while ((Get-Date) -lt $deadline) {
     $footerChanged = [bool]$currentFooter -and $currentFooter -ne $baselineFooter
 
     $statusLabel = if ($isWaiting) { 'PENDING (waiting for input)' } elseif ($isWorking) { 'WORKING' } else { 'IDLE' }
-    Write-Host "[poll #$pollNum] state=$statusLabel messages=$($messages.Count)" -ForegroundColor Gray
+    Write-PollLine "[poll #$pollNum] state=$statusLabel messages=$($messages.Count)" -ForegroundColor Gray
 
     if ($isWaiting) {
         $labels = @($all | Where-Object { $_.AutomationId -eq 'RadioFieldLabel' } | ForEach-Object { $_.Name })
@@ -389,6 +452,7 @@ while ((Get-Date) -lt $deadline) {
             ElapsedSeconds = [int]((Get-Date) - $start).TotalSeconds
         }
         if ($AsJson) { $result | ConvertTo-Json -Depth 5 } else { $result }
+        Invoke-DoneSignal
         return
     }
 
@@ -410,13 +474,18 @@ while ((Get-Date) -lt $deadline) {
         $confirmed = $messages.Count -gt 0 -and $gateOpen -and ($stableIdlePolls -ge $neededPolls -or $fastConfirm)
 
         if (-not $gateOpen) {
-            Write-Host "[poll #$pollNum] idle, but Working has not been seen yet (-RequireWorkingFirst); waiting up to ${StartGraceSeconds}s" -ForegroundColor DarkGray
+            Write-PollLine "[poll #$pollNum] idle, but Working has not been seen yet (-RequireWorkingFirst); waiting up to ${StartGraceSeconds}s" -ForegroundColor DarkGray
         } else {
-            Write-Host "[poll #$pollNum] idle-stability=$stableIdlePolls completion-footer=$endsWithFooter (need $neededPolls stable polls, or a new completion footer, to confirm Idle)" -ForegroundColor DarkGray
+            Write-PollLine "[poll #$pollNum] idle-stability=$stableIdlePolls completion-footer=$endsWithFooter (need $neededPolls stable polls, or a new completion footer, to confirm Idle)" -ForegroundColor DarkGray
         }
 
         if ($confirmed) {
             $lastMsg = if ($contentMessages.Count -gt 0) { $contentMessages[-1].Name } else { '' }
+            $tail = $lastMsg.Substring([Math]::Max(0, $lastMsg.Length - 600))
+            $awaitingReply = [bool]$tail -and ($tail -match $QuestionPattern)
+            if ($awaitingReply) {
+                Write-PollLine "[poll #$pollNum] last message looks like a question or approval request (AwaitingReply)" -ForegroundColor Yellow
+            }
             $result = [PSCustomObject]@{
                 State            = 'Idle'
                 Question         = $null
@@ -426,12 +495,15 @@ while ((Get-Date) -lt $deadline) {
                 Completed        = $endsWithFooter
                 CompletionFooter = $currentFooter
                 WorkingSeen      = $seenActivity
-                Note             = $(if (-not $endsWithFooter) { 'No completion footer: read the transcript and inspect for a prompt before trusting Idle.' } else { $null })
+                AwaitingReply    = $awaitingReply
+                LastMessageTail  = $(if ($awaitingReply) { $tail } else { $null })
+                Note             = $(if (-not $endsWithFooter) { 'No completion footer: read the transcript and inspect for a prompt before trusting Idle.' } elseif ($awaitingReply) { 'The last message looks like a question or approval request in plain text (no card). Idle does not mean the task is done: read LastMessage and reply with Send-CopilotPrompt.ps1.' } else { $null })
                 Banners          = $banners
                 MessageCount     = $messages.Count
                 ElapsedSeconds   = [int]((Get-Date) - $start).TotalSeconds
             }
             if ($AsJson) { $result | ConvertTo-Json -Depth 5 } else { $result }
+            Invoke-DoneSignal
             return
         }
     } else {
@@ -439,7 +511,7 @@ while ((Get-Date) -lt $deadline) {
     }
 
     $sleepMilliseconds = Get-SleepMilliseconds -RequestedMilliseconds ($currentInterval * 1000) -Deadline $deadline
-    Write-Host "[poll #$pollNum] no new terminal state; sleeping $([Math]::Round($sleepMilliseconds / 1000, 3))s (next: $([Math]::Min($MaxPollIntervalSeconds, [Math]::Ceiling($currentInterval * $PollBackoffMultiplier)))s)..." -ForegroundColor DarkGray
+    Write-PollLine "[poll #$pollNum] no new terminal state; sleeping $([Math]::Round($sleepMilliseconds / 1000, 3))s (next: $([Math]::Min($MaxPollIntervalSeconds, [Math]::Ceiling($currentInterval * $PollBackoffMultiplier)))s)..." -ForegroundColor DarkGray
     if ($sleepMilliseconds -gt 0) {
         Start-Sleep -Milliseconds $sleepMilliseconds
     }
@@ -456,3 +528,4 @@ $result = [PSCustomObject]@{
     ElapsedSeconds = [int]((Get-Date) - $start).TotalSeconds
 }
 if ($AsJson) { $result | ConvertTo-Json -Depth 5 } else { $result }
+Invoke-DoneSignal
