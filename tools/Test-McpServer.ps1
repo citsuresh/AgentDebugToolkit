@@ -26,12 +26,19 @@
 .PARAMETER Solution
     Optional --solution value forwarded to vs_debugger_status/vs_evaluate, to disambiguate which
     running devenv.exe instance to query if more than one is open.
+
+.PARAMETER ServerArgs
+    Optional command-line arguments for agentdebug-mcp.exe, for example '--tools','console' to start
+    the server with only the console_* tools. The script then throws when the tools it expects are not
+    listed. Defaults to none (the server's default tool groups). Pass it from a PowerShell session or
+    -Command: with powershell.exe -File, '--tools','console' arrives as the single string '--tools,console'.
 #>
 param(
     [string]$ServerExePath = (Join-Path $PSScriptRoot '..\src\AgentDebugToolkit.Mcp\bin\Debug\net8.0-windows\agentdebug-mcp.exe'),
     [string]$VsBinPath = (Join-Path $PSScriptRoot '..\src\AgentDebugToolkit.Debugger.VisualStudio\bin\Debug\net8.0-windows'),
     [string]$UiBinPath = (Join-Path $PSScriptRoot '..\src\AgentDebugToolkit.UiAutomation.Cli\bin\Debug\net8.0-windows'),
-    [string]$Solution = $null
+    [string]$Solution = $null,
+    [string[]]$ServerArgs = @()
 )
 
 $ErrorActionPreference = 'Stop'
@@ -43,10 +50,12 @@ $UiBinPath = (Resolve-Path $UiBinPath).Path
 Write-Host "Server exe:     $ServerExePath"
 Write-Host "VS bin:         $VsBinPath"
 Write-Host "UI bin:         $UiBinPath"
+Write-Host "Server args:    $($ServerArgs -join ' ')"
 Write-Host ""
 
 $psi = New-Object System.Diagnostics.ProcessStartInfo
 $psi.FileName = $ServerExePath
+$psi.Arguments = ($ServerArgs | ForEach-Object { if ($_ -match '\s') { '"' + $_ + '"' } else { $_ } }) -join ' '
 $psi.UseShellExecute = $false
 $psi.RedirectStandardInput = $true
 $psi.RedirectStandardOutput = $true
