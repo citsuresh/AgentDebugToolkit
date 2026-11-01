@@ -4,27 +4,24 @@
 
 ## Current Focus
 
-2026-10-31: Replaced the stale chat watcher with the authoritative V1 script; made MCP `ui_inspect`
-read-only by omitting its screenshot option; improved `list-windows` argument diagnostics; and tagged
-the real-click UI test for interactive-desktop filtering. Changes remain unstaged and uncommitted.
+2026-11-01: Completed the real interactive-desktop test and filtered UI Automation suite in an
+isolated copy after the in-place build was blocked by running MCP processes.
 
 ## Verification and Diagnostic Evidence
 
-- `AgentDebugToolkit.UiAutomation.Cli` native Visual Studio build succeeded.
-- `git diff --check` passed. No changes are staged.
-- Tests: building the test project in place stops at the locked `agentdebug-mcp.exe` (running MCP
-  servers hold the default output). Run from a temporary copy of the working tree instead (robocopy
-  without `bin`, `obj`, `.git`), where `dotnet test` with `Category!=InteractiveDesktop` passed 36 of
-  36 on 2026-10-31. The interactive-desktop test was excluded by the filter and was not run.
-- Phase reviews found no scoped source issues. Final review flagged the copied V1 header's reference
-  to a V2 script absent from this repository; the source was retained verbatim as requested. The
-  code graph returned symbol-not-found for queried MCP and list-windows symbols; direct source
-  searches were used as fallback.
+- GraphTools full build succeeded in 36.76 seconds: 807 nodes and 3,801 edges.
+- The dependency manifest `commitSha` matches `git rev-parse HEAD`.
+- `docs/graph-viewer.html` matches the current skill source.
+- In-place attempt: `dotnet test tests\AgentDebugToolkit.UiAutomation.Tests\AgentDebugToolkit.UiAutomation.Tests.csproj --filter "FullyQualifiedName=AgentDebugToolkit.UiAutomation.Tests.ControlTypeSelectorTests.Click_ControlTypeDisambiguatesDifferentTypesButNotRepeatedSameTypeMatches" --logger "console;verbosity=normal"` failed before test execution (`0` executed; pass/fail/skip counts not reported). `MSB3027`/`MSB3021` could not copy `src\AgentDebugToolkit.Mcp\obj\Debug\net8.0-windows\apphost.exe` to `src\AgentDebugToolkit.Mcp\bin\Debug\net8.0-windows\agentdebug-mcp.exe`; the destination was locked by `agentdebug-mcp` PIDs 2448, 19920, 22136, and 24912. Restore reported all projects up-to-date.
+- Isolated copy: created at `%TEMP%\AgentDebugToolkit-live-test-20261101` using `robocopy "C:\MyFiles\Git\AgentDebugToolkit" "%TEMP%\AgentDebugToolkit-live-test-20261101" /E /XD .git .vs bin obj session-state /R:1 /W:1 /NFL /NDL /NP`; Robocopy exit code `1` (78 files copied, 0 failed). All test commands below ran from that copy.
+- Real-click test: `dotnet test tests\AgentDebugToolkit.UiAutomation.Tests\AgentDebugToolkit.UiAutomation.Tests.csproj --filter "FullyQualifiedName=AgentDebugToolkit.UiAutomation.Tests.ControlTypeSelectorTests.Click_ControlTypeDisambiguatesDifferentTypesButNotRepeatedSameTypeMatches" --logger "console;verbosity=normal"` — **1 passed, 0 failed, 0 skipped**. Exact test: `AgentDebugToolkit.UiAutomation.Tests.ControlTypeSelectorTests.Click_ControlTypeDisambiguatesDifferentTypesButNotRepeatedSameTypeMatches`.
+- Documented filtered suite: `dotnet test tests\AgentDebugToolkit.UiAutomation.Tests\AgentDebugToolkit.UiAutomation.Tests.csproj --filter "Category!=InteractiveDesktop" --logger "console;verbosity=normal"` — **36 passed, 0 failed, 0 skipped**.
+- Complementary category run: `dotnet test tests\AgentDebugToolkit.UiAutomation.Tests\AgentDebugToolkit.UiAutomation.Tests.csproj --filter "Category=InteractiveDesktop" --logger "console;verbosity=normal"` — **1 passed, 0 failed, 0 skipped**; the sole result was the exact real-click test named above.
+- Discovery: `dotnet test tests\AgentDebugToolkit.UiAutomation.Tests\AgentDebugToolkit.UiAutomation.Tests.csproj --list-tests` exited `0`, listed **37** test cases, and listed the exact real-click test once. The category run selected exactly that one test; the negated-category run executed the other 36. This is the observed evidence that the filter excludes exactly the named test.
+- The isolated restore/build completed. NuGet vulnerability-data requests emitted `NU1900` warnings for configured Azure DevOps feeds; the test runs succeeded.
 
 ## Open Tasks / Known Issues
 
-- Run the interactive-desktop test (the real-click test) once on an interactive desktop, and confirm
-  that the filter `Category!=InteractiveDesktop` excludes exactly that test.
 - `set-grid-cell` parity is not consistently demonstrated: intermittent row-resolution failures
   occurred on both builds. Diagnose internal termination and provider/layout timing without
   inferring root cause from snapshots alone.
@@ -39,9 +36,4 @@ the real-click UI test for interactive-desktop filtering. Changes remain unstage
 
 ## Recently Changed Files
 
-- `tools\Watch-CopilotChat.ps1` (renamed to `Watch-CopilotChatV1.ps1`) and `docs\CLI_CONTRACT.md`.
-- `src\AgentDebugToolkit.Mcp\UiAutomationTools.cs`, the UI test project, and
-  `docs\MCP_SERVER.md` for the read-only inspect contract.
-- `src\AgentDebugToolkit.UiAutomation.Cli\Program.cs`, `ListWindowsArgumentTests.cs`, and
-  `docs\CLI_CONTRACT.md` for `list-windows` diagnostics.
-- `ControlTypeSelectorTests.cs` and `docs\TESTING.md` for interactive-desktop test filtering.
+- `docs\PROJECT_STATE.md` — recorded the in-place build blocker and isolated live test results.
