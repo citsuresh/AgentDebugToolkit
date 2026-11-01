@@ -9,3 +9,6 @@ dotnet test tests\AgentDebugToolkit.UiAutomation.Tests\AgentDebugToolkit.UiAutom
 ```
 
 Run the full suite without the filter only in a session with an interactive desktop available.
+
+Test cases for `scripts\agent\Rebuild-Mcp.ps1` and `tools\Test-McpServer.ps1` are in
+`docs\SCRIPT_TESTS.md`.
