@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0",
-  "generatedAt": "2026-10-30T12:57:42.422519Z",
+  "generatedAt": "2026-11-01T07:08:52.3632384Z",
   "solutionPath": "C:\\MyFiles\\Git\\AgentDebugToolkit\\AgentDebugToolkit.slnx",
-  "commitSha": "397fc074579a1b13dd4ee3ddb004ab41ef128daf",
+  "commitSha": "81e2cd4bbbbac841e093411eb847e7ddb32594ca",
   "projects": [
     {
       "name": "AgentDebugToolkit.ConsoleAutomation.Cli",
@@ -36,6 +36,7 @@
       "path": "C:\\MyFiles\\Git\\AgentDebugToolkit\\tests\\AgentDebugToolkit.UiAutomation.Tests\\AgentDebugToolkit.UiAutomation.Tests.csproj",
       "references": [
         "AgentDebugToolkit.Core",
+        "AgentDebugToolkit.Mcp",
         "AgentDebugToolkit.UiAutomation.Cli"
       ]
     }

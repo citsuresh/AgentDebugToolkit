@@ -1,6 +1,6 @@
 # Copilot Instructions
 
-<!-- project-memory-management-graph: skill-version=23 -->
+<!-- project-memory-management-graph: skill-version=24 -->
 ## Persistent Project Memory
 
 This repo uses the `project-memory-management-graph` skill for persistent, low-token project
@@ -88,6 +88,13 @@ per-part cadence. Neither mode waives the full-report or individual-fix-approval
   commands. `scripts\agent\Rebuild-Mcp.ps1` is the preferred approved Claude-close/MCP-rebuild
   workflow, but builds MCP only: UI CLI changes still require a UI project or full solution build
   and output timestamp verification. Do not run it when process termination is prohibited.
+- When the user asks to publish AgentDebugToolkit, run the repository script
+  `scripts\agent\Publish-AgentDebugToolkit.ps1` with `-Confirm:$false`, using its default
+  Release configuration and `C:\Shared\AgentDebugToolkit-win-x64` destination unless the user
+  specifies otherwise. Use `-ReplaceExisting` if the destination exists; the script retains the
+  previous package as a backup. Treat the explicit publish request as approval for that invocation, while
+  honoring any additional task restrictions. Check the script and `docs/SCRIPTS.md` first,
+  verify the result, and report failures without changing NuGet sources or stopping processes.
 - At the very first user message in a new chat session (not on subsequent prompts within the
   same session), automatically invoke the `project-memory-management-graph` skill's Begin
   Session step before addressing the user's request — without asking for confirmation. Skip
@@ -109,6 +116,10 @@ per-part cadence. Neither mode waives the full-report or individual-fix-approval
   to navigate through the running application to reach a specific screen or feature — including as
   part of debugging it — use the `ui-navigation-orchestrator` skill, which composes `vs-debug` and
   `ui-interaction` for you.
+- If the `vs-chat-history` skill is installed, use it to search earlier Visual Studio
+  Copilot Chat conversations on this machine (for example "what did we decide about X",
+  "which chat worked on Y"). It reads `session-store.db` only, and chat text is
+  confidential: show short excerpts only. Ignore this note if the skill is not installed.
 
 ## Response Guidelines
 

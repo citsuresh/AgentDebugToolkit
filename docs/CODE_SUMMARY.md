@@ -9,9 +9,11 @@ executes live operations while the calling agent owns navigation maps and workfl
 ```mermaid
 graph LR
 	Ui[AgentDebugToolkit.UiAutomation.Cli] --> Core[AgentDebugToolkit.Core]
+	Tests[AgentDebugToolkit.UiAutomation.Tests] --> Core
+	Tests --> Mcp[AgentDebugToolkit.Mcp]
+	Tests --> Ui
 	Debugger[AgentDebugToolkit.Debugger.VisualStudio]
 	Console[AgentDebugToolkit.ConsoleAutomation.Cli]
-	Mcp[AgentDebugToolkit.Mcp]
 ```
 
 ## Symbol Index
