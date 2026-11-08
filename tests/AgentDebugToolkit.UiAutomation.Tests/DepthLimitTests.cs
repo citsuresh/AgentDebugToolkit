@@ -118,4 +118,112 @@ public sealed class DepthLimitTests
         Assert.False(deep.Json.GetProperty("truncated").GetBoolean());
         Assert.Contains(LeafText, deep.Json.GetProperty("lines").EnumerateArray().Select(line => line.GetString()));
     }
+
+    private static UIElement BuildChains(int chains)
+    {
+        // Each chain is six nested GroupBoxes around a TextBlock, which has no UIA children, so the
+        // only nodes with children at any limit are the chain GroupBoxes (one per chain).
+        var panel = new StackPanel();
+        for (var chain = 0; chain < chains; chain++)
+        {
+            UIElement content = new TextBlock { Text = $"chain{chain}" };
+            for (var level = 6; level >= 1; level--)
+            {
+                content = new GroupBox { Header = $"c{chain}l{level}", Content = content };
+            }
+
+            panel.Children.Add(content);
+        }
+
+        return panel;
+    }
+
+    private static List<int> NodesBeyondDepthByLimit(Func<UIElement> content, int maxLimit)
+    {
+        using var window = FixtureWindow.Create(content);
+        var counts = new List<int>();
+        for (var depth = 1; depth <= maxLimit; depth++)
+        {
+            var result = UiCli.Run("inspect", "--hwnd", window.HwndArgument, "--maxDepth", depth.ToString());
+            Assert.True(result.Success, result.RawOutput);
+            counts.Add(result.Json.TryGetProperty("nodesBeyondDepth", out var count) ? count.GetInt32() : 0);
+        }
+
+        return counts;
+    }
+
+    [Fact]
+    public void NodesBeyondDepth_CountsBoundaryNodesOnly_NotDescendantsOrDoubleCounts()
+    {
+        // The window frame has its own nodes with children (title bar and so on), so measure the
+        // difference against the same window with empty content.
+        var baseline = NodesBeyondDepthByLimit(() => BuildChains(0), 14);
+        var twoChains = NodesBeyondDepthByLimit(() => BuildChains(2), 14);
+
+        var extra = twoChains.Zip(baseline, (chains, empty) => chains - empty).ToList();
+        // The two chains add at most two boundary parents at any limit (one per chain), reach two
+        // where the limit cuts both of them, and nothing once the limit is deep enough.
+        Assert.All(extra, difference => Assert.InRange(difference, 0, 2));
+        Assert.Equal(2, extra.Max());
+        Assert.Equal(0, extra[^1]);
+    }
+
+    private static int NodeCount(CliResult result) =>
+        System.Text.RegularExpressions.Regex.Matches(result.RawOutput, System.Text.RegularExpressions.Regex.Escape("ControlType.")).Count;
+
+    [Fact]
+    public void Boundary_EachLevelAddsNodes_UntilTheDepthThatShowsEverything()
+    {
+        using var window = FixtureWindow.Create(BuildNested);
+        var runs = new List<CliResult>();
+        int? firstUnlimited = null;
+        for (var depth = 1; depth <= 20 && firstUnlimited is null; depth++)
+        {
+            var result = UiCli.Run("inspect", "--hwnd", window.HwndArgument, "--maxDepth", depth.ToString());
+            runs.Add(result);
+            if (!result.Json.TryGetProperty("depthLimited", out _))
+            {
+                firstUnlimited = depth;
+            }
+        }
+
+        Assert.NotNull(firstUnlimited);
+        var unlimited = runs[^1];
+        Assert.Contains(LeafText, unlimited.RawOutput);
+
+        // Every limited run reports exactly the limit it used.
+        for (var i = 0; i < runs.Count - 1; i++)
+        {
+            Assert.True(runs[i].Json.GetProperty("depthLimited").GetBoolean());
+            Assert.Equal(i + 1, runs[i].Json.GetProperty("maxDepth").GetInt32());
+        }
+
+        // One level short shows strictly fewer nodes than the unlimited run (so the flag is not
+        // raised for a result that is already complete, nor missing for one that is cut), and a
+        // deeper limit adds nothing (so the "unlimited" run really showed everything).
+        var oneLess = runs[^2];
+        Assert.True(NodeCount(oneLess) < NodeCount(unlimited), "The limited run showed as many nodes as the complete one.");
+        var deeper = UiCli.Run("inspect", "--hwnd", window.HwndArgument, "--maxDepth", (firstUnlimited!.Value + 2).ToString());
+        Assert.Equal(NodeCount(unlimited), NodeCount(deeper));
+        Assert.False(deeper.Json.TryGetProperty("depthLimited", out _));
+
+        var textOneLess = UiCli.Run("read-visible-text", "--hwnd", window.HwndArgument, "--maxDepth", (firstUnlimited.Value - 1).ToString());
+        Assert.True(textOneLess.Json.GetProperty("depthLimited").GetBoolean());
+        Assert.Equal(firstUnlimited.Value - 1, textOneLess.Json.GetProperty("maxDepth").GetInt32());
+        var textUnlimited = UiCli.Run("read-visible-text", "--hwnd", window.HwndArgument, "--maxDepth", firstUnlimited.Value.ToString());
+        Assert.False(textUnlimited.Json.TryGetProperty("depthLimited", out _));
+    }
+
+    [Fact]
+    public void Hint_SuggestsADepthDeeperThanTheOneUsed_AndMarksCappedCounts()
+    {
+        var stats = new AgentDebugToolkit.UiAutomation.Cli.DepthLimitStats { NodesBeyondDepth = 3 };
+        Assert.Contains("(for example 30)", stats.Hint(3));
+        Assert.Contains("(for example 60)", stats.Hint(30));
+        Assert.Contains("(for example 80)", stats.Hint(40));
+        Assert.DoesNotContain("at least", stats.Hint(3));
+
+        stats.Capped = true;
+        Assert.Contains("at least 3 node(s)", stats.Hint(3));
+    }
 }

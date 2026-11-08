@@ -731,6 +731,7 @@ internal static class Verbs
             depthLimited = limited ? true : (bool?)null,
             maxDepth = limited ? maxDepth : (int?)null,
             nodesBeyondDepth = limited ? depthStats.NodesBeyondDepth : (int?)null,
+            nodesBeyondDepthCapped = limited && depthStats.Capped ? true : (bool?)null,
             hint = limited ? depthStats.Hint(maxDepth) : null,
         });
         return 0;
@@ -2009,6 +2010,7 @@ internal static class Verbs
             depthLimited = limited ? true : (bool?)null,
             maxDepth = limited ? usedDepth : (int?)null,
             nodesBeyondDepth = limited ? depthStats.NodesBeyondDepth : (int?)null,
+            nodesBeyondDepthCapped = limited && depthStats.Capped ? true : (bool?)null,
             hint = limited ? depthStats.Hint(usedDepth) : null,
         });
         return 0;

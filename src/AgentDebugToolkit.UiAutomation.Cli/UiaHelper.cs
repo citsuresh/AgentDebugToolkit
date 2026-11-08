@@ -846,6 +846,37 @@ internal static class UiaHelper
     }
 
     /// <summary>
+    /// Counts one limit-depth node, within a fixed budget: at most
+    /// <see cref="DepthLimitStats.MaxProbes"/> first-child probes per call and at most
+    /// <see cref="DepthLimitStats.MaxPositives"/> positives, after which probing stops and the
+    /// result is marked capped. A first-child request can make a provider build a large child list
+    /// (for example an unvirtualized 100,000-item list), so the number of probes is bounded, which
+    /// bounds the extra work on a big window even though the cost of one probe is not.
+    /// </summary>
+    private static void ProbeBeyondDepth(AutomationElement el, DepthLimitStats stats)
+    {
+        if (stats.Capped)
+        {
+            return;
+        }
+
+        if (++stats.Probes > DepthLimitStats.MaxProbes)
+        {
+            stats.Capped = true;
+            return;
+        }
+
+        if (HasChildren(el))
+        {
+            stats.NodesBeyondDepth++;
+            if (stats.NodesBeyondDepth >= DepthLimitStats.MaxPositives)
+            {
+                stats.Capped = true;
+            }
+        }
+    }
+
+    /// <summary>
     /// Cheap probe used only for nodes sitting exactly at the depth limit: asks for the first child
     /// with the same condition the traversal uses (TrueCondition, TreeScope.Children) and never
     /// walks or serializes the hidden subtree. Provider failures count as "no children".
@@ -927,9 +958,9 @@ internal static class UiaHelper
                 info.Children.Add(ToElementInfo(child, includeChildren, maxDepth, depth + 1, depthStats));
             }
         }
-        else if (includeChildren && depthStats is not null && HasChildren(el))
+        else if (includeChildren && depthStats is not null)
         {
-            depthStats.NodesBeyondDepth++;
+            ProbeBeyondDepth(el, depthStats);
         }
 
         return info;
@@ -1442,9 +1473,9 @@ internal static class UiaHelper
 
             if (depth >= depthLimit)
             {
-                if (depthStats is not null && HasChildren(el))
+                if (depthStats is not null)
                 {
-                    depthStats.NodesBeyondDepth++;
+                    ProbeBeyondDepth(el, depthStats);
                 }
                 return;
             }
@@ -1550,12 +1581,27 @@ internal static class UiaHelper
 /// </summary>
 public sealed class DepthLimitStats
 {
+    /// <summary>Most limit-depth nodes probed for children in one call.</summary>
+    public const int MaxProbes = 300;
+
+    /// <summary>Most limit-depth nodes with children counted before probing stops.</summary>
+    public const int MaxPositives = 50;
+
     public int NodesBeyondDepth { get; set; }
+
+    /// <summary>Limit-depth nodes probed so far.</summary>
+    public int Probes { get; set; }
+
+    /// <summary>True once the probe budget ran out, so <see cref="NodesBeyondDepth"/> is a lower bound.</summary>
+    public bool Capped { get; set; }
 
     public bool IsLimited => NodesBeyondDepth > 0;
 
+    /// <summary>A depth to suggest that is deeper than the one already used.</summary>
+    public static int SuggestedDepth(int maxDepth) => Math.Max(30, maxDepth * 2);
+
     public string Hint(int maxDepth) =>
-        $"Output stopped at --maxDepth {maxDepth}; {NodesBeyondDepth} node(s) at the limit have children. " +
+        $"Output stopped at --maxDepth {maxDepth}; {(Capped ? "at least " : string.Empty)}{NodesBeyondDepth} node(s) at the limit have children. " +
         "Electron/Chromium page content is often deeper than 8: re-run with a larger --maxDepth " +
-        "(for example 30) before concluding the window is opaque.";
+        $"(for example {SuggestedDepth(maxDepth)}) before concluding the window is opaque.";
 }

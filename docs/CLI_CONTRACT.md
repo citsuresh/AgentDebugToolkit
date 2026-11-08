@@ -255,9 +255,14 @@ screenshot.
   descendants. When nothing was cut off these four fields are **omitted** (never
   `depthLimited: false`). The check asks each limit-depth node for its first child
   (`TreeScope.Children`, `TrueCondition`, same as the traversal) and does not walk hidden
-  subtrees; a provider error counts as "no children". Electron/Chromium page content is often
+  subtrees; a provider error counts as "no children". The probing has a fixed budget, because a
+  first-child request can make a provider build a large child list: at most 300 limit-depth nodes
+  are probed and probing stops after 50 positives, and then `"nodesBeyondDepthCapped": true` is
+  added and `nodesBeyondDepth` is a lower bound (the hint says "at least"). The cost of a single
+  probe is still up to the provider. Electron/Chromium page content is often
   deeper than 8 (for example the Claude desktop chat input is at depth 16): a frame-only result
-  with `depthLimited: true` is not an opaque app, so re-run with a larger `--maxDepth` (e.g. 30).
+  with `depthLimited: true` is not an opaque app, so re-run with a larger `--maxDepth`. The hint
+  suggests `max(30, 2 * maxDepth)`, always deeper than the depth already used.
 
 ### `click --hwnd <h> (--strategy <s> --value <v> [--controlType <type>] [--scopeHwnd <h2>] | --x <n> --y <n> [--allowOutsideWindow])`
 Supply exactly one target form: the existing selector form or an absolute screen coordinate pair.
@@ -788,7 +793,8 @@ branch was read successfully or that all transcript content is exposed.
 - Depth-limit detection (additive; default `--maxDepth` stays `8`): when a visited node at the
   depth limit has children, the response adds `"depthLimited": true`, `"maxDepth"` (value used),
   `"nodesBeyondDepth"` (visited nodes at the limit that have children, not all hidden
-  descendants) and `"hint"`; otherwise these fields are omitted. `depthLimited` is independent of
+  descendants; a lower bound with `"nodesBeyondDepthCapped": true` once the 300-probe / 50-positive
+  budget described under `inspect` ran out) and `"hint"`; otherwise these fields are omitted. `depthLimited` is independent of
   `truncated`: `truncated` covers only the breadth (200 children), node-count (5000) and
   per-value length caps, so a result can have either, both or neither. If `truncated` stopped the
   walk before reaching some limit-depth nodes, those are not counted. Electron/Chromium content is
