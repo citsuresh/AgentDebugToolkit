@@ -250,3 +250,38 @@ Use the same `GetWindowRect` snapshot to size the bitmap and report its origin; 
 Visible-frame cropping or a separately read rectangle could make the reported origin disagree
 with the saved bitmap. Native outer bounds intentionally include invisible resize borders;
 the live maximized Notepad image matched those bounds, including 11-pixel borders at 150% DPI.
+
+## 2026-11-08 -- Preserve chat input-step errors with a narrow foreground callback
+
+**Decision:** An internal foreground-check helper catches only `WindowGoneException` and writes
+`step: resolve-input`. The production caller supplies the existing real foreground operation;
+tests inject the exception at that boundary rather than racing a real window's closure.
+
+**Rationale:** A deterministic catch-path regression needs no process-global override, new public
+API, or speculative timing. False/success behavior is unchanged; unrelated exceptions propagate.
+
+## 2026-11-08 -- Crop before downscaling, retaining the original physical coordinate frame
+
+**Decision:** Optional screenshot region/scale processing crops the full captured bitmap before
+resampling. Keep `windowRect` as the original full-window snapshot; return source-image `region`
+and requested `scale` when either option is supplied. Without options, retain the existing path,
+pixels and response fields. Keep the MCP cancellation token's positional slot for existing callers.
+
+**Rationale:** Coordinate mapping requires the source-region offset plus saved-pixel offset divided
+by scale, with no second DPI multiplication. Ceiling-rounded dimensions retain at least one pixel
+for tiny regions. Apply the requested scale rather than stretching to the rounded dimensions;
+stretching would silently change the mapping for odd-sized regions. Crop before filtering so
+resampling cannot incorporate pixels outside the requested region.
+
+## 2026-11-08 -- Preflight normal-window pointer bounds without removing the post-activation guard
+
+**Decision:** Coordinate click/right-click/double-click preflight the current target rectangle
+before activation when its top-level window is not minimized. Reject outside/unreadable bounds
+without raising/restoring the window or sending input. Minimized targets skip preflight; keep
+the existing stable-restore wait and fresh bounds check immediately before input for all targets.
+`--allowOutsideWindow` bypasses both checks; selector behavior is unchanged.
+
+**Rationale:** An obviously invalid point must not depend on foreground permission or cause
+activation. Replacing the post-activation check would miss movement/restoration; checking a
+minimized rectangle before restoration would incorrectly reject its temporary off-screen bounds.
+Use the root's minimized state, matching the existing activation/restoration target.

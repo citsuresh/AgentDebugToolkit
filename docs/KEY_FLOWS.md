@@ -28,7 +28,7 @@ Program.Verbs.Activate -> Program.Verbs.ValidateResolvedWindowHwnd -> NativeMeth
 
 Program.Verbs.SendKeys -> ResolveWindowHwnd -> Program.Verbs.ResolveElement -> UiaHelper.SendKeys (NativeMethods.Click + NativeMethods.SendKeysRaw)
 
-Program.Verbs.SubmitChatMessage -> ResolveWindowHwnd -> UiaHelper.FindWindowByHwnd -> UiaHelper.ResolveSelector (input) -> NativeMethods.Click -> UiaHelper.Type -> UiaHelper.GetText (conditional verify) -> UiaHelper.ResolveSelector (Send) -> UiaHelper.Click
+Program.Verbs.SubmitChatMessage -> ResolveWindowHwnd -> UiaHelper.FindWindowByHwnd -> UiaHelper.ResolveSelector (input) -> Program.Verbs.TryEnsureChatInputForeground -> NativeMethods.Click -> UiaHelper.Type -> UiaHelper.GetText (conditional verify) -> UiaHelper.ResolveSelector (Send) -> UiaHelper.Click
 
 Program.Verbs.ScrollContainer -> ResolveWindowHwnd -> UiaHelper.ResolveSelectorAll -> UiaHelper.GetScrollPattern/SetScrollPercent -> bounded position polling -> JsonOutput.WriteSuccess/WriteError
 
@@ -38,4 +38,6 @@ UiAutomationTools.CursorSessionStart/Stop -> CliRunner.RunAsync -> Program.Verbs
 
 Program.Verbs.ResolveWindowHwnd/ResolveElement -> Program.Verbs.ValidateResolvedWindowHwnd -> NativeMethods.EnsureWindowExists/IsResponding -> window-gone/window-not-responding
 
-Program.Verbs.Screenshot -> Program.Verbs.ResolveWindowHwnd -> ScreenshotHelper.CaptureWindow -> NativeMethods.GetWindowRect/GetDpiForWindow -> ScreenshotHelper.TryPrintWindow/CaptureRegion -> JsonOutput.WriteSuccess
+Program.Verbs.Screenshot -> Program.Verbs.ResolveWindowHwnd -> ScreenshotHelper.CaptureWindow -> NativeMethods.GetWindowRect/GetDpiForWindow -> ScreenshotHelper.TryPrintWindow/CaptureScreenRegion -> ScreenshotHelper.CropAndScale (optional) -> ScreenshotHelper.SaveBitmap -> JsonOutput.WriteSuccess
+
+Program.Verbs.Click/RightClick/DoubleClick (coordinates) -> TryValidateCoordinateTarget (preflight unless minimized) -> EnsureTargetWindowForeground (restore/wait if minimized) -> TryValidateCoordinateTarget (fresh bounds) -> NativeMethods.Click/RightClick/DoubleClick

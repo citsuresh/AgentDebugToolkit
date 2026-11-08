@@ -151,14 +151,19 @@ dispatched key units; if focus changes mid-sequence, it stops before the next un
 the remaining input is not sent to the newly foreground application. Read-only verbs do not change
 activation.
 
-For coordinate-form `click`, `right-click`, and `double-click`, a minimized target is restored with
-`ShowWindow` before foreground verification. After requesting restoration, the CLI polls every
+For coordinate-form `click`, `right-click`, and `double-click`, unless `--allowOutsideWindow` is
+true, a non-minimized target's current `GetWindowRect` is checked before any activation or restore.
+An outside point or unreadable rectangle returns `invalid-argument` without raising/restoring the
+window or sending mouse input, independent of foreground focus. This preflight is skipped when
+the target's top-level window is minimized: it is restored with `ShowWindow` before foreground
+verification. After requesting restoration, the CLI polls every
 20 ms for up to 1 second until `IsIconic` is false and `GetWindowRect` returns the same rectangle
 on two consecutive reads. A failed rectangle read or a minimized state resets the consecutive-read
 check. If restoration does not settle before the timeout, the command returns
 `foreground-activation-failed` with a restore-timeout message and sends no coordinate input.
-The point is then checked against a freshly read rectangle after activation, immediately before
-mouse input, unless `--allowOutsideWindow` is true.
+The point is still checked against a freshly read rectangle after activation/restore, immediately
+before mouse input, unless `--allowOutsideWindow` is true. This second check covers restored and
+moved windows; rejection at this stage can occur after activation/restoration.
 
 ---
 
@@ -248,11 +253,14 @@ Supply exactly one target form: the existing selector form or an absolute screen
 Coordinates are physical screen pixels (same coordinate frame as `move-mouse`). The window handle
 is still required and is checked for responsiveness and foreground activation before input; the
 coordinate point itself is not relative to that window. By default, the point must lie within the
-`--hwnd` window rectangle read by `GetWindowRect` after activation (and restoration if minimized),
-immediately before input. `GetWindowRect` includes the invisible resize border of about 7 to 8
-pixels at 100% DPI (scaled at higher DPI); this is not a visible-content hit test. An outside point or unreadable rectangle returns
-`invalid-argument` without mouse input, but the window may already have been activated/restored.
-`--allowOutsideWindow` disables this bounds check. A point inside the rectangle can still hit
+`--hwnd` window rectangle read by `GetWindowRect`. A non-minimized target is checked before any
+activation/restore, so an outside point or unreadable rectangle returns `invalid-argument` without
+raising/restoring it or sending mouse input, independent of foreground focus. Minimized targets
+skip this preflight. A fresh check after activation (and restoration if minimized), immediately
+before input, also covers moved windows; rejection then may follow activation/restoration.
+`GetWindowRect` includes the invisible resize border of about 7 to 8 pixels at 100% DPI (scaled
+at higher DPI); this is not a visible-content hit test. `--allowOutsideWindow` disables both
+bounds checks. A point inside the rectangle can still hit
 another window covering it. `--controlType` and `--scopeHwnd` apply only to
 the selector form. The two forms are mutually exclusive.
 - Optional `--controlType` narrows candidates to the named UIA control type before ambiguity is
@@ -285,11 +293,13 @@ Supply exactly one target form: the existing selector form or an absolute screen
 Coordinates are physical screen pixels (same coordinate frame as `move-mouse`). The required
 `--hwnd` is checked for responsiveness and foreground activation before input; the coordinate point
 itself is not relative to that window. By default, the point must lie within the `--hwnd` window
-rectangle read by `GetWindowRect` after activation (and restoration if minimized), immediately
-before input. `GetWindowRect` includes the invisible resize border of about 7 to 8 pixels at
-100% DPI (scaled at higher DPI); this is not a visible-content hit test. An outside point or unreadable rectangle returns
-`invalid-argument` without mouse input, but the window may already have been activated/restored.
-`--allowOutsideWindow` disables this bounds check. A point inside the rectangle can still hit
+rectangle read by `GetWindowRect`. A non-minimized target is checked before any activation/restore,
+so an outside point or unreadable rectangle returns `invalid-argument` without raising/restoring
+it or sending mouse input, independent of foreground focus. Minimized targets skip this preflight.
+A fresh check after activation (and restoration if minimized), immediately before input, also
+covers moved windows; rejection then may follow activation/restoration. `GetWindowRect` includes
+the invisible resize border of about 7 to 8 pixels at 100% DPI (scaled at higher DPI); this is not
+a visible-content hit test. `--allowOutsideWindow` disables both bounds checks. A point inside the rectangle can still hit
 another window covering it. `--scopeHwnd` applies only to the selector form. The forms are
 mutually exclusive.
 - Fails with `ambiguous-match` instead of right-clicking the first of several matches. Pre-check
@@ -312,11 +322,13 @@ Supply exactly one target form: the existing selector form or an absolute screen
 Coordinates are physical screen pixels (same coordinate frame as `move-mouse`). The required
 `--hwnd` is checked for responsiveness and foreground activation before input; the coordinate point
 itself is not relative to that window. By default, the point must lie within the `--hwnd` window
-rectangle read by `GetWindowRect` after activation (and restoration if minimized), immediately
-before input. `GetWindowRect` includes the invisible resize border of about 7 to 8 pixels at
-100% DPI (scaled at higher DPI); this is not a visible-content hit test. An outside point or unreadable rectangle returns
-`invalid-argument` without mouse input, but the window may already have been activated/restored.
-`--allowOutsideWindow` disables this bounds check. A point inside the rectangle can still hit
+rectangle read by `GetWindowRect`. A non-minimized target is checked before any activation/restore,
+so an outside point or unreadable rectangle returns `invalid-argument` without raising/restoring
+it or sending mouse input, independent of foreground focus. Minimized targets skip this preflight.
+A fresh check after activation (and restoration if minimized), immediately before input, also
+covers moved windows; rejection then may follow activation/restoration. `GetWindowRect` includes
+the invisible resize border of about 7 to 8 pixels at 100% DPI (scaled at higher DPI); this is not
+a visible-content hit test. `--allowOutsideWindow` disables both bounds checks. A point inside the rectangle can still hit
 another window covering it. `--scopeHwnd` applies only to the selector form. The forms are
 mutually exclusive.
 - Fails with `ambiguous-match` instead of double-clicking the first of several matches. Pre-check
@@ -771,8 +783,8 @@ branch was read successfully or that all transcript content is exposed.
   Chat content is UIA-exposed in this environment; the `screenshot` fallback below is not required
   for that specific content, but remains available for chat/webview UIs where it is not.
 
-### `screenshot --hwnd <h>`
-Captures a bitmap of the given window and returns the saved PNG path plus capture geometry/DPI — a fallback observation
+### `screenshot --hwnd <h> [--region x,y,w,h] [--scale <0.1..1.0>]`
+Captures a bitmap of the given window, optionally cropped/downscaled, and returns the saved PNG path plus capture geometry/DPI — a fallback observation
 method for content not meaningfully exposed via UIA (e.g. custom controls or webview-hosted
 content). Does not activate/focus the window.
 - Capture method: attempts `PrintWindow` with `PW_RENDERFULLCONTENT` first, which renders the
@@ -790,7 +802,8 @@ content). Does not activate/focus the window.
     "imageWidth": 420, "imageHeight": 320, "dpiScale": 1.0 }
   ```
 - `windowRect` is the `GetWindowRect` snapshot used to size the capture, in absolute physical
-  screen pixels. `imageWidth` and `imageHeight` are the saved PNG dimensions and equal
+  screen pixels; it always describes the full window, even when cropping. Without the new options,
+  `imageWidth` and `imageHeight` are the saved PNG dimensions and equal
   `windowRect.right - windowRect.left` and `windowRect.bottom - windowRect.top` respectively.
   Non-positive bounds fail without saving an image. `GetWindowRect` includes the invisible resize
   border (about 7-8 pixels at 100% DPI, scaled at higher DPI); a maximized rectangle can extend
@@ -799,14 +812,49 @@ content). Does not activate/focus the window.
   `screenY = windowRect.top + imagePixelY`. `dpiScale` is `GetDpiForWindow(hwnd) / 96.0`;
   the image and rectangle already use physical pixels, so do not multiply by this scale again.
   Geometry is a capture-time snapshot: recapture if the window moves or resizes before clicking.
+- `--region x,y,w,h` uses four invariant-culture integers in the original window image's pixel
+  frame, with its origin at the window top-left (including resize borders, not the client-area
+  top-left). `x`/`y` must be non-negative, `w`/`h` positive, and the entire rectangle inside the
+  full window image. Touching the right/bottom edges is allowed. Malformed, overflowing or
+  out-of-bounds regions return `invalid-argument` without saving an image. Only the region is saved.
+- `--scale` is an invariant-culture finite number from 0.1 to 1.0 inclusive, default 1.0.
+  It downsizes the cropped image; non-finite or out-of-range values return `invalid-argument`.
+  Saved dimensions are `ceil(region.width * scale)` and `ceil(region.height * scale)` (at least
+  one pixel). High-quality resampling uses the requested scale, not a stretch to those rounded
+  dimensions; the last row/column can cover a partial source-pixel span.
+- When either option is supplied, the response also contains `region` with lowercase `x`, `y`,
+  `width`, `height` in original window-image pixels, and `scale`. With scale only, `region` is the
+  full image `(0,0,window width,window height)`; with region only, `scale` is 1.0.
+  `imageWidth`/`imageHeight` always describe the saved PNG, not the original window or source region.
+  Example with `--region 20,30,101,81 --scale 0.5`:
+  ```json
+  { "success": true, "screenshotPath": "C:\\...\\shot_20261108...png",
+    "windowRect": { "left": 40, "top": 40, "right": 460, "bottom": 360 },
+    "region": { "x": 20, "y": 30, "width": 101, "height": 81 }, "scale": 0.5,
+    "imageWidth": 51, "imageHeight": 41, "dpiScale": 1.0 }
+  ```
+- Map transformed image pixels with
+  `screenX = windowRect.left + region.x + imagePixelX / scale` and
+  `screenY = windowRect.top + region.y + imagePixelY / scale`.
+  Do not multiply by `dpiScale`; round the final coordinates to physical pixels for integer
+  click arguments. Without either option, the existing full-window image and response fields
+  are unchanged: `region` and `scale` are omitted, and the original mapping above still applies.
 - These fields are returned by both `screenshot` and MCP `ui_screenshot`. The legacy
-  `inspect --screenshot` response remains unchanged.
+  `inspect --screenshot` response remains unchanged and has no region/scale options. MCP accepts
+  optional `region` (the same comma-separated string) and `scale` (a number).
 - Failure: `invalid-argument`, `window-gone` (the window no longer exists), `stale-context`
   (the existing window's bounds or DPI cannot be read during capture),
   `ambiguous-window`, `element-not-found` (same window-resolution errors as `inspect`), or
   `window-not-responding` (checked up front, matching `read-visible-text`).
 - Screenshots save to the same folder as `inspect`'s screenshots:
   `%LOCALAPPDATA%\AgentDebugToolkit\screenshots\`.
+- Region/scale verified live 2026-11-08 on a NEW empty Notepad window at DPI scale 1.5:
+  default bounds `(57,57,1208,785)` produced 1151 x 728 pixels with unchanged fields;
+  region `(20,30,101,81)` produced 101 x 81 pixels and three sampled pixels exactly matched
+  their full-image offsets; scale 0.5 alone produced 576 x 364 pixels; that region at scale 0.5
+  produced 51 x 41 pixels. Decoded PNG sizes matched responses. An out-of-bounds region returned
+  `invalid-argument` with no image. The new empty window was closed without saving, existing
+  windows were untouched, and generated images were removed.
 - Verified 2026-11-08 on a newly opened Notepad window at `dpiScale: 1.5`: normal
   `windowRect: (-213, 172, 938, 900)` produced a 1151 x 728 PNG; maximized
   `windowRect: (-11, -11, 1931, 1019)` produced a 1942 x 1030 PNG. Both decoded image sizes

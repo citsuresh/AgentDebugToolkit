@@ -1,7 +1,9 @@
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Windows.Controls;
 using System.Windows.Threading;
+using AgentDebugToolkit.UiAutomation.Cli;
 using AgentDebugToolkit.UiAutomation.Tests.Infrastructure;
 using Xunit;
 
@@ -9,6 +11,73 @@ namespace AgentDebugToolkit.UiAutomation.Tests;
 
 public sealed class WindowAvailabilityTests
 {
+    [Theory]
+    [InlineData(true, "window-gone")]
+    [InlineData(false, "foreground-activation-failed")]
+    public void ChatInputForeground_FailurePreservesResolveInputStep(bool windowGone, string expectedCode)
+    {
+        using var output = new StringWriter();
+        var originalOutput = Console.Out;
+        var calls = 0;
+        bool foreground;
+        Console.SetOut(output);
+        try
+        {
+            foreground = Verbs.TryEnsureChatInputForeground(() =>
+            {
+                calls++;
+                if (windowGone)
+                {
+                    throw new WindowGoneException(new IntPtr(0x123));
+                }
+
+                return false;
+            });
+        }
+        finally
+        {
+            Console.SetOut(originalOutput);
+        }
+
+        Assert.False(foreground);
+        Assert.Equal(1, calls);
+        using var response = JsonDocument.Parse(output.ToString());
+        Assert.False(response.RootElement.GetProperty("success").GetBoolean());
+        Assert.Equal(expectedCode, response.RootElement.GetProperty("error").GetString());
+        Assert.Equal("resolve-input", response.RootElement.GetProperty("step").GetString());
+        if (windowGone)
+        {
+            Assert.Contains("list-windows --processName <name>",
+                response.RootElement.GetProperty("message").GetString());
+        }
+    }
+
+    [Fact]
+    public void ChatInputForeground_SuccessDoesNotWriteAnError()
+    {
+        using var output = new StringWriter();
+        var originalOutput = Console.Out;
+        Console.SetOut(output);
+        try
+        {
+            Assert.True(Verbs.TryEnsureChatInputForeground(() => true));
+        }
+        finally
+        {
+            Console.SetOut(originalOutput);
+        }
+
+        Assert.Equal(string.Empty, output.ToString());
+    }
+
+    [Fact]
+    public void ChatInputForeground_UnrelatedExceptionIsNotCaught()
+    {
+        var exception = new InvalidOperationException("foreground test failure");
+        Assert.Same(exception, Assert.Throws<InvalidOperationException>(() =>
+            Verbs.TryEnsureChatInputForeground(() => throw exception)));
+    }
+
     public static IEnumerable<object[]> HwndCommands()
     {
         foreach (var verb in new[] { "inspect", "screenshot", "activate", "read-visible-text" })

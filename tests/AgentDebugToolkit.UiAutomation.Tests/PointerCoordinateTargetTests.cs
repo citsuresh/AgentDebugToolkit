@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using AgentDebugToolkit.UiAutomation.Cli;
 using AgentDebugToolkit.UiAutomation.Tests.Infrastructure;
 using Xunit;
 
@@ -64,18 +65,75 @@ public sealed class PointerCoordinateTargetTests
     [Trait("Category", "InteractiveDesktop")]
     public void PointerVerbs_RejectNegativePointOutsideWindowBeforeInput(string verb)
     {
+        Button button = null!;
         var mouseDownCount = 0;
+        var activationCount = 0;
+        var stateChangeCount = 0;
         using var window = FixtureWindow.Create(() =>
         {
-            var button = new Button { Content = "Target" };
+            button = new Button { Content = "Target" };
             button.PreviewMouseDown += (_, _) => mouseDownCount++;
             return button;
         });
+        window.Invoke(() =>
+        {
+            var target = Window.GetWindow(button);
+            Assert.False(target.IsActive);
+            Assert.Equal(WindowState.Normal, target.WindowState);
+            target.Activated += (_, _) => activationCount++;
+            target.StateChanged += (_, _) => stateChangeCount++;
+        });
+        Assert.False(NativeMethods.IsIconic(window.Hwnd));
+        Assert.True(NativeMethods.GetWindowRect(window.Hwnd, out var bounds));
+        Assert.True(-11 < bounds.Left || -11 < bounds.Top);
 
         var result = UiCli.Run(verb, "--hwnd", window.HwndArgument, "--x", "-11", "--y", "-11");
 
         Assert.Equal("invalid-argument", result.ErrorCode);
         Assert.Contains("outside the target window rectangle", result.Json.GetProperty("message").GetString());
+        Assert.Equal(0, window.Invoke(() => mouseDownCount));
+        Assert.Equal(0, window.Invoke(() => activationCount));
+        Assert.Equal(0, window.Invoke(() => stateChangeCount));
+        Assert.Equal(WindowState.Normal, window.Invoke(() => Window.GetWindow(button).WindowState));
+    }
+
+    [Theory]
+    [InlineData("click")]
+    [InlineData("right-click")]
+    [InlineData("double-click")]
+    [Trait("Category", "InteractiveDesktop")]
+    public void PointerVerbs_RestoreMinimizedWindowBeforeRejectingOutsidePoint(string verb)
+    {
+        Button button = null!;
+        var mouseDownCount = 0;
+        var restoreCount = 0;
+        using var window = FixtureWindow.Create(() =>
+        {
+            button = new Button { Content = "Target" };
+            button.PreviewMouseDown += (_, _) => mouseDownCount++;
+            return button;
+        });
+        window.Invoke(() =>
+        {
+            var target = Window.GetWindow(button);
+            target.WindowState = WindowState.Minimized;
+            target.StateChanged += (_, _) =>
+            {
+                if (target.WindowState == WindowState.Normal)
+                {
+                    restoreCount++;
+                }
+            };
+        });
+        Assert.True(NativeMethods.IsIconic(window.Hwnd));
+
+        var result = UiCli.Run(verb, "--hwnd", window.HwndArgument, "--x", "-11", "--y", "-11");
+
+        Assert.Equal("invalid-argument", result.ErrorCode);
+        Assert.Contains("outside the target window rectangle", result.Json.GetProperty("message").GetString());
+        Assert.Equal(1, window.Invoke(() => restoreCount));
+        Assert.Equal(WindowState.Normal, window.Invoke(() => Window.GetWindow(button).WindowState));
+        Assert.False(NativeMethods.IsIconic(window.Hwnd));
         Assert.Equal(0, window.Invoke(() => mouseDownCount));
     }
 

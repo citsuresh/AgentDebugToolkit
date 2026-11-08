@@ -762,6 +762,12 @@ internal static class Verbs
 
         if (hasCoordinates)
         {
+            if (!TryValidateCoordinateTarget(windowHwnd, x, y, allowOutsideWindow, out var preflightError, skipIfMinimized: true))
+            {
+                JsonOutput.WriteError("invalid-argument", preflightError!);
+                return 1;
+            }
+
             if (!EnsureTargetWindowForeground(windowHwnd, restoreIfMinimized: true))
             {
                 JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
@@ -829,6 +835,12 @@ internal static class Verbs
 
         if (hasCoordinates)
         {
+            if (!TryValidateCoordinateTarget(windowHwnd, x, y, allowOutsideWindow, out var preflightError, skipIfMinimized: true))
+            {
+                JsonOutput.WriteError("invalid-argument", preflightError!);
+                return 1;
+            }
+
             if (!EnsureTargetWindowForeground(windowHwnd, restoreIfMinimized: true))
             {
                 JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
@@ -891,6 +903,12 @@ internal static class Verbs
 
         if (hasCoordinates)
         {
+            if (!TryValidateCoordinateTarget(windowHwnd, x, y, allowOutsideWindow, out var preflightError, skipIfMinimized: true))
+            {
+                JsonOutput.WriteError("invalid-argument", preflightError!);
+                return 1;
+            }
+
             if (!EnsureTargetWindowForeground(windowHwnd, restoreIfMinimized: true))
             {
                 JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
@@ -1780,9 +1798,38 @@ internal static class Verbs
         return 0;
     }
 
-    /// <summary>Captures a window PNG with physical screen bounds, image dimensions, and per-window DPI scale.</summary>
+    /// <summary>Captures a window PNG, optionally cropped/scaled, with physical bounds and saved image dimensions.</summary>
     public static int Screenshot(Dictionary<string, string> opts)
     {
+        System.Drawing.Rectangle? region = null;
+        if (opts.TryGetValue("region", out var regionText))
+        {
+            var parts = regionText.Split(',');
+            if (parts.Length != 4
+                || !int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var x)
+                || !int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var y)
+                || !int.TryParse(parts[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out var width)
+                || !int.TryParse(parts[3], NumberStyles.Integer, CultureInfo.InvariantCulture, out var height))
+            {
+                JsonOutput.WriteError("invalid-argument", "--region must be x,y,width,height using four integers.");
+                return 1;
+            }
+
+            region = new System.Drawing.Rectangle(x, y, width, height);
+        }
+
+        double? scale = null;
+        if (opts.TryGetValue("scale", out var scaleText))
+        {
+            if (!double.TryParse(scaleText, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedScale))
+            {
+                JsonOutput.WriteError("invalid-argument", "--scale must be a finite number from 0.1 to 1.0.");
+                return 1;
+            }
+
+            scale = parsedScale;
+        }
+
         var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
         if (errorCode is not null)
         {
@@ -1805,7 +1852,12 @@ internal static class Verbs
         WindowScreenshotResult screenshot;
         try
         {
-            screenshot = ScreenshotHelper.CaptureWindow(windowHwnd);
+            screenshot = ScreenshotHelper.CaptureWindow(windowHwnd, region, scale);
+        }
+        catch (ArgumentException ex) when (ex.ParamName is "region" or "scale")
+        {
+            JsonOutput.WriteError("invalid-argument", ex.Message);
+            return 1;
         }
         catch (InvalidOperationException ex)
         {
@@ -1828,6 +1880,14 @@ internal static class Verbs
             imageWidth = screenshot.ImageWidth,
             imageHeight = screenshot.ImageHeight,
             dpiScale = screenshot.DpiScale,
+            region = screenshot.Region is { } capturedRegion ? new
+            {
+                x = capturedRegion.X,
+                y = capturedRegion.Y,
+                width = capturedRegion.Width,
+                height = capturedRegion.Height,
+            } : null,
+            scale = screenshot.Scale,
         });
         return 0;
     }
@@ -2012,11 +2072,8 @@ internal static class Verbs
             return 1;
         }
 
-        if (!EnsureElementForeground(inputElement, windowHwnd))
+        if (!TryEnsureChatInputForeground(() => EnsureElementForeground(inputElement, windowHwnd)))
         {
-            JsonOutput.WriteError(
-                "foreground-activation-failed", "Could not bring the target window to the foreground.",
-                new { step = "resolve-input" });
             return 1;
         }
 
@@ -2150,6 +2207,29 @@ internal static class Verbs
             JsonOutput.WriteSuccess(new { method });
         }
         return 0;
+    }
+
+    internal static bool TryEnsureChatInputForeground(Func<bool> ensureForeground)
+    {
+        bool foreground;
+        try
+        {
+            foreground = ensureForeground();
+        }
+        catch (WindowGoneException ex)
+        {
+            JsonOutput.WriteError("window-gone", ex.Message, new { step = "resolve-input" });
+            return false;
+        }
+
+        if (!foreground)
+        {
+            JsonOutput.WriteError(
+                "foreground-activation-failed", "Could not bring the target window to the foreground.",
+                new { step = "resolve-input" });
+        }
+
+        return foreground;
     }
 
     /// <summary>
@@ -3100,9 +3180,10 @@ internal static class Verbs
     }
 
     private static bool TryValidateCoordinateTarget(
-        IntPtr hwnd, int x, int y, bool allowOutsideWindow, out string? error)
+        IntPtr hwnd, int x, int y, bool allowOutsideWindow, out string? error, bool skipIfMinimized = false)
     {
-        if (allowOutsideWindow)
+        if (allowOutsideWindow
+            || (skipIfMinimized && NativeMethods.IsIconic(NativeMethods.GetAncestor(hwnd, NativeMethods.GA_ROOT))))
         {
             error = null;
             return true;

@@ -318,11 +318,14 @@ public sealed class UiAutomationTools
         => RunAsync(BuildArgs("read-visible-text", ("--hwnd", hwnd), ("--maxDepth", maxDepth?.ToString())), null, cancellationToken);
 
     [McpServerTool(Name = "ui_screenshot", ReadOnly = false, Destructive = false, OpenWorld = false),
-     Description("Captures the given window (PrintWindow with a CopyFromScreen fallback) as a PNG. Returns screenshotPath plus windowRect (left, top, right, bottom in physical screen pixels), imageWidth, imageHeight, and dpiScale (GetDpiForWindow / 96). Map image pixels with screenX = windowRect.left + imagePixelX and screenY = windowRect.top + imagePixelY; do not scale these physical pixels again. Bounds include invisible resize borders, including when maximized. A nonexistent hwnd returns window-gone; re-run list-windows --processName <name> for a new hwnd and pid. Does not activate/focus the window, but writes a file to disk.")]
+     Description("Captures the given window (PrintWindow with a CopyFromScreen fallback) as a PNG, optionally cropped to region and downsized by scale. Returns screenshotPath plus windowRect (left, top, right, bottom in physical screen pixels), saved imageWidth/imageHeight, and dpiScale (GetDpiForWindow / 96). With region or scale, also returns region (x, y, width, height in the original window image) and scale (default 1); output dimensions are ceil(region dimension * scale). Map saved pixels with screenX = windowRect.left + region.x + imagePixelX / scale, likewise for y. Without options, region origin is zero and scale is one; do not multiply by dpiScale. Bounds include invisible resize borders, including when maximized. A nonexistent hwnd returns window-gone; re-run list-windows --processName <name> for a new hwnd and pid. Does not activate/focus the window, but writes a file to disk.")]
     public Task<ToolInvocationResult> Screenshot(
         [Description("Window handle to capture.")] string hwnd,
-        CancellationToken cancellationToken = default)
-        => RunAsync(BuildArgs("screenshot", ("--hwnd", hwnd)), null, cancellationToken);
+        CancellationToken cancellationToken = default,
+        [Description("Optional x,y,width,height integers in original window-image pixels. Origin is the window top-left; x/y must be non-negative, dimensions positive, and the entire region inside the window. Invalid regions return invalid-argument.")] string? region = null,
+        [Description("Optional finite downsize factor from 0.1 to 1.0 (default 1). Saved dimensions use ceiling rounding; coordinates map back by dividing by this scale.")] double? scale = null)
+        => RunAsync(BuildArgs("screenshot", ("--hwnd", hwnd), ("--region", region),
+            ("--scale", scale?.ToString("R", CultureInfo.InvariantCulture))), null, cancellationToken);
 
     [McpServerTool(Name = "ui_activate", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false),
      Description("Brings the given window to the foreground (SetForegroundWindow). Unlike read-only verbs, this changes window activation, z-order, and input focus. Risk: can steal focus from whatever the user is currently doing.")]

@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Windows.Automation;
@@ -6,7 +7,8 @@ using System.Windows.Automation;
 namespace AgentDebugToolkit.UiAutomation.Cli;
 
 internal sealed record WindowScreenshotResult(
-    string ScreenshotPath, NativeMethods.RECT WindowRect, int ImageWidth, int ImageHeight, double DpiScale);
+    string ScreenshotPath, NativeMethods.RECT WindowRect, int ImageWidth, int ImageHeight, double DpiScale,
+    Rectangle? Region = null, double? Scale = null);
 
 internal static class ScreenshotHelper
 {
@@ -27,9 +29,14 @@ internal static class ScreenshotHelper
     /// only reflects the target window's true content when it is topmost/unobscured at its
     /// screen position — see docs/CLI_CONTRACT.md.
     /// </summary>
-    public static WindowScreenshotResult CaptureWindow(IntPtr hwnd)
+    public static WindowScreenshotResult CaptureWindow(IntPtr hwnd, Rectangle? region = null, double? scale = null)
     {
         NativeMethods.EnsureWindowExists(hwnd);
+        if (scale is { } requestedScale && (!double.IsFinite(requestedScale) || requestedScale < 0.1 || requestedScale > 1.0))
+        {
+            throw new ArgumentException("--scale must be a finite number from 0.1 to 1.0.", nameof(scale));
+        }
+
         if (!NativeMethods.GetWindowRect(hwnd, out var rect))
         {
             NativeMethods.EnsureWindowExists(hwnd);
@@ -41,6 +48,14 @@ internal static class ScreenshotHelper
         if (width <= 0 || height <= 0)
         {
             throw new InvalidOperationException("The target window rectangle has no positive area; no screenshot was saved.");
+        }
+
+        var sourceRegion = region ?? new Rectangle(0, 0, width, height);
+        if (sourceRegion.X < 0 || sourceRegion.Y < 0 || sourceRegion.Width <= 0 || sourceRegion.Height <= 0
+            || sourceRegion.Width > width || sourceRegion.Height > height
+            || sourceRegion.X > width - sourceRegion.Width || sourceRegion.Y > height - sourceRegion.Height)
+        {
+            throw new ArgumentException("--region must have non-negative x/y, positive width/height, and lie entirely inside the window image.", nameof(region));
         }
 
         var dpi = NativeMethods.GetDpiForWindow(hwnd);
@@ -57,10 +72,45 @@ internal static class ScreenshotHelper
             throw new WindowGoneException(hwnd);
         }
 
-        var path = printed is not null
-            ? SaveBitmap(printed)
-            : CaptureRegion(rect.Left, rect.Top, width, height);
-        return new WindowScreenshotResult(path, rect, width, height, dpi / 96.0);
+        using var bitmap = printed ?? CaptureScreenRegion(rect.Left, rect.Top, width, height);
+        if (region is null && scale is null)
+        {
+            return new WindowScreenshotResult(SaveBitmap(bitmap), rect, width, height, dpi / 96.0);
+        }
+
+        var outputScale = scale ?? 1.0;
+        using var transformed = CropAndScale(bitmap, sourceRegion, outputScale);
+        return new WindowScreenshotResult(SaveBitmap(transformed), rect, transformed.Width, transformed.Height,
+            dpi / 96.0, sourceRegion, outputScale);
+    }
+
+    internal static Bitmap CropAndScale(Bitmap bitmap, Rectangle region, double scale)
+    {
+        if (scale == 1.0)
+        {
+            return bitmap.Clone(region, PixelFormat.Format32bppArgb);
+        }
+
+        using var cropped = bitmap.Clone(region, PixelFormat.Format32bppArgb);
+        var scaled = new Bitmap((int)Math.Ceiling(region.Width * scale), (int)Math.Ceiling(region.Height * scale));
+        try
+        {
+            using var graphics = Graphics.FromImage(scaled);
+            graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            graphics.PixelOffsetMode = PixelOffsetMode.Half;
+            // Keep the requested scale rather than stretching to the rounded output dimensions.
+            graphics.ScaleTransform((float)scale, (float)scale);
+            using var attributes = new ImageAttributes();
+            attributes.SetWrapMode(WrapMode.TileFlipXY);
+            graphics.DrawImage(cropped, new Rectangle(0, 0, region.Width, region.Height),
+                0, 0, region.Width, region.Height, GraphicsUnit.Pixel, attributes);
+            return scaled;
+        }
+        catch
+        {
+            scaled.Dispose();
+            throw;
+        }
     }
 
     /// <summary>
@@ -101,13 +151,10 @@ internal static class ScreenshotHelper
 
     private static string SaveBitmap(Bitmap bitmap)
     {
-        using (bitmap)
-        {
-            var dir = ScreenshotDirectory();
-            var path = Path.Combine(dir, $"shot_{DateTime.Now:yyyyMMdd_HHmmss_fff}.png");
-            bitmap.Save(path, ImageFormat.Png);
-            return path;
-        }
+        var dir = ScreenshotDirectory();
+        var path = Path.Combine(dir, $"shot_{DateTime.Now:yyyyMMdd_HHmmss_fff}.png");
+        bitmap.Save(path, ImageFormat.Png);
+        return path;
     }
 
     private static string ScreenshotDirectory()
@@ -121,15 +168,23 @@ internal static class ScreenshotHelper
 
     private static string CaptureRegion(int x, int y, int width, int height)
     {
-        var safeWidth = Math.Max(1, width);
-        var safeHeight = Math.Max(1, height);
-
-        var bitmap = new Bitmap(safeWidth, safeHeight);
-        using (var g = Graphics.FromImage(bitmap))
-        {
-            g.CopyFromScreen(x, y, 0, 0, new Size(safeWidth, safeHeight));
-        }
-
+        using var bitmap = CaptureScreenRegion(x, y, Math.Max(1, width), Math.Max(1, height));
         return SaveBitmap(bitmap);
+    }
+
+    private static Bitmap CaptureScreenRegion(int x, int y, int width, int height)
+    {
+        var bitmap = new Bitmap(width, height);
+        try
+        {
+            using var g = Graphics.FromImage(bitmap);
+            g.CopyFromScreen(x, y, 0, 0, new Size(width, height));
+            return bitmap;
+        }
+        catch
+        {
+            bitmap.Dispose();
+            throw;
+        }
     }
 }

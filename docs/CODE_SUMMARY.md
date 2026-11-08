@@ -34,7 +34,7 @@ graph LR
 | `UiaHelper` | `UiaHelper.cs` | Enumerates windows through Win32; resolves selectors, virtualized grid cells/editors, and scroll targets; shares vertical scroll-search and ScrollPattern access; builds and filters `ElementInfo` trees while preserving ancestors; performs pattern-based or synthetic interaction |
 | `SessionContext` | `SessionContext.cs` | Persists the "current" pid to a temp JSON file so subsequent CLI invocations (separate processes) can omit `--pid` after `attach` |
 | `CursorSession` / `SystemCursorOperations` | `CursorSession.cs` | Share a cursor-indicator session with the script via a temp flag; reload, mark, and restore the arrow, hand, and I-beam through Win32 |
-| `ScreenshotHelper` | `ScreenshotHelper.cs` | Saves element/window PNGs to local app data; window captures return the physical capture rectangle, image dimensions, and per-window DPI scale |
+| `ScreenshotHelper` | `ScreenshotHelper.cs` | Saves element/window PNGs to local app data; optional window-image cropping/downscaling preserves physical window bounds and reports source region, scale, saved dimensions, and per-window DPI |
 | `NativeMethods` | `NativeMethods.cs` | P/Invoke user32 helpers for Win32 window enumeration/metadata, synthetic mouse/keyboard input, and window queries; primary interaction mechanism since target apps often support no UIA patterns |
 
 ### AgentDebugToolkit.Debugger.VisualStudio

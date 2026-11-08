@@ -9,7 +9,7 @@ namespace AgentDebugToolkit.UiAutomation.Tests;
 public sealed class McpToolMetadataTests
 {
     [Fact]
-    public void UiScreenshot_DescribesPhysicalGeometryAndDpiWithoutChangingParameters()
+    public void UiScreenshot_DescribesPhysicalGeometryAndOptionalTransforms()
     {
         var method = typeof(UiAutomationTools).GetMethod(nameof(UiAutomationTools.Screenshot));
         Assert.NotNull(method);
@@ -20,7 +20,13 @@ public sealed class McpToolMetadataTests
         Assert.Contains("imageWidth", description.Description);
         Assert.Contains("imageHeight", description.Description);
         Assert.Contains("dpiScale (GetDpiForWindow / 96)", description.Description);
-        Assert.Equal(new[] { "hwnd", "cancellationToken" }, method.GetParameters().Select(parameter => parameter.Name));
+        Assert.Contains("region.x + imagePixelX / scale", description.Description);
+        var parameters = method.GetParameters();
+        Assert.Equal(new[] { "hwnd", "cancellationToken", "region", "scale" }, parameters.Select(parameter => parameter.Name));
+        Assert.Equal(typeof(string), parameters[2].ParameterType);
+        Assert.True(parameters[2].IsOptional);
+        Assert.Equal(typeof(double?), parameters[3].ParameterType);
+        Assert.True(parameters[3].IsOptional);
     }
 
     [Fact]
