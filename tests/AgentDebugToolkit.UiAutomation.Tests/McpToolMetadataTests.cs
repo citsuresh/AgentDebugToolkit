@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Reflection;
 using AgentDebugToolkit.Mcp;
 using ModelContextProtocol.Server;
@@ -7,6 +8,21 @@ namespace AgentDebugToolkit.UiAutomation.Tests;
 
 public sealed class McpToolMetadataTests
 {
+    [Fact]
+    public void UiScreenshot_DescribesPhysicalGeometryAndDpiWithoutChangingParameters()
+    {
+        var method = typeof(UiAutomationTools).GetMethod(nameof(UiAutomationTools.Screenshot));
+        Assert.NotNull(method);
+        var description = method.GetCustomAttribute<DescriptionAttribute>();
+        Assert.NotNull(description);
+        Assert.Contains("screenshotPath", description.Description);
+        Assert.Contains("windowRect (left, top, right, bottom in physical screen pixels)", description.Description);
+        Assert.Contains("imageWidth", description.Description);
+        Assert.Contains("imageHeight", description.Description);
+        Assert.Contains("dpiScale (GetDpiForWindow / 96)", description.Description);
+        Assert.Equal(new[] { "hwnd", "cancellationToken" }, method.GetParameters().Select(parameter => parameter.Name));
+    }
+
     [Fact]
     public void UiInspect_IsReadOnlyAndDoesNotExposeScreenshot()
     {

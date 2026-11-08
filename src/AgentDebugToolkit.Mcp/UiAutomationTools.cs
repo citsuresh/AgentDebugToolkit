@@ -318,7 +318,7 @@ public sealed class UiAutomationTools
         => RunAsync(BuildArgs("read-visible-text", ("--hwnd", hwnd), ("--maxDepth", maxDepth?.ToString())), null, cancellationToken);
 
     [McpServerTool(Name = "ui_screenshot", ReadOnly = false, Destructive = false, OpenWorld = false),
-     Description("Captures a bitmap of the given window (PrintWindow with a CopyFromScreen fallback) and saves it as a PNG file on disk, returning the saved path. Does not activate/focus the window or change target application state, but is NOT read-only: it writes a new file to disk.")]
+     Description("Captures the given window (PrintWindow with a CopyFromScreen fallback) as a PNG. Returns screenshotPath plus windowRect (left, top, right, bottom in physical screen pixels), imageWidth, imageHeight, and dpiScale (GetDpiForWindow / 96). Map image pixels with screenX = windowRect.left + imagePixelX and screenY = windowRect.top + imagePixelY; do not scale these physical pixels again. Bounds include invisible resize borders, including when maximized. A nonexistent hwnd returns window-gone; re-run list-windows --processName <name> for a new hwnd and pid. Does not activate/focus the window, but writes a file to disk.")]
     public Task<ToolInvocationResult> Screenshot(
         [Description("Window handle to capture.")] string hwnd,
         CancellationToken cancellationToken = default)

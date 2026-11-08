@@ -111,11 +111,18 @@ throwing. `inspect` remains successful in this case; only the affected element(s
 ### Error envelope (on failure, any verb)
 ```json
 { "success": false, "error": "element-not-found" | "stale-context" | "ambiguous-process" |
-  "ambiguous-window" | "ambiguous-match" | "timeout" | "process-not-responding" | "window-not-responding" |
+  "ambiguous-window" | "ambiguous-match" | "timeout" | "process-not-responding" | "window-gone" | "window-not-responding" |
   "foreground-activation-failed" | "input-injection-failed" | "invalid-argument" |
   "session-context-write-failed",
   "message": "human readable detail" }
 ```
+
+All HWND-based target verbs share an existence/responsiveness check before UIA or input work.
+If `IsWindow` is false, they return `window-gone` and advise:
+`Re-run list-windows --processName <name> to find the new hwnd and pid.` Replace `<name>` with
+the target process name; do not reuse the old handle. A window that still exists but does not
+respond returns `window-not-responding`. Scoped HWNDs use the same check. An already-running
+`wait-for-element --state disappeared` still succeeds if its previously resolved window closes.
 
 `ambiguous-match` includes the total `count` and at most 10 `candidates`, using the same summary
 shape as `find-all`:
@@ -243,7 +250,7 @@ is still required and is checked for responsiveness and foreground activation be
 coordinate point itself is not relative to that window. By default, the point must lie within the
 `--hwnd` window rectangle read by `GetWindowRect` after activation (and restoration if minimized),
 immediately before input. `GetWindowRect` includes the invisible resize border of about 7 to 8
-pixels; this is not a visible-content hit test. An outside point or unreadable rectangle returns
+pixels at 100% DPI (scaled at higher DPI); this is not a visible-content hit test. An outside point or unreadable rectangle returns
 `invalid-argument` without mouse input, but the window may already have been activated/restored.
 `--allowOutsideWindow` disables this bounds check. A point inside the rectangle can still hit
 another window covering it. `--controlType` and `--scopeHwnd` apply only to
@@ -279,8 +286,8 @@ Coordinates are physical screen pixels (same coordinate frame as `move-mouse`). 
 `--hwnd` is checked for responsiveness and foreground activation before input; the coordinate point
 itself is not relative to that window. By default, the point must lie within the `--hwnd` window
 rectangle read by `GetWindowRect` after activation (and restoration if minimized), immediately
-before input. `GetWindowRect` includes the invisible resize border of about 7 to 8 pixels; this
-is not a visible-content hit test. An outside point or unreadable rectangle returns
+before input. `GetWindowRect` includes the invisible resize border of about 7 to 8 pixels at
+100% DPI (scaled at higher DPI); this is not a visible-content hit test. An outside point or unreadable rectangle returns
 `invalid-argument` without mouse input, but the window may already have been activated/restored.
 `--allowOutsideWindow` disables this bounds check. A point inside the rectangle can still hit
 another window covering it. `--scopeHwnd` applies only to the selector form. The forms are
@@ -306,8 +313,8 @@ Coordinates are physical screen pixels (same coordinate frame as `move-mouse`). 
 `--hwnd` is checked for responsiveness and foreground activation before input; the coordinate point
 itself is not relative to that window. By default, the point must lie within the `--hwnd` window
 rectangle read by `GetWindowRect` after activation (and restoration if minimized), immediately
-before input. `GetWindowRect` includes the invisible resize border of about 7 to 8 pixels; this
-is not a visible-content hit test. An outside point or unreadable rectangle returns
+before input. `GetWindowRect` includes the invisible resize border of about 7 to 8 pixels at
+100% DPI (scaled at higher DPI); this is not a visible-content hit test. An outside point or unreadable rectangle returns
 `invalid-argument` without mouse input, but the window may already have been activated/restored.
 `--allowOutsideWindow` disables this bounds check. A point inside the rectangle can still hit
 another window covering it. `--scopeHwnd` applies only to the selector form. The forms are
@@ -765,7 +772,7 @@ branch was read successfully or that all transcript content is exposed.
   for that specific content, but remains available for chat/webview UIs where it is not.
 
 ### `screenshot --hwnd <h>`
-Captures a bitmap of the given window and returns the saved PNG path — a fallback observation
+Captures a bitmap of the given window and returns the saved PNG path plus capture geometry/DPI — a fallback observation
 method for content not meaningfully exposed via UIA (e.g. custom controls or webview-hosted
 content). Does not activate/focus the window.
 - Capture method: attempts `PrintWindow` with `PW_RENDERFULLCONTENT` first, which renders the
@@ -776,12 +783,37 @@ content). Does not activate/focus the window.
   currently visible at those screen coordinates, so it only reflects the target window's true
   content when the window is topmost/unobscured at capture time — a caller relying on the
   fallback path specifically should ensure the window is not covered by another window first.
-- Success: `{ "success": true, "screenshotPath": "C:\\...\\shot_20260915...png" }`
-- Failure: `invalid-argument`, `stale-context` (the resolved window closed before/during capture),
+- Success (new fields are additive; `screenshotPath` is unchanged):
+  ```json
+  { "success": true, "screenshotPath": "C:\\...\\shot_20261108...png",
+    "windowRect": { "left": 40, "top": 40, "right": 460, "bottom": 360 },
+    "imageWidth": 420, "imageHeight": 320, "dpiScale": 1.0 }
+  ```
+- `windowRect` is the `GetWindowRect` snapshot used to size the capture, in absolute physical
+  screen pixels. `imageWidth` and `imageHeight` are the saved PNG dimensions and equal
+  `windowRect.right - windowRect.left` and `windowRect.bottom - windowRect.top` respectively.
+  Non-positive bounds fail without saving an image. `GetWindowRect` includes the invisible resize
+  border (about 7-8 pixels at 100% DPI, scaled at higher DPI); a maximized rectangle can extend
+  beyond the monitor's visible edges.
+- Map an image pixel to the screen with `screenX = windowRect.left + imagePixelX` and
+  `screenY = windowRect.top + imagePixelY`. `dpiScale` is `GetDpiForWindow(hwnd) / 96.0`;
+  the image and rectangle already use physical pixels, so do not multiply by this scale again.
+  Geometry is a capture-time snapshot: recapture if the window moves or resizes before clicking.
+- These fields are returned by both `screenshot` and MCP `ui_screenshot`. The legacy
+  `inspect --screenshot` response remains unchanged.
+- Failure: `invalid-argument`, `window-gone` (the window no longer exists), `stale-context`
+  (the existing window's bounds or DPI cannot be read during capture),
   `ambiguous-window`, `element-not-found` (same window-resolution errors as `inspect`), or
   `window-not-responding` (checked up front, matching `read-visible-text`).
 - Screenshots save to the same folder as `inspect`'s screenshots:
   `%LOCALAPPDATA%\AgentDebugToolkit\screenshots\`.
+- Verified 2026-11-08 on a newly opened Notepad window at `dpiScale: 1.5`: normal
+  `windowRect: (-213, 172, 938, 900)` produced a 1151 x 728 PNG; maximized
+  `windowRect: (-11, -11, 1931, 1019)` produced a 1942 x 1030 PNG. Both decoded image sizes
+  exactly matched the rectangle sizes. The maximized rectangle included an 11-physical-pixel
+  invisible border at this DPI, not just the visible monitor/work-area bounds. This verified
+  geometry and file dimensions, not completeness of every rendered pixel. Images were removed;
+  the new empty window was closed without saving, and its old HWND returned `window-gone`.
 - Validated live (2026-09-15) against the same Visual Studio Insiders window while it was fully
   obscured on-screen by another application window: the `PrintWindow` path correctly captured the
   target window's own content (menu bar, editor, Chat panel with correct text), confirming the
@@ -809,8 +841,10 @@ and input focus rather than only observing the target. Requires an explicit `--h
 fall back to `--pid`/persisted session context.
 - Success: `{ "success": true, "activated": true }`
 - Failure: `invalid-argument` if `--hwnd` is missing or malformed.
+- Failure: `window-gone` if the HWND no longer exists; rediscover its replacement as described above.
+- Failure: `window-not-responding` if the window exists but is hung.
 - Failure: `stale-context` if `SetForegroundWindow` returns false. This can mean the window
-  closed, **or** that Windows legitimately denied the foreground switch due to focus-stealing
+  still exists but Windows legitimately denied the foreground switch due to focus-stealing
   prevention (which process last had input focus determines whether the OS honors the request) —
   this is not necessarily a fatal condition for the caller. A caller receiving `stale-context`
   from `activate` should not assume the window is gone; it may retry, or fall back to manual
@@ -1066,7 +1100,7 @@ in practice.
 Sets the selected container to an absolute vertical scroll percentage via UI Automation `ScrollPattern` only. It does not request window activation and sends no mouse or keyboard input. Container selection follows the standard selector rules: one matching descendant is required; zero matches return `container-not-found`, and multiple matches return `ambiguous-container` with candidate details. An optional `--scopeHwnd` narrows the search.
 
 - `--verticalPercent` is required and must be a finite number from 0 through 100; otherwise the CLI returns `invalid-argument`. No direction/relative-step mode is provided.
-- A container without a vertically scrollable `ScrollPattern` returns `not-scrollable`. A stale UIA element returns `stale-context`; provider failures return `scroll-provider-error` with `details.stage`. A closed or unresponsive hwnd returns `window-not-responding`.
+- A container without a vertically scrollable `ScrollPattern` returns `not-scrollable`. A stale UIA element returns `stale-context`; provider failures return `scroll-provider-error` with `details.stage`. A closed hwnd returns `window-gone`; an existing but unresponsive hwnd returns `window-not-responding`.
 - When the current percent is already the requested percent, no `SetScrollPercent` call is made. After setting a new position, the CLI re-reads the percent for up to 500 ms to allow the provider to update.
 - Success: `{ "success": true, "container": { "name", "automationId", "controlType", "className" }, "verticalScrollPercentBefore": <number>, "verticalScrollPercentAfter": <number>, "boundaryReached": <bool>, "changed": <bool> }`. `boundaryReached` is true when the requested boundary (0 or 100) is reached; `changed` reflects whether the reported percent moved.
 
@@ -1115,12 +1149,11 @@ success and `timeout`, `element-not-found-after-scroll`, `not-scrollable`, `cont
 scroller is known (for example `container-not-found`, or `ambiguous-container` both for an
 ambiguous scope and for auto-detect with several scrollable containers, because no single scroller
 was chosen). Early errors
-(`invalid-argument`, `window-not-responding`, and an hwnd that cannot be found) do not include the
-percent fields. A dead or closed `--hwnd` is
-reported as `window-not-responding` by the shared responsiveness check, the same as other verbs at
-HEAD; `element-not-found` is returned when the `--hwnd` has no window; `element-not-found-after-scroll`
+(`invalid-argument`, `window-gone`, and `window-not-responding`) do not include the
+percent fields. A dead or closed `--hwnd` is reported as `window-gone` by the shared window check;
+an existing but hung window returns `window-not-responding`. `element-not-found-after-scroll`
 is returned when the element disappears or cannot be found after scrolling.
-- Failures include `invalid-argument`, `window-not-responding`, `element-not-found`, `stale-context`,
+- Failures include `invalid-argument`, `window-gone`, `window-not-responding`, `element-not-found`, `stale-context`,
 `container-not-found`, `ambiguous-container`, `not-scrollable`, `ambiguous-match`, `timeout`,
 `element-not-found-after-scroll`, and `scroll-provider-error`. The `not-scrollable` message states
 that a mouse-wheel fallback is not implemented. `stale-context` is returned when a UIA element

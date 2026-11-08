@@ -5,6 +5,9 @@ using System.Windows.Automation;
 
 namespace AgentDebugToolkit.UiAutomation.Cli;
 
+internal sealed record WindowScreenshotResult(
+    string ScreenshotPath, NativeMethods.RECT WindowRect, int ImageWidth, int ImageHeight, double DpiScale);
+
 internal static class ScreenshotHelper
 {
     public static string Capture(AutomationElement element)
@@ -24,23 +27,40 @@ internal static class ScreenshotHelper
     /// only reflects the target window's true content when it is topmost/unobscured at its
     /// screen position — see docs/CLI_CONTRACT.md.
     /// </summary>
-    public static string CaptureWindow(IntPtr hwnd)
+    public static WindowScreenshotResult CaptureWindow(IntPtr hwnd)
     {
+        NativeMethods.EnsureWindowExists(hwnd);
         if (!NativeMethods.GetWindowRect(hwnd, out var rect))
         {
+            NativeMethods.EnsureWindowExists(hwnd);
             throw new InvalidOperationException($"GetWindowRect failed for hwnd '0x{hwnd.ToInt64():X}'.");
         }
 
-        var width = Math.Max(1, rect.Right - rect.Left);
-        var height = Math.Max(1, rect.Bottom - rect.Top);
-
-        var printed = TryPrintWindow(hwnd, width, height);
-        if (printed is not null)
+        var width = rect.Right - rect.Left;
+        var height = rect.Bottom - rect.Top;
+        if (width <= 0 || height <= 0)
         {
-            return SaveBitmap(printed);
+            throw new InvalidOperationException("The target window rectangle has no positive area; no screenshot was saved.");
         }
 
-        return CaptureRegion(rect.Left, rect.Top, width, height);
+        var dpi = NativeMethods.GetDpiForWindow(hwnd);
+        if (dpi == 0)
+        {
+            NativeMethods.EnsureWindowExists(hwnd);
+            throw new InvalidOperationException("GetDpiForWindow failed; no screenshot was saved.");
+        }
+
+        var printed = TryPrintWindow(hwnd, width, height);
+        if (!NativeMethods.IsWindow(hwnd))
+        {
+            printed?.Dispose();
+            throw new WindowGoneException(hwnd);
+        }
+
+        var path = printed is not null
+            ? SaveBitmap(printed)
+            : CaptureRegion(rect.Left, rect.Top, width, height);
+        return new WindowScreenshotResult(path, rect, width, height, dpi / 96.0);
     }
 
     /// <summary>

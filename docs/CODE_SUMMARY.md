@@ -30,11 +30,11 @@ graph LR
 
 | Symbol | File | Responsibility |
 |---|---|---|
-| `Program` / `Verbs` (top-level) | `Program.cs` | Parses args and dispatches UI Automation verbs, including grid-cell edits and absolute container scrolling; shared action-target resolution rejects ambiguous matches |
+| `Program` / `Verbs` (top-level) | `Program.cs` | Parses args and dispatches UI Automation verbs; shared target/scope checks distinguish gone and hung HWNDs, and action-target resolution rejects ambiguous matches |
 | `UiaHelper` | `UiaHelper.cs` | Enumerates windows through Win32; resolves selectors, virtualized grid cells/editors, and scroll targets; shares vertical scroll-search and ScrollPattern access; builds and filters `ElementInfo` trees while preserving ancestors; performs pattern-based or synthetic interaction |
 | `SessionContext` | `SessionContext.cs` | Persists the "current" pid to a temp JSON file so subsequent CLI invocations (separate processes) can omit `--pid` after `attach` |
 | `CursorSession` / `SystemCursorOperations` | `CursorSession.cs` | Share a cursor-indicator session with the script via a temp flag; reload, mark, and restore the arrow, hand, and I-beam through Win32 |
-| `ScreenshotHelper` | `ScreenshotHelper.cs` | Captures a PNG screenshot of an element's bounding rect to local app data |
+| `ScreenshotHelper` | `ScreenshotHelper.cs` | Saves element/window PNGs to local app data; window captures return the physical capture rectangle, image dimensions, and per-window DPI scale |
 | `NativeMethods` | `NativeMethods.cs` | P/Invoke user32 helpers for Win32 window enumeration/metadata, synthetic mouse/keyboard input, and window queries; primary interaction mechanism since target apps often support no UIA patterns |
 
 ### AgentDebugToolkit.Debugger.VisualStudio

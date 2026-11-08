@@ -227,3 +227,26 @@ a shell dependency and prevents the CLI from owning and testing the behavior dir
 atomic across processes. Concurrent starts can disagree about ownership; a mutex in the CLI alone
 would not protect script callers. Coordinating both implementations would require updating the
 external script, which is deliberately outside this change.
+
+## 2026-11-08 -- Distinguish vanished HWNDs from existing hung windows
+
+**Decision:** Reverse the 2026-10-19 vanished-window classification: shared target/scope HWND
+validation checks `IsWindow` before probing responsiveness and again after a failed probe.
+Nonexistent handles return `window-gone` with `list-windows --processName <name>` rediscovery
+guidance; existing hung windows retain `window-not-responding`. An active disappearance wait
+still treats closure of its previously resolved window as success.
+
+**Rationale:** A restarted application requires rediscovery of its HWND and pid, not repeated
+responsiveness retries against a handle that no longer exists.
+
+## 2026-11-08 -- Screenshot geometry matches the saved physical-pixel bitmap
+
+**Decision:** Standalone `screenshot`/`ui_screenshot` add `windowRect`, `imageWidth`, `imageHeight`,
+and `dpiScale` without changing `screenshotPath` or the legacy `inspect --screenshot` response.
+Use the same `GetWindowRect` snapshot to size the bitmap and report its origin; DPI is
+`GetDpiForWindow / 96.0`, informational rather than an additional pixel multiplier.
+
+**Rationale:** Image-pixel offsets must share a coordinate frame with absolute screen clicks.
+Visible-frame cropping or a separately read rectangle could make the reported origin disagree
+with the saved bitmap. Native outer bounds intentionally include invisible resize borders;
+the live maximized Notepad image matched those bounds, including 11-pixel borders at 150% DPI.

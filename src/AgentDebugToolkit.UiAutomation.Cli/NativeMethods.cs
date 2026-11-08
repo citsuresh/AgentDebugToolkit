@@ -19,6 +19,15 @@ internal sealed class InputInjectionException : Exception
     }
 }
 
+internal sealed class WindowGoneException : Exception
+{
+    public WindowGoneException(IntPtr hwnd)
+        : base($"The target window '0x{hwnd.ToInt64():X}' no longer exists. " +
+            "Re-run list-windows --processName <name> to find the new hwnd and pid.")
+    {
+    }
+}
+
 /// <summary>
 /// P/Invoke helpers for synthetic input and window queries. See docs/VALIDATION_FINDINGS.md
 /// for why synthetic input (rather than UIA InvokePattern/ValuePattern) is the primary
@@ -159,6 +168,17 @@ internal static class NativeMethods
     [DllImport("user32.dll")]
     public static extern bool IsWindowVisible(IntPtr hWnd);
 
+    [DllImport("user32.dll")]
+    public static extern bool IsWindow(IntPtr hWnd);
+
+    public static void EnsureWindowExists(IntPtr hwnd)
+    {
+        if (!IsWindow(hwnd))
+        {
+            throw new WindowGoneException(hwnd);
+        }
+    }
+
     private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
     [DllImport("user32.dll", SetLastError = true)]
@@ -181,6 +201,9 @@ internal static class NativeMethods
 
     [DllImport("user32.dll")]
     public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+    [DllImport("user32.dll")]
+    public static extern uint GetDpiForWindow(IntPtr hWnd);
 
     public struct RECT
     {

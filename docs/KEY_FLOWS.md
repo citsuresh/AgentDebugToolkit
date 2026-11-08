@@ -24,7 +24,7 @@ UiAutomationTools/VsDebuggerTools/ConsoleTools.BuildArgs -> ArgumentFormatting.A
 
 ConsoleVerbs.SendText/WaitForText/ReadScreen/Stop -> BrokerClient.SendRequest -> BrokerProgram.ServeConnectionAsync -> TerminalBuffer/ConPtySession
 
-Program.Verbs.Activate -> ResolveWindowHwnd -> NativeMethods.SetForegroundWindow -> JsonOutput.WriteSuccess/WriteError(stale-context)
+Program.Verbs.Activate -> Program.Verbs.ValidateResolvedWindowHwnd -> NativeMethods.SetForegroundWindow -> JsonOutput.WriteSuccess/WriteError
 
 Program.Verbs.SendKeys -> ResolveWindowHwnd -> Program.Verbs.ResolveElement -> UiaHelper.SendKeys (NativeMethods.Click + NativeMethods.SendKeysRaw)
 
@@ -35,3 +35,7 @@ Program.Verbs.ScrollContainer -> ResolveWindowHwnd -> UiaHelper.ResolveSelectorA
 Program.Verbs.ScrollIntoView -> ResolveWindowHwnd -> UiaHelper.ResolveSelectorAll -> UiaHelper.TryFindAndRealizeContainerItem/ScrollSearch -> UIA scroll patterns -> JsonOutput.WriteSuccess/WriteError
 
 UiAutomationTools.CursorSessionStart/Stop -> CliRunner.RunAsync -> Program.Verbs.CursorSessionVerb -> CursorSession.Start/Stop -> SystemCursorOperations.Mark/Restore -> JsonOutput.WriteSuccess
+
+Program.Verbs.ResolveWindowHwnd/ResolveElement -> Program.Verbs.ValidateResolvedWindowHwnd -> NativeMethods.EnsureWindowExists/IsResponding -> window-gone/window-not-responding
+
+Program.Verbs.Screenshot -> Program.Verbs.ResolveWindowHwnd -> ScreenshotHelper.CaptureWindow -> NativeMethods.GetWindowRect/GetDpiForWindow -> ScreenshotHelper.TryPrintWindow/CaptureRegion -> JsonOutput.WriteSuccess

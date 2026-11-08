@@ -4,42 +4,45 @@
 
 ## Current Focus
 
-2026-11-08: Completed Phase 1 item 1 and its requested review fixes — absolute-coordinate targets
-for click, right-click, and double-click. Phase 1 items 2-5 remain deferred.
+2026-11-08: Item 1 is committed at `3e63f7d`. Implemented only Phase 1 items 4 and 5:
+distinct dead-window errors and additive screenshot geometry/DPI. These changes are uncommitted.
+Items 2 (selector-free input) and 3 (wheel scrolling) remain deferred.
 
-## Bounds / Restoration Decisions
+## Current Decisions
 
-- Coordinate input activates the target first, restoring it if minimized, then checks a freshly
-  read `GetWindowRect` immediately before input. Selector behavior is unchanged.
-- After requesting restoration, poll every 20 ms for up to 1 second until the window is no longer
-  minimized and its rectangle matches on two consecutive successful reads. Timeout reports
-  `foreground-activation-failed` with a restore-timeout message and sends no coordinate input.
-- Outside points or unreadable bounds return `invalid-argument` without mouse input; activation
-  or restoration may already have occurred. `GetWindowRect` includes the invisible resize border
-  (about 7-8 pixels); an in-bounds point can still hit a covering window.
-- `--allowOutsideWindow` is coordinate-only and accepts true/false (bare means true). All three
-  MCP tools forward explicit false with `Bool`; omitted values remain omitted. Coordinates are
-  parsed and serialized invariantly, including negative values.
+- Shared target/scope HWND validation returns `window-gone` when `IsWindow` is false and advises
+  `list-windows --processName <name>` to find the new HWND and pid. Existing hung windows retain
+  `window-not-responding`; active disappearance waits retain their intended success behavior.
+- Legacy failed probes recheck existence. Shared resolution returns error tuples so composite
+  operations preserve their error context, including `submit-chat-message`'s resolve-window step.
+- Standalone screenshots report `windowRect` (left/top/right/bottom physical screen pixels),
+  `imageWidth`, `imageHeight`, and `dpiScale = GetDpiForWindow / 96.0`. The same native rectangle
+  sizes the bitmap; map pixels by adding its left/top, without multiplying by DPI again.
+- `screenshotPath` and `inspect --screenshot` remain unchanged. Native outer bounds include
+  invisible resize borders (about 7-8 pixels at 100% DPI, scaled at higher DPI), including maximized
+  windows. Capture geometry does not guarantee complete rendering by every provider.
+- Item 1's post-activation bounds check and bounded restoration wait remain unchanged.
 
 ## Verification
 
-- Latest CLI build succeeded. MCP and test-project builds succeeded only in the ignored scratch
-  workspace `.vs\item1-final-validation-20261108-1824`, without touching running MCP outputs.
-- Full updated test suite in that isolated workspace: 83 passed, 0 failed, 0 skipped. Includes
-  all six normal/minimized fixture-button cases and MCP explicit false/true/omitted regressions.
-- Earlier review-round live test on a distinct new Notepad window: coordinate click collapsed
-  selection, double-click selected a word, right-click opened a menu, and minimized-window click
-  restored the editor and collapsed selection. The test document was discarded and its window
-  closed; the two pre-existing windows received no input. No new Notepad run in the final round.
-- Isolated builds emitted six cached NU1900 warnings about unavailable vulnerability-data feeds;
-  builds and tests succeeded without changing feeds or stopping processes.
-- The graph was refreshed earlier (807 nodes, 3,801 edges); it was not regenerated for these
-  review fixes. Recent symbol/caller queries reported symbol-not-found and duplicate key `Program`.
+- CLI build and isolated full solution/MCP builds succeeded in
+  `.vs\items4-5-validation-20261108-1834`; no running MCP output was touched.
+- Full isolated test suite: 114 passed, 0 failed, 0 skipped. Focused window checks: 26 passed;
+  screenshot/metadata/legacy-inspect checks: 8 passed. Tests include closed fixtures, genuinely
+  non-pumping hung fixtures, closed scopes, composite errors, and CLI/MCP normal/maximized images.
+- NEW Notepad live check at DPI scale 1.5: normal rect `(-213,172,938,900)` saved 1151 x 728 pixels;
+  maximized rect `(-11,-11,1931,1019)` saved 1942 x 1030 pixels. Both decoded PNG sizes exactly
+  matched the native rect sizes; the maximized capture included 11-pixel invisible borders.
+- The verified empty new window was closed without saving. Its old HWND returned `window-gone`
+  with rediscovery guidance. Existing Notepad windows received no input; generated PNGs were removed.
+- Six cached NU1900 vulnerability-feed warnings remain. Existing Console/Debugger dependency
+  assets were copied into scratch to permit the full solution build; no restore/feed change needed.
+- Registered graph caller lookup failed with duplicate key `Program`; direct source tracing was
+  used. Pre-existing graph-file modifications were left untouched; no graph rebuild this task.
 
 ## Open Tasks / Known Issues
 
-- Remaining requested Phase 1 items: selector-free input, wheel scrolling, a distinct dead-window
-  error, and screenshot bounds/DPI metadata.
+- Remaining Phase 1 items: selector-free input and wheel scrolling; neither was started.
 - `set-grid-cell` parity remains inconsistent; investigate internal termination and provider/layout
   timing without inferring root cause from snapshots alone.
 - Cursor-session concurrent-start ownership race remains a documented limitation; cross-process
@@ -51,16 +54,11 @@ for click, right-click, and double-click. Phase 1 items 2-5 remain deferred.
 
 ## Recently Changed Files
 
-- `docs\full-graph.agentdebugtoolkit.json` and `docs\project-dependencies.agentdebugtoolkit.json` — graph refresh.
-- `src\AgentDebugToolkit.UiAutomation.Cli\Program.cs` — coordinate targets, post-activation bounds,
-  bounded restore wait, strict override parsing, and invariant coordinates.
-- `src\AgentDebugToolkit.UiAutomation.Cli\NativeMethods.cs` — minimized-state/restore calls and
-  descriptive foreground errors.
-- `src\AgentDebugToolkit.Mcp\UiAutomationTools.cs` — coordinate parameters, invariant forwarding,
-  and explicit false for pointer-tool overrides.
-- `tests\AgentDebugToolkit.UiAutomation.Tests\PointerCoordinateTargetTests.cs` and
-	`McpToolMetadataTests.cs` — target/boolean validation, real-click fixtures, and MCP schemas.
-- `tests\AgentDebugToolkit.UiAutomation.Tests\McpPointerCoordinateTests.cs` — negative-coordinate
-  culture regressions and explicit false/true/omitted forwarding.
-- `docs\CLI_CONTRACT.md` — bounds, restoration wait, override, and border semantics;
-  `docs\PROJECT_STATE.md` — this session snapshot.
+- `src\AgentDebugToolkit.UiAutomation.Cli\Program.cs` and `NativeMethods.cs` — shared window checks,
+  window-gone errors, composite error context, and DPI query.
+- `src\AgentDebugToolkit.UiAutomation.Cli\ScreenshotHelper.cs` — additive capture metadata.
+- `src\AgentDebugToolkit.Mcp\UiAutomationTools.cs` — screenshot description.
+- `tests\AgentDebugToolkit.UiAutomation.Tests\WindowAvailabilityTests.cs` and `ScrollContainerTests.cs`
+  — closed/hung/scope regressions; `WindowScreenshotTests.cs` and `McpToolMetadataTests.cs` — image/DPI tests.
+- `docs\CLI_CONTRACT.md`, `CODE_SUMMARY.md`, `KEY_FLOWS.md`, `DESIGN_DECISIONS.md`, and
+  `PROJECT_STATE.md` — contracts, responsibilities, flows, decisions, and verification.

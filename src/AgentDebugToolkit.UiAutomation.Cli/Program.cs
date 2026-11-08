@@ -126,6 +126,11 @@ try
             return 1;
     }
 }
+catch (WindowGoneException ex)
+{
+    JsonOutput.WriteError("window-gone", ex.Message);
+    return 1;
+}
 catch (ForegroundActivationException ex)
 {
     JsonOutput.WriteError("foreground-activation-failed", ex.Message);
@@ -750,6 +755,7 @@ internal static class Verbs
 
         if (!NativeMethods.IsResponding(windowHwnd, timeoutMs: 250))
         {
+            NativeMethods.EnsureWindowExists(windowHwnd);
             JsonOutput.WriteError("window-not-responding", "The target window is not responding.");
             return 1;
         }
@@ -816,6 +822,7 @@ internal static class Verbs
 
         if (!NativeMethods.IsResponding(windowHwnd, timeoutMs: 250))
         {
+            NativeMethods.EnsureWindowExists(windowHwnd);
             JsonOutput.WriteError("window-not-responding", "The target window is not responding.");
             return 1;
         }
@@ -877,6 +884,7 @@ internal static class Verbs
 
         if (!NativeMethods.IsResponding(windowHwnd, timeoutMs: 250))
         {
+            NativeMethods.EnsureWindowExists(windowHwnd);
             JsonOutput.WriteError("window-not-responding", "The target window is not responding.");
             return 1;
         }
@@ -968,6 +976,7 @@ internal static class Verbs
 
         if (!NativeMethods.IsResponding(windowHwnd, timeoutMs: 250))
         {
+            NativeMethods.EnsureWindowExists(windowHwnd);
             JsonOutput.WriteError("window-not-responding", "The target window is not responding.");
             return 1;
         }
@@ -1066,6 +1075,7 @@ internal static class Verbs
 
             if (!NativeMethods.IsResponding(windowHwnd, timeoutMs: 250))
             {
+                NativeMethods.EnsureWindowExists(windowHwnd);
                 JsonOutput.WriteError("window-not-responding", "Target window is not responding.");
                 return 1;
             }
@@ -1137,6 +1147,7 @@ internal static class Verbs
 
         if (!NativeMethods.IsResponding(windowHwnd, timeoutMs: 250))
         {
+            NativeMethods.EnsureWindowExists(windowHwnd);
             JsonOutput.WriteError("window-not-responding", "The target window is not responding.");
             return 1;
         }
@@ -1340,6 +1351,7 @@ internal static class Verbs
 
         if (!NativeMethods.IsResponding(windowHwnd, timeoutMs: 250))
         {
+            NativeMethods.EnsureWindowExists(windowHwnd);
             JsonOutput.WriteError("window-not-responding", "The target window is not responding.");
             return 1;
         }
@@ -1552,6 +1564,7 @@ internal static class Verbs
 
         if (!NativeMethods.IsResponding(windowHwnd, timeoutMs: 250))
         {
+            NativeMethods.EnsureWindowExists(windowHwnd);
             JsonOutput.WriteError("window-not-responding", "The target window is not responding.");
             return 1;
         }
@@ -1739,6 +1752,7 @@ internal static class Verbs
         // indefinitely on an unresponsive window.
         if (!NativeMethods.IsResponding(windowHwnd, timeoutMs: 250))
         {
+            NativeMethods.EnsureWindowExists(windowHwnd);
             JsonOutput.WriteError("window-not-responding", "The target window is not responding.");
             return 1;
         }
@@ -1766,6 +1780,7 @@ internal static class Verbs
         return 0;
     }
 
+    /// <summary>Captures a window PNG with physical screen bounds, image dimensions, and per-window DPI scale.</summary>
     public static int Screenshot(Dictionary<string, string> opts)
     {
         var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
@@ -1782,26 +1797,38 @@ internal static class Verbs
         // misleading screenshot rather than a clear error. Kept consistent with read-visible-text.
         if (!NativeMethods.IsResponding(windowHwnd, timeoutMs: 250))
         {
+            NativeMethods.EnsureWindowExists(windowHwnd);
             JsonOutput.WriteError("window-not-responding", "The target window is not responding.");
             return 1;
         }
 
-        string screenshotPath;
+        WindowScreenshotResult screenshot;
         try
         {
-            screenshotPath = ScreenshotHelper.CaptureWindow(windowHwnd);
+            screenshot = ScreenshotHelper.CaptureWindow(windowHwnd);
         }
         catch (InvalidOperationException ex)
         {
-            // The hwnd resolved successfully above, but GetWindowRect failed at capture time —
-            // most plausibly because the window closed in the gap between resolution and
-            // capture. This is a "the target went away" condition, not a "selector picked the
-            // wrong thing" condition, so it uses stale-context rather than element-not-found.
+            NativeMethods.EnsureWindowExists(windowHwnd);
+            // The window still exists, but its capture metadata was unavailable.
             JsonOutput.WriteError("stale-context", ex.Message);
             return 1;
         }
 
-        JsonOutput.WriteSuccess(new { screenshotPath });
+        JsonOutput.WriteSuccess(new
+        {
+            screenshotPath = screenshot.ScreenshotPath,
+            windowRect = new
+            {
+                left = screenshot.WindowRect.Left,
+                top = screenshot.WindowRect.Top,
+                right = screenshot.WindowRect.Right,
+                bottom = screenshot.WindowRect.Bottom,
+            },
+            imageWidth = screenshot.ImageWidth,
+            imageHeight = screenshot.ImageHeight,
+            dpiScale = screenshot.DpiScale,
+        });
         return 0;
     }
 
@@ -1832,6 +1859,13 @@ internal static class Verbs
             return 1;
         }
 
+        var (_, windowErrorCode, windowError) = ValidateResolvedWindowHwnd(windowHwnd);
+        if (windowErrorCode is not null)
+        {
+            JsonOutput.WriteError(windowErrorCode, windowError!);
+            return 1;
+        }
+
         // SetForegroundWindow can legitimately return false
         // window: Windows' focus-stealing prevention denies the foreground switch depending on
         // which process last had input focus (e.g. the calling process isn't the foreground
@@ -1843,6 +1877,7 @@ internal static class Verbs
         var activated = NativeMethods.SetForegroundWindow(windowHwnd);
         if (!activated)
         {
+            NativeMethods.EnsureWindowExists(windowHwnd);
             JsonOutput.WriteError(
                 "stale-context",
                 $"Could not bring hwnd '0x{windowHwnd.ToInt64():X}' to the foreground. The window " +
@@ -1938,6 +1973,16 @@ internal static class Verbs
 
         if (!NativeMethods.IsResponding(windowHwnd, timeoutMs: 250))
         {
+            try
+            {
+                NativeMethods.EnsureWindowExists(windowHwnd);
+            }
+            catch (WindowGoneException ex)
+            {
+                JsonOutput.WriteError("window-gone", ex.Message, new { step = "resolve-window" });
+                return 1;
+            }
+
             JsonOutput.WriteError(
                 "window-not-responding", "The target window is not responding.", new { step = "resolve-window" });
             return 1;
@@ -2269,6 +2314,7 @@ internal static class Verbs
 
         if (!NativeMethods.IsResponding(windowHwnd, timeoutMs: 250))
         {
+            NativeMethods.EnsureWindowExists(windowHwnd);
             JsonOutput.WriteError("window-not-responding", "The target window is not responding.");
             return 1;
         }
@@ -2296,6 +2342,13 @@ internal static class Verbs
                 catch (Exception ex) when (ex is FormatException or OverflowException)
                 {
                     JsonOutput.WriteError("invalid-argument", $"Invalid scopeHwnd '{scopeHwndText}'.");
+                    return 1;
+                }
+
+                var (_, scopeErrorCode, scopeError) = ValidateResolvedWindowHwnd(scopeHwnd);
+                if (scopeErrorCode is not null)
+                {
+                    JsonOutput.WriteError(scopeErrorCode, scopeError!);
                     return 1;
                 }
 
@@ -2476,6 +2529,7 @@ internal static class Verbs
 
         if (!NativeMethods.IsResponding(windowHwnd, timeoutMs: 250))
         {
+            NativeMethods.EnsureWindowExists(windowHwnd);
             JsonOutput.WriteError("window-not-responding", "The target window is not responding.");
             return 1;
         }
@@ -3112,6 +3166,7 @@ internal static class Verbs
 
         if (!NativeMethods.IsResponding(windowHwnd, timeoutMs: 250))
         {
+            NativeMethods.EnsureWindowExists(windowHwnd);
             return (null, "window-not-responding", "The target window is not responding.");
         }
 
@@ -3166,6 +3221,12 @@ internal static class Verbs
             catch (Exception ex) when (ex is FormatException or OverflowException)
             {
                 return (null, "invalid-argument", $"Invalid scopeHwnd '{scopeHwndText}'.", null);
+            }
+
+            var (_, scopeErrorCode, scopeError) = ValidateResolvedWindowHwnd(scopeHwnd);
+            if (scopeErrorCode is not null)
+            {
+                return (null, scopeErrorCode, scopeError, null);
             }
 
             var scopeElement = UiaHelper.FindWindowByHwnd($"0x{scopeHwnd.ToInt64():X}");
@@ -3254,6 +3315,7 @@ internal static class Verbs
 
     private static bool EnsureTargetWindowForeground(IntPtr targetHwnd, bool restoreIfMinimized = false)
     {
+        NativeMethods.EnsureWindowExists(targetHwnd);
         var targetRoot = NativeMethods.GetAncestor(targetHwnd, NativeMethods.GA_ROOT);
         if (targetRoot == IntPtr.Zero)
         {
@@ -3345,7 +3407,7 @@ internal static class Verbs
         {
             try
             {
-                return (UiaHelper.ParseHwnd(hwndText), null, null);
+                return ValidateResolvedWindowHwnd(UiaHelper.ParseHwnd(hwndText));
             }
             catch (FormatException)
             {
@@ -3372,16 +3434,35 @@ internal static class Verbs
         var foregroundWindows = windows.Where(window => window.IsForeground).ToList();
         if (foregroundWindows.Count == 1)
         {
-            return (UiaHelper.ParseHwnd(foregroundWindows[0].Hwnd), null, null);
+            return ValidateResolvedWindowHwnd(UiaHelper.ParseHwnd(foregroundWindows[0].Hwnd));
         }
 
         if (windows.Count == 1)
         {
-            return (UiaHelper.ParseHwnd(windows[0].Hwnd), null, null);
+            return ValidateResolvedWindowHwnd(UiaHelper.ParseHwnd(windows[0].Hwnd));
         }
 
         return (IntPtr.Zero, "ambiguous-window",
             $"Multiple windows found for pid {pid.Value}; pass --hwnd to select one.");
+    }
+
+    private static (IntPtr windowHwnd, string? errorCode, string? error) ValidateResolvedWindowHwnd(IntPtr hwnd)
+    {
+        try
+        {
+            NativeMethods.EnsureWindowExists(hwnd);
+            if (!NativeMethods.IsResponding(hwnd, timeoutMs: 250))
+            {
+                NativeMethods.EnsureWindowExists(hwnd);
+                return (IntPtr.Zero, "window-not-responding", "The target window exists but is not responding.");
+            }
+
+            return (hwnd, null, null);
+        }
+        catch (WindowGoneException ex)
+        {
+            return (IntPtr.Zero, "window-gone", ex.Message);
+        }
     }
 
     private static (AutomationElement? element, string? errorCode, string? error) ResolveDiscoveredWindow(string hwnd)

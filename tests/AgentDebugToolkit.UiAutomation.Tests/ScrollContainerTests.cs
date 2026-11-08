@@ -60,7 +60,7 @@ public sealed class ScrollContainerTests
     }
 
     [Fact]
-    public void ScrollContainer_ClosedWindowHandleReturnsWindowNotResponding()
+    public void ScrollContainer_ClosedWindowHandleReturnsWindowGone()
     {
         var window = CreateScrollableFixture();
         var staleHwnd = window.HwndArgument;
@@ -69,7 +69,7 @@ public sealed class ScrollContainerTests
         var result = UiCli.Run("scroll-container", "--hwnd", staleHwnd,
             "--strategy", "Name", "--value", ContainerName, "--verticalPercent", "50");
 
-        Assert.Equal("window-not-responding", result.ErrorCode);
+        Assert.Equal("window-gone", result.ErrorCode);
     }
 
     [Theory]
