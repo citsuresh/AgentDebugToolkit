@@ -247,6 +247,17 @@ screenshot.
   omits `screenshotPath` because no screenshot is taken. When requested, screenshots capture the
   original root, not just matching controls.
 - Screenshots save to a standard folder, e.g. `%LOCALAPPDATA%\AgentDebugToolkit\screenshots\`.
+- Depth-limit detection (additive; the default `--maxDepth` stays `8`). When traversal stopped at
+  the depth limit and at least one node at that limit still has children, the response (filtered
+  or unfiltered, including `matchCount: 0`) adds:
+  `"depthLimited": true`, `"maxDepth": <value used>`, `"nodesBeyondDepth": <n>` and a `"hint"`
+  string. `nodesBeyondDepth` counts the nodes at the limit that have children, not all hidden
+  descendants. When nothing was cut off these four fields are **omitted** (never
+  `depthLimited: false`). The check asks each limit-depth node for its first child
+  (`TreeScope.Children`, `TrueCondition`, same as the traversal) and does not walk hidden
+  subtrees; a provider error counts as "no children". Electron/Chromium page content is often
+  deeper than 8 (for example the Claude desktop chat input is at depth 16): a frame-only result
+  with `depthLimited: true` is not an opaque app, so re-run with a larger `--maxDepth` (e.g. 30).
 
 ### `click --hwnd <h> (--strategy <s> --value <v> [--controlType <type>] [--scopeHwnd <h2>] | --x <n> --y <n> [--allowOutsideWindow])`
 Supply exactly one target form: the existing selector form or an absolute screen coordinate pair.
@@ -774,6 +785,15 @@ branch was read successfully or that all transcript content is exposed.
   exposed in the UI Automation tree, and `read-visible-text` cannot recover content the provider
   does not expose.
 - Success: `{ "success": true, "lines": ["...", "..."], "truncated": false }`
+- Depth-limit detection (additive; default `--maxDepth` stays `8`): when a visited node at the
+  depth limit has children, the response adds `"depthLimited": true`, `"maxDepth"` (value used),
+  `"nodesBeyondDepth"` (visited nodes at the limit that have children, not all hidden
+  descendants) and `"hint"`; otherwise these fields are omitted. `depthLimited` is independent of
+  `truncated`: `truncated` covers only the breadth (200 children), node-count (5000) and
+  per-value length caps, so a result can have either, both or neither. If `truncated` stopped the
+  walk before reaching some limit-depth nodes, those are not counted. Electron/Chromium content is
+  often deeper than 8 (read-visible-text returned 6 lines at depth 8, 91 at 16, 272 at 30 on the
+  Claude desktop window); re-run with a larger `--maxDepth` before concluding the app is opaque.
 - Failure: `invalid-argument`, `stale-context`, `ambiguous-window`, `element-not-found` (same
   window-resolution errors as `inspect`), or `window-not-responding` (checked up front, since
   UIA calls against a hung target's message pump can otherwise block).

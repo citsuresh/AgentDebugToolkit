@@ -845,10 +845,27 @@ internal static class UiaHelper
         return controlType is not null;
     }
 
-    public static ElementInfo ToElementInfo(AutomationElement el, bool includeChildren, int maxDepth,
-        string? nameContains, ControlType? controlType, out int matchCount)
+    /// <summary>
+    /// Cheap probe used only for nodes sitting exactly at the depth limit: asks for the first child
+    /// with the same condition the traversal uses (TrueCondition, TreeScope.Children) and never
+    /// walks or serializes the hidden subtree. Provider failures count as "no children".
+    /// </summary>
+    private static bool HasChildren(AutomationElement el)
     {
-        var info = ToElementInfo(el, includeChildren, maxDepth);
+        try
+        {
+            return el.FindFirst(TreeScope.Children, Condition.TrueCondition) is not null;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public static ElementInfo ToElementInfo(AutomationElement el, bool includeChildren, int maxDepth,
+        string? nameContains, ControlType? controlType, out int matchCount, DepthLimitStats? depthStats = null)
+    {
+        var info = ToElementInfo(el, includeChildren, maxDepth, 0, depthStats);
         matchCount = nameContains is null && controlType is null
             ? 0
             : PruneElementInfo(info, nameContains, controlType);
@@ -875,7 +892,8 @@ internal static class UiaHelper
         return matchCount;
     }
 
-    public static ElementInfo ToElementInfo(AutomationElement el, bool includeChildren, int maxDepth, int depth = 0)
+    public static ElementInfo ToElementInfo(AutomationElement el, bool includeChildren, int maxDepth, int depth = 0,
+        DepthLimitStats? depthStats = null)
     {
         var r = el.Current.BoundingRectangle;
         var info = new ElementInfo
@@ -906,8 +924,12 @@ internal static class UiaHelper
 
             foreach (AutomationElement child in children)
             {
-                info.Children.Add(ToElementInfo(child, includeChildren, maxDepth, depth + 1));
+                info.Children.Add(ToElementInfo(child, includeChildren, maxDepth, depth + 1, depthStats));
             }
+        }
+        else if (includeChildren && depthStats is not null && HasChildren(el))
+        {
+            depthStats.NodesBeyondDepth++;
         }
 
         return info;
@@ -1373,7 +1395,7 @@ internal static class UiaHelper
     // Bounds for read-visible-text traversal: mirrors inspect's existing default maxDepth (8) and
     // adds a breadth cap and a total-node cap so a large/complex accessibility tree (e.g. an IDE
     // window) cannot produce unbounded JSON output or run away traversing thousands of elements.
-    private const int DefaultTextMaxDepth = 8;
+    internal const int DefaultTextMaxDepth = 8;
     private const int MaxChildrenPerElement = 200;
     private const int MaxVisitedNodes = 5000;
     private const int MaxTextValueLength = 2000;
@@ -1386,7 +1408,8 @@ internal static class UiaHelper
     /// traversal cap (depth/breadth/node count) or per-value length cap was hit, so callers can
     /// tell incomplete output from a genuinely exhaustive result.
     /// </summary>
-    public static (List<string> Lines, bool Truncated) CollectVisibleText(AutomationElement root, int? maxDepth = null)
+    public static (List<string> Lines, bool Truncated) CollectVisibleText(AutomationElement root, int? maxDepth = null,
+        DepthLimitStats? depthStats = null)
     {
         var depthLimit = maxDepth ?? DefaultTextMaxDepth;
         var seen = new HashSet<string>();
@@ -1419,6 +1442,10 @@ internal static class UiaHelper
 
             if (depth >= depthLimit)
             {
+                if (depthStats is not null && HasChildren(el))
+                {
+                    depthStats.NodesBeyondDepth++;
+                }
                 return;
             }
             if (visited >= MaxVisitedNodes)
@@ -1515,4 +1542,20 @@ internal static class UiaHelper
             }
         }
     }
+}
+
+/// <summary>
+/// Counts nodes sitting at the depth limit that still have children, so a depth-limited result
+/// can be told apart from a genuinely opaque or shallow app.
+/// </summary>
+public sealed class DepthLimitStats
+{
+    public int NodesBeyondDepth { get; set; }
+
+    public bool IsLimited => NodesBeyondDepth > 0;
+
+    public string Hint(int maxDepth) =>
+        $"Output stopped at --maxDepth {maxDepth}; {NodesBeyondDepth} node(s) at the limit have children. " +
+        "Electron/Chromium page content is often deeper than 8: re-run with a larger --maxDepth " +
+        "(for example 30) before concluding the window is opaque.";
 }

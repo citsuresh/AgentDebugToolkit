@@ -715,29 +715,24 @@ internal static class Verbs
             && ssText.Equals("true", StringComparison.OrdinalIgnoreCase);
 
         var filtered = nameContains is not null || controlType is not null;
+        var depthStats = new DepthLimitStats();
         var tree = UiaHelper.ToElementInfo(element, includeChildren: true, maxDepth: maxDepth,
-            nameContains: nameContains, controlType: controlType, out var matchCount);
+            nameContains: nameContains, controlType: controlType, out var matchCount, depthStats);
         string? screenshotPath = takeScreenshot ? ScreenshotHelper.Capture(element) : null;
 
-        if (filtered)
+        // Depth-limit fields are omitted (null) unless at least one node at the limit has children.
+        // Null properties are not serialized, so existing responses are unchanged otherwise.
+        var limited = depthStats.IsLimited;
+        JsonOutput.WriteSuccess(new
         {
-            if (screenshotPath is null)
-            {
-                JsonOutput.WriteSuccess(new { root = tree, matchCount });
-            }
-            else
-            {
-                JsonOutput.WriteSuccess(new { root = tree, screenshotPath, matchCount });
-            }
-        }
-        else if (screenshotPath is null)
-        {
-            JsonOutput.WriteSuccess(new { root = tree });
-        }
-        else
-        {
-            JsonOutput.WriteSuccess(new { root = tree, screenshotPath });
-        }
+            root = tree,
+            screenshotPath,
+            matchCount = filtered ? matchCount : (int?)null,
+            depthLimited = limited ? true : (bool?)null,
+            maxDepth = limited ? maxDepth : (int?)null,
+            nodesBeyondDepth = limited ? depthStats.NodesBeyondDepth : (int?)null,
+            hint = limited ? depthStats.Hint(maxDepth) : null,
+        });
         return 0;
     }
 
@@ -2003,8 +1998,19 @@ internal static class Verbs
             maxDepth = md;
         }
 
-        var (lines, truncated) = UiaHelper.CollectVisibleText(element, maxDepth);
-        JsonOutput.WriteSuccess(new { lines, truncated });
+        var depthStats = new DepthLimitStats();
+        var (lines, truncated) = UiaHelper.CollectVisibleText(element, maxDepth, depthStats);
+        var limited = depthStats.IsLimited;
+        var usedDepth = maxDepth ?? UiaHelper.DefaultTextMaxDepth;
+        JsonOutput.WriteSuccess(new
+        {
+            lines,
+            truncated,
+            depthLimited = limited ? true : (bool?)null,
+            maxDepth = limited ? usedDepth : (int?)null,
+            nodesBeyondDepth = limited ? depthStats.NodesBeyondDepth : (int?)null,
+            hint = limited ? depthStats.Hint(usedDepth) : null,
+        });
         return 0;
     }
 

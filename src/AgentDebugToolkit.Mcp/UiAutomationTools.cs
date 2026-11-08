@@ -81,10 +81,10 @@ public sealed class UiAutomationTools
             ("--includeUntitled", TrueOnly(includeUntitled))), null, cancellationToken);
 
     [McpServerTool(Name = "ui_inspect", ReadOnly = true, Destructive = false, OpenWorld = false),
-     Description("Dumps the UIA subtree rooted at the given window/element handle without interacting with the UI or saving a screenshot. Prefer filtered inspection over a full dump; unfiltered output has no matchCount; if the window's own name matches nameContains the whole tree is returned.")]
+     Description("Dumps the UIA subtree rooted at the given window/element handle without interacting with the UI or saving a screenshot. Prefer filtered inspection over a full dump; unfiltered output has no matchCount; if the window's own name matches nameContains the whole tree is returned. If the output stopped at maxDepth while nodes at the limit still have children, the result carries depthLimited: true, maxDepth, nodesBeyondDepth and a hint (omitted otherwise); that includes a filtered call with matchCount 0. Re-run with a larger maxDepth before concluding a window is opaque.")]
     public Task<ToolInvocationResult> Inspect(
         [Description("Window handle, e.g. '0x00123456'.")] string hwnd,
-        [Description("Maximum tree depth (default implementation-defined, capped internally).")] int? maxDepth = null,
+        [Description("Maximum tree depth (default 8, root is 0). Electron/Chromium page content is often deeper than the default (for example 16-30); see depthLimited in the result.")] int? maxDepth = null,
         [Description("Case-insensitive substring filter on element Name. Returns a pruned tree (matches plus ancestors) with a matchCount field.")] string? nameContains = null,
         [Description("UIA control type short name, e.g. Button or Edit. An unrecognized value returns invalid-argument.")] string? controlType = null,
         CancellationToken cancellationToken = default)
@@ -310,10 +310,10 @@ public sealed class UiAutomationTools
         => RunAsync(BuildArgs("set-context", ("--pid", pid.ToString())), null, cancellationToken);
 
     [McpServerTool(Name = "ui_read_visible_text", ReadOnly = true, Destructive = false, OpenWorld = false),
-     Description("Traverses the UIA subtree rooted at the given window and returns de-duplicated visible text (TextPattern/ValuePattern/Name). Never activates/focuses/clicks/types. Strictly read-only.")]
+     Description("Traverses the UIA subtree rooted at the given window and returns de-duplicated visible text (TextPattern/ValuePattern/Name). Never activates/focuses/clicks/types. Strictly read-only. depthLimited: true (with maxDepth, nodesBeyondDepth, hint) means the depth limit hid deeper nodes and is separate from truncated (breadth/node caps).")]
     public Task<ToolInvocationResult> ReadVisibleText(
         [Description("Window handle to read from.")] string hwnd,
-        [Description("Maximum traversal depth (default 8).")] int? maxDepth = null,
+        [Description("Maximum traversal depth (default 8). Electron/Chromium content is often deeper than the default (for example 16-30); see depthLimited in the result.")] int? maxDepth = null,
         CancellationToken cancellationToken = default)
         => RunAsync(BuildArgs("read-visible-text", ("--hwnd", hwnd), ("--maxDepth", maxDepth?.ToString())), null, cancellationToken);
 

@@ -9,6 +9,25 @@ namespace AgentDebugToolkit.UiAutomation.Tests;
 public sealed class McpToolMetadataTests
 {
     [Fact]
+    public void UiInspectAndReadVisibleText_DescribeDepthLimitDetection()
+    {
+        foreach (var name in new[] { nameof(UiAutomationTools.Inspect), nameof(UiAutomationTools.ReadVisibleText) })
+        {
+            var method = typeof(UiAutomationTools).GetMethod(name);
+            Assert.NotNull(method);
+            var description = method.GetCustomAttribute<DescriptionAttribute>();
+            Assert.NotNull(description);
+            Assert.Contains("depthLimited", description.Description);
+            Assert.Contains("hint", description.Description);
+            var maxDepth = method.GetParameters().Single(parameter => parameter.Name == "maxDepth")
+                .GetCustomAttribute<DescriptionAttribute>();
+            Assert.NotNull(maxDepth);
+            Assert.Contains("Electron/Chromium", maxDepth.Description);
+            Assert.Contains("deeper than the default", maxDepth.Description);
+        }
+    }
+
+    [Fact]
     public void UiScreenshot_DescribesPhysicalGeometryAndOptionalTransforms()
     {
         var method = typeof(UiAutomationTools).GetMethod(nameof(UiAutomationTools.Screenshot));

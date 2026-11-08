@@ -13,6 +13,7 @@ needs one rebuild (with the Claude sessions closed) before the new `ui_*` parame
 
 ## Current Decisions
 
+- Depth-limited UIA results are detectable (2026-11-08): `inspect` and `read-visible-text` keep the default `--maxDepth 8` but add `depthLimited: true`, `maxDepth`, `nodesBeyondDepth` (limit-depth nodes that have children, found with a first-child probe, no hidden-subtree walk) and `hint` when the limit cut off nodes; the four fields are omitted otherwise, and also appear for filtered inspect with `matchCount: 0`. Independent of `truncated`. Reason: Electron/Chromium content (Claude desktop chat input at depth 16) looked opaque at depth 8.
 - `scroll --hwnd --direction up|down|left|right [--clicks 1..50] [--x --y [--allowOutsideWindow]]` sends
   `SendInput` wheel notches (120 units each) at the window center or an explicit in-window point,
   after activation. It moves the real cursor and verifies the cursor is at the target point after
