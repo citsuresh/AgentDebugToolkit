@@ -337,16 +337,26 @@ public sealed class UiAutomationTools
     [McpServerTool(Name = "ui_send_keys", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false),
      Description("Sends raw, unescaped SendKeys syntax (e.g. '^a', '{DELETE}', '{ENTER}', '^{END}') to the resolved element at its CURRENT caret position. focusMode set-focus only establishes focus and does not move the caret; click performs a synthetic click that may reposition the caret depending on the control (unverified). To append after ui_type (which can leave the caret at position 0), send ^{END} first. Newlines from {ENTER} may read back as \"\\r\" in RichEdit-style controls. Changes target application state; can trigger unintended actions if the syntax is wrong for the control. If the selector matches more than one element this fails with ambiguous-match (count plus up to 10 candidates) and does nothing; narrow with scopeHwnd or pre-check with ui_find_all.")]
     public Task<ToolInvocationResult> SendKeys(
-        [Description("Window handle to resolve the selector against.")] string hwnd,
-        [Description("Selector strategy: Name or AutomationId.")] string strategy,
-        [Description("Selector value to match.")] string value,
+        [Description("Window handle. With strategy/value it is the window the selector is resolved against; without them it is the window that receives the keys at its current focus.")] string hwnd,
         [Description("Unescaped SendKeys.SendWait syntax, e.g. '^a' for Ctrl+A, '{DELETE}', '{ENTER}'.")] string keys,
-        [Description("How to establish focus before sending keys: set-focus (default), click, or none.")] string? focusMode = null,
-        [Description("Optional narrower scope window/element handle to search within instead of hwnd.")] string? scopeHwnd = null,
+        [Description("Selector strategy: Name or AutomationId. Omit strategy and value together to send keys to the window's current focus (needed for apps whose content UI Automation cannot see, such as Electron); in that form focusMode must be omitted or none and scopeHwnd is not allowed.")] string? strategy = null,
+        [Description("Selector value to match. Provide together with strategy, or omit both.")] string? value = null,
+        [Description("How to establish focus before sending keys: set-focus (default), click, or none. Selector form only (window-level form uses none).")] string? focusMode = null,
+        [Description("Optional narrower scope window/element handle to search within instead of hwnd. Selector form only.")] string? scopeHwnd = null,
         CancellationToken cancellationToken = default)
         => RunAsync(BuildArgs(
             "send-keys",
             ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value), ("--keys", keys), ("--focusMode", focusMode), ("--scopeHwnd", scopeHwnd)), null, cancellationToken);
+
+    [McpServerTool(Name = "ui_paste_text", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false),
+     Description("Pastes text into whatever currently has focus in the given window, with no selector and no click: brings the window to the foreground (restoring it if minimized), puts the text on the clipboard (excluded from clipboard history and sync), sends Ctrl+V, then restores the previous clipboard contents on a best-effort basis. Embedded newlines are allowed, and this is the safe way to enter multi-line text, because SendKeys breaks on + ^ % ~ { }. Works for apps whose content UI Automation cannot see (for example Electron), but the caller must first put focus where the text should go (for example with a coordinate click) and must verify the result with a screenshot, because success only means the keys were sent. Changes target application state.")]
+    public Task<ToolInvocationResult> PasteText(
+        [Description("Window handle of the window that should receive the paste. Required; the window's current focus decides where the text goes.")] string hwnd,
+        [Description("Text to paste. Must be non-empty. Newlines are allowed.")] string text,
+        [Description("Optional milliseconds to wait after Ctrl+V before the previous clipboard contents are restored (0 to 5000, default 300). Raise it for a slow target that reads the clipboard late; the wait is not a guarantee. Check clipboardSnapshotComplete in the result: false means the previous clipboard could not be preserved in full.")] int? restoreDelayMs = null,
+        CancellationToken cancellationToken = default)
+        => RunAsync(BuildArgs("paste-text", ("--hwnd", hwnd), ("--text", text),
+            ("--restoreDelayMs", restoreDelayMs?.ToString(CultureInfo.InvariantCulture))), null, cancellationToken);
 
     [McpServerTool(Name = "ui_submit_chat_message", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false),
      Description("Composite verb for the Copilot Chat input pattern: clicks the input, types text, verifies it landed, then submits (Send button click or SendKeys). Changes target application state and can trigger a real chat submission — treat as high-impact.")]

@@ -4,14 +4,22 @@
 
 ## Current Focus
 
-2026-11-08: Items 4/5 are committed at `57c821f` (item 1 at `3e63f7d`). Added the requested
-chat foreground-step fix, then screenshot region/scale support. These changes are uncommitted.
-Current round completed focus-independent pointer bounds preflight while retaining post-activation
-validation and minimized-window restoration; both requested full-suite runs passed.
-Items 2 (selector-free input) and 3 (wheel scrolling) remain deferred.
+2026-11-08: Items 1, 4 and 5 and the region/scale, pre-activation bounds and resolve-input work are
+committed (`3e63f7d`, `57c821f`, `07fe1d2`). Item 2 is implemented and pending commit: window-level
+`send-keys` (no selector) and the new `paste-text` verb, with a Copilot read-only review applied.
+Item 3 (wheel scrolling) remains deferred. The MCP needs one rebuild (with the Claude sessions
+closed) before the new `ui_*` parameters and `ui_paste_text` are visible.
 
 ## Current Decisions
 
+- Window-level `send-keys` (no `--strategy`/`--value`) requires an explicit `--hwnd` (checked before any
+  window resolution), rejects `--scopeHwnd` and any `--focusMode` but `none`, restores a minimized
+  window and sends keys to its current focus; success reports `focusMethod: "window"`.
+- `paste-text --hwnd --text [--restoreDelayMs 0..5000]` snapshots the clipboard, pastes via Ctrl+V,
+  restores after the delay (a wait, not a guarantee), all under a named `Local` mutex with a 15 s
+  limit; the result reports `clipboardRestored` and `clipboardSnapshotComplete`. `type --paste` shares
+  the snapshot/restore helpers but does not take the mutex.
+- `ui_send_keys` MCP parameter order is now `hwnd, keys, strategy?, value?, ...`; clients pass names.
 - Chat input foreground handling catches only `WindowGoneException`, retaining `window-gone`
   and `step: resolve-input`. A narrow internal callback supports deterministic catch-path tests;
   production still uses the real foreground check. False/success and unrelated exceptions are preserved.

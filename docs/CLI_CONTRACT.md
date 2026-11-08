@@ -920,7 +920,22 @@ fall back to `--pid`/persisted session context.
   `stale-context` result from `activate` should be treated as "could not activate this time," not
   as evidence the window/session is invalid.
 
-### `send-keys --hwnd <h> --strategy <s> --value <v> --keys <SendKeys syntax> [--focusMode set-focus|click|none] [--scopeHwnd <h2>]`
+### `send-keys --hwnd <h> [--strategy <s> --value <v>] --keys <SendKeys syntax> [--focusMode set-focus|click|none] [--scopeHwnd <h2>]`
+- **Window-level form (no `--strategy`/`--value`).** The keys go to whatever currently has focus
+  in the `--hwnd` window; no element is resolved, so it works for an app whose content UI
+  Automation cannot see (for example an Electron/Chromium window). An explicit `--hwnd` is
+  required. The window is brought to the foreground first, restoring it if minimized, and the
+  same per-key foreground guard as the selector form applies. `--scopeHwnd` is not allowed, and
+  `--focusMode`, if given, must be `none` (anything else is `invalid-argument`). Success:
+  `{ "success": true, "sent": true, "focusMethod": "window" }`. The caller must first put focus
+  where the keys should go (for example with a coordinate click), and must verify the result
+  independently, because success only means the keys were sent.
+- Providing only one of `--strategy` and `--value` is not the window-level form: it takes the
+  selector path and fails with `invalid-argument`.
+- **MCP parameter order.** `ui_send_keys` now takes `hwnd` and `keys` first, then the optional
+  `strategy`, `value`, `focusMode` and `scopeHwnd`, because required parameters cannot follow
+  optional ones. MCP clients pass arguments by name and are unaffected; a C# caller passing the
+  old positional order (`hwnd, strategy, value, keys`) would silently bind the wrong values.
 - Fails with `ambiguous-match` instead of sending keys to the first of several matches. Pre-check
   the count with `find-all`; narrow the search with `--scopeHwnd`.
 - `--scopeHwnd` follows the same scope semantics as `click`.
@@ -973,6 +988,40 @@ foreground application.
   input, then cleared it back to empty via `--keys "^a{DEL}"` (Ctrl+A, Delete), confirmed via a
   follow-up screenshot showing the input back at its placeholder-empty state. Also validated that
   malformed syntax (`--keys "{"`) returns a clean `invalid-argument` rather than crashing.
+
+### `paste-text --hwnd <h> --text <input> [--restoreDelayMs <0..5000>]`
+Pastes text into whatever currently has focus in the window, with no selector and no click, so it
+works for an app whose content UI Automation cannot see (for example an Electron/Chromium
+window). `type --paste` needs a resolved element and clicks its center first; `paste-text` does
+neither.
+- `--hwnd` and a non-empty `--text` are required (`invalid-argument` otherwise; use
+  `--text=<value>` for a value that starts with `--`). Embedded newlines are allowed, and this is
+  the safe way to enter multi-line text: `send-keys` breaks on `+ ^ % ~ { }` unless every such
+  character is escaped.
+- The window is brought to the foreground first (restored if minimized). The text is then placed
+  on the clipboard, excluded from clipboard history and cloud sync, Ctrl+V is sent, and the
+  previous clipboard contents are restored on a best-effort basis after a wait of
+  `--restoreDelayMs` (default 300, maximum 5000). The wait gives a renderer that reads the
+  clipboard asynchronously time to take the text, but it is **not a guarantee**: a target that
+  reads the clipboard later than that pastes the restored contents instead, and the command still
+  reports success. Raise the delay for a slow target. The caller must first put focus where the
+  text should go, and must verify the result independently (for example with a cropped
+  screenshot), because success only means the keys were sent.
+- The snapshot, paste and restore sequence is serialized across processes with a named mutex, so
+  two concurrent `paste-text` calls cannot corrupt each other's clipboard snapshot. A call that
+  cannot get the clipboard within 15 seconds fails with `clipboard-unavailable` and pastes nothing.
+  `type --paste` does not take this mutex.
+- Success: `{ "success": true, "method": "clipboard-paste-focus", "length": <n>,
+  "clipboardRestored": true | false, "clipboardSnapshotComplete": true | false }`.
+  `clipboardRestored` is omitted when there was nothing on the clipboard to restore and `false`
+  when a prior snapshot existed but restoring it failed. `clipboardSnapshotComplete` is `false`
+  when reading the previous clipboard failed or some of its formats could not be copied, so the
+  previous contents may be lost even if `clipboardRestored` is `true` or omitted; an omitted
+  `clipboardRestored` with `clipboardSnapshotComplete: false` does **not** mean the clipboard was
+  empty.
+- Failure: `invalid-argument`, `window-gone`, `window-not-responding`,
+  `foreground-activation-failed`, and `clipboard-unavailable` (the clipboard could not be written
+  after retrying; nothing was pasted).
 
 ### `submit-chat-message --hwnd <h> (--inputAutomationId <id> | --inputStrategy Name --inputValue <value>) [--sendAutomationId <id> | --submitKeys <SendKeys syntax>] --text <input> [--paste]`
 Composite verb tailored to the Copilot Chat input pattern specifically: click the input, type the

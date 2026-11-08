@@ -1056,8 +1056,131 @@ internal static class UiaHelper
     /// </exception>
     public static (string method, bool? clipboardRestored) TypeViaPaste(AutomationElement element, string text)
     {
+        var (originalData, hadOriginalContent, _) = SnapshotClipboard();
+
+        SetClipboardTextWithRetry(text, excludeFromHistoryAndSync: true);
+
+        bool? restored = null;
+        try
+        {
+            var r = element.Current.BoundingRectangle;
+            var cx = (int)(r.X + r.Width / 2);
+            var cy = (int)(r.Y + r.Height / 2);
+            NativeMethods.Click(cx, cy);
+            Thread.Sleep(100);
+            NativeMethods.SendKeysRaw("^v");
+            Thread.Sleep(100);
+        }
+        finally
+        {
+            restored = RestoreClipboard(originalData, hadOriginalContent);
+        }
+
+        return ("clipboard-paste", restored);
+    }
+
+    /// <summary>Outcome of <see cref="PasteTextToFocus"/>.</summary>
+    /// <param name="ClipboardRestored">
+    /// Same meaning as <see cref="TypeViaPaste"/>: null when there was nothing to restore, true
+    /// when restored, false when the best-effort restore failed.
+    /// </param>
+    /// <param name="SnapshotComplete">
+    /// False when reading the previous clipboard failed or some of its formats could not be
+    /// copied, so the previous contents may not have been preserved in full (or at all).
+    /// </param>
+    public sealed record PasteResult(bool? ClipboardRestored, bool SnapshotComplete);
+
+    public const int DefaultRestoreDelayMs = 300;
+
+    private const string ClipboardMutexName = @"Local\AgentDebugToolkit.ClipboardPaste";
+
+    /// <summary>
+    /// Puts <paramref name="text"/> on the clipboard (excluded from history and cloud sync) and
+    /// sends Ctrl+V to whatever currently has focus, with no element and no click. The caller must
+    /// already have brought the target window to the foreground. The prior clipboard contents are
+    /// restored afterwards, after <paramref name="restoreDelayMs"/> so a renderer that reads the
+    /// clipboard asynchronously (Chromium) has had time to take the text first. The delay is a
+    /// wait, not a guarantee: a target that reads the clipboard later than that pastes the
+    /// restored contents instead. The whole snapshot, paste and restore sequence is serialized
+    /// across processes so two concurrent calls cannot corrupt each other's snapshot.
+    /// </summary>
+    /// <exception cref="ClipboardUnavailableException">
+    /// Thrown if the clipboard could not be written to after retrying, or another paste held it
+    /// for more than 15 seconds.
+    /// </exception>
+    public static PasteResult PasteTextToFocus(string text, int restoreDelayMs = DefaultRestoreDelayMs)
+    {
+        using var mutex = new Mutex(false, ClipboardMutexName);
+        var acquired = false;
+        try
+        {
+            try
+            {
+                acquired = mutex.WaitOne(TimeSpan.FromSeconds(15));
+            }
+            catch (AbandonedMutexException)
+            {
+                // A previous holder exited without releasing; we own it now.
+                acquired = true;
+            }
+
+            if (!acquired)
+            {
+                throw new ClipboardUnavailableException(
+                    "Another paste is using the clipboard; waited 15 seconds and nothing was pasted.", null!);
+            }
+
+            var (originalData, hadOriginalContent, snapshotComplete) = SnapshotClipboard();
+
+            SetClipboardTextWithRetry(text, excludeFromHistoryAndSync: true);
+
+            bool? restored = null;
+            try
+            {
+                Thread.Sleep(50);
+                NativeMethods.SendKeysRaw("^v");
+                Thread.Sleep(restoreDelayMs);
+            }
+            finally
+            {
+                restored = RestoreClipboard(originalData, hadOriginalContent);
+            }
+
+            return new PasteResult(restored, snapshotComplete);
+        }
+        finally
+        {
+            if (acquired)
+            {
+                mutex.ReleaseMutex();
+            }
+        }
+    }
+
+    private static bool? RestoreClipboard(System.Windows.Forms.IDataObject? originalData, bool hadOriginalContent)
+    {
+        if (!hadOriginalContent)
+        {
+            return null;
+        }
+
+        try
+        {
+            SetClipboardDataWithRetry(originalData!);
+            return true;
+        }
+        catch (ClipboardUnavailableException)
+        {
+            // Best-effort restore only; the paste itself already happened or was aborted safely.
+            return false;
+        }
+    }
+
+    private static (System.Windows.Forms.IDataObject? originalData, bool hadOriginalContent, bool complete) SnapshotClipboard()
+    {
         System.Windows.Forms.IDataObject? originalData = null;
         var hadOriginalContent = false;
+        var complete = true;
         try
         {
             var snapshot = System.Windows.Forms.Clipboard.GetDataObject();
@@ -1085,7 +1208,14 @@ internal static class UiaHelper
                         catch (System.Runtime.InteropServices.ExternalException)
                         {
                             // Skip formats that fail to materialize; best-effort snapshot.
+                            complete = false;
                         }
+                    }
+
+                    if (owned.GetFormats().Length < formats.Length)
+                    {
+                        // A format returned no data or failed: the snapshot is not the full clipboard.
+                        complete = false;
                     }
 
                     if (owned.GetFormats().Length > 0)
@@ -1100,40 +1230,11 @@ internal static class UiaHelper
         {
             // Clipboard busy reading current contents — proceed without a snapshot; restore
             // will simply be skipped (clipboardRestored: null) rather than failing the paste.
+            // The result is flagged incomplete so a caller can tell this from an empty clipboard.
+            complete = false;
         }
 
-        SetClipboardTextWithRetry(text, excludeFromHistoryAndSync: true);
-
-        bool? restored = null;
-        try
-        {
-            var r = element.Current.BoundingRectangle;
-            var cx = (int)(r.X + r.Width / 2);
-            var cy = (int)(r.Y + r.Height / 2);
-            NativeMethods.Click(cx, cy);
-            Thread.Sleep(100);
-            NativeMethods.SendKeysRaw("^v");
-            Thread.Sleep(100);
-        }
-        finally
-        {
-            if (hadOriginalContent)
-            {
-                try
-                {
-                    SetClipboardDataWithRetry(originalData!);
-                    restored = true;
-                }
-                catch (ClipboardUnavailableException)
-                {
-                    // Best-effort restore only — the paste itself already succeeded above or
-                    // input was safely aborted before it could be delivered.
-                    restored = false;
-                }
-            }
-        }
-
-        return ("clipboard-paste", restored);
+        return (originalData, hadOriginalContent, complete);
     }
 
     // Windows Clipboard History / Cloud Clipboard opt-out marker formats (documented at

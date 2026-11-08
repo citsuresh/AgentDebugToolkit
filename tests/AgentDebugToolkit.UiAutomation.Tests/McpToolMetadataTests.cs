@@ -30,6 +30,50 @@ public sealed class McpToolMetadataTests
     }
 
     [Fact]
+    public void UiSendKeys_SelectorIsOptionalForWindowLevelInput()
+    {
+        var method = typeof(UiAutomationTools).GetMethod(nameof(UiAutomationTools.SendKeys));
+        Assert.NotNull(method);
+
+        var parameters = method.GetParameters();
+        Assert.False(parameters.Single(parameter => parameter.Name == "hwnd").IsOptional);
+        Assert.False(parameters.Single(parameter => parameter.Name == "keys").IsOptional);
+        Assert.True(parameters.Single(parameter => parameter.Name == "strategy").IsOptional);
+        Assert.True(parameters.Single(parameter => parameter.Name == "value").IsOptional);
+
+        var toolMetadata = method.GetCustomAttribute<McpServerToolAttribute>();
+        Assert.NotNull(toolMetadata);
+        Assert.False(toolMetadata.ReadOnly);
+        var description = parameters.Single(parameter => parameter.Name == "strategy")
+            .GetCustomAttribute<DescriptionAttribute>();
+        Assert.NotNull(description);
+        Assert.Contains("current focus", description.Description);
+    }
+
+    [Fact]
+    public void UiPasteText_IsDestructiveAndRequiresHwndAndText()
+    {
+        var method = typeof(UiAutomationTools).GetMethod(nameof(UiAutomationTools.PasteText));
+        Assert.NotNull(method);
+
+        var toolMetadata = method.GetCustomAttribute<McpServerToolAttribute>();
+        Assert.NotNull(toolMetadata);
+        Assert.Equal("ui_paste_text", toolMetadata.Name);
+        Assert.False(toolMetadata.ReadOnly);
+        Assert.True(toolMetadata.Destructive);
+
+        var parameters = method.GetParameters();
+        Assert.False(parameters.Single(parameter => parameter.Name == "hwnd").IsOptional);
+        Assert.False(parameters.Single(parameter => parameter.Name == "text").IsOptional);
+        var restoreDelay = parameters.Single(parameter => parameter.Name == "restoreDelayMs");
+        Assert.Equal(typeof(int?), restoreDelay.ParameterType);
+        Assert.True(restoreDelay.IsOptional);
+        Assert.Contains("clipboardSnapshotComplete",
+            restoreDelay.GetCustomAttribute<DescriptionAttribute>()!.Description);
+        Assert.Contains("multi-line", method.GetCustomAttribute<DescriptionAttribute>()!.Description);
+    }
+
+    [Fact]
     public void UiInspect_IsReadOnlyAndDoesNotExposeScreenshot()
     {
         var inspectMethod = typeof(UiAutomationTools).GetMethod(nameof(UiAutomationTools.Inspect));

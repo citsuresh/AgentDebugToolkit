@@ -103,6 +103,8 @@ try
             return Verbs.Activate(opts);
         case "send-keys":
             return Verbs.SendKeys(opts);
+        case "paste-text":
+            return Verbs.PasteText(opts);
         case "submit-chat-message":
             return Verbs.SubmitChatMessage(opts);
         case "find-first":
@@ -1573,6 +1575,14 @@ internal static class Verbs
             return 1;
         }
 
+        if (!opts.ContainsKey("strategy") && !opts.ContainsKey("value") && !opts.ContainsKey("hwnd"))
+        {
+            JsonOutput.WriteError(
+                "invalid-argument",
+                "Window-level send-keys (no --strategy/--value) requires an explicit --hwnd.");
+            return 1;
+        }
+
         var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
         if (errorCode is not null)
         {
@@ -1585,6 +1595,41 @@ internal static class Verbs
             NativeMethods.EnsureWindowExists(windowHwnd);
             JsonOutput.WriteError("window-not-responding", "The target window is not responding.");
             return 1;
+        }
+
+        if (!opts.ContainsKey("strategy") && !opts.ContainsKey("value"))
+        {
+            // Window-level form: no selector, so the keys go to whatever currently has focus in
+            // the --hwnd window. This is the only way to send keys to an app whose content is not
+            // exposed through UI Automation (for example an Electron/Chromium window).
+            if (opts.ContainsKey("scopeHwnd")
+                || (opts.TryGetValue("focusMode", out var windowFocusMode)
+                    && !windowFocusMode.Equals("none", StringComparison.OrdinalIgnoreCase)))
+            {
+                JsonOutput.WriteError(
+                    "invalid-argument",
+                    "Without --strategy/--value, send-keys targets the window's current focus: " +
+                    "--scopeHwnd is not allowed and --focusMode, if given, must be none.");
+                return 1;
+            }
+
+            if (!EnsureTargetWindowForeground(windowHwnd, restoreIfMinimized: true))
+            {
+                JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
+                return 1;
+            }
+
+            try
+            {
+                NativeMethods.SendKeysRaw(keys);
+                JsonOutput.WriteSuccess(new { sent = true, focusMethod = "window" });
+                return 0;
+            }
+            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or FormatException)
+            {
+                JsonOutput.WriteError("invalid-argument", $"Invalid --keys syntax '{keys}': {ex.Message}");
+                return 1;
+            }
         }
 
         var (element, elementErrorCode, elementError, elementErrorDetails) = ResolveElement(windowHwnd, opts);
@@ -1615,6 +1660,67 @@ internal static class Verbs
             return 1;
         }
 
+    }
+
+    /// <summary>
+    /// paste-text --hwnd h --text s: puts the text on the clipboard (excluded from clipboard
+    /// history and sync, prior contents restored afterwards) and sends Ctrl+V to whatever has
+    /// focus in the window. No selector, no click, so it works for apps whose content is not
+    /// exposed through UI Automation. Embedded newlines are allowed; that is the point.
+    /// </summary>
+    public static int PasteText(Dictionary<string, string> opts)
+    {
+        if (!opts.ContainsKey("hwnd"))
+        {
+            JsonOutput.WriteError("invalid-argument", "paste-text requires an explicit --hwnd.");
+            return 1;
+        }
+
+        if (!opts.TryGetValue("text", out var text) || text.Length == 0)
+        {
+            JsonOutput.WriteError("invalid-argument", "--text is required and must be non-empty.");
+            return 1;
+        }
+
+        var restoreDelayMs = UiaHelper.DefaultRestoreDelayMs;
+        if (opts.TryGetValue("restoreDelayMs", out var delayText)
+            && (!int.TryParse(delayText, NumberStyles.Integer, CultureInfo.InvariantCulture, out restoreDelayMs)
+                || restoreDelayMs < 0 || restoreDelayMs > 5000))
+        {
+            JsonOutput.WriteError("invalid-argument", "--restoreDelayMs must be an integer from 0 to 5000.");
+            return 1;
+        }
+
+        var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
+        if (errorCode is not null)
+        {
+            JsonOutput.WriteError(errorCode, error!);
+            return 1;
+        }
+
+        if (!EnsureTargetWindowForeground(windowHwnd, restoreIfMinimized: true))
+        {
+            JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
+            return 1;
+        }
+
+        try
+        {
+            var pasted = UiaHelper.PasteTextToFocus(text, restoreDelayMs);
+            JsonOutput.WriteSuccess(new
+            {
+                method = "clipboard-paste-focus",
+                length = text.Length,
+                clipboardRestored = pasted.ClipboardRestored,
+                clipboardSnapshotComplete = pasted.SnapshotComplete,
+            });
+            return 0;
+        }
+        catch (ClipboardUnavailableException ex)
+        {
+            JsonOutput.WriteError("clipboard-unavailable", ex.Message);
+            return 1;
+        }
     }
 
     public static int GetText(Dictionary<string, string> opts)
