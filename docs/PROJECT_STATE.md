@@ -16,7 +16,7 @@ closed) before the new `ui_*` parameters and `ui_paste_text` are visible.
   window resolution), rejects `--scopeHwnd` and any `--focusMode` but `none`, restores a minimized
   window and sends keys to its current focus; success reports `focusMethod: "window"`.
 - `paste-text --hwnd --text [--restoreDelayMs 0..5000]` snapshots the clipboard, pastes via Ctrl+V,
-  restores after the delay (a wait, not a guarantee), all under a named `Local` mutex with a 15 s
+  restores after the delay (a wait, not a guarantee), all under a named `LocalAgentDebugToolkit.ClipboardPaste` mutex with a 15 s
   limit; the result reports `clipboardRestored` and `clipboardSnapshotComplete`. `type --paste` shares
   the snapshot/restore helpers but does not take the mutex.
 - `ui_send_keys` MCP parameter order is now `hwnd, keys, strategy?, value?, ...`; clients pass names.
