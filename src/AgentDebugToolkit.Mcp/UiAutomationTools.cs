@@ -91,35 +91,44 @@ public sealed class UiAutomationTools
         => RunAsync(BuildArgs("inspect", ("--hwnd", hwnd), ("--maxDepth", maxDepth?.ToString()), ("--nameContains", nameContains), ("--controlType", controlType)), null, cancellationToken);
 
     [McpServerTool(Name = "ui_click", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false),
-     Description("Resolves an element via selector and clicks it (UIA pattern, falling back to a synthetic click). Changes target application state. If the selector matches more than one element this fails with ambiguous-match (count plus up to 10 candidates) and does nothing; narrow with scopeHwnd or pre-check with ui_find_all.")]
+     Description("Clicks either a selector-resolved element (UIA pattern, falling back to a synthetic click) or an absolute screen coordinate. Supply exactly one target form: strategy/value or x/y. Changes target application state.")]
     public Task<ToolInvocationResult> Click(
-        [Description("Window handle to resolve the selector against.")] string hwnd,
-        [Description("Selector strategy: Name or AutomationId.")] string strategy,
-        [Description("Selector value to match.")] string value,
-        [Description("Optional UIA control type filter, e.g. Button or Text. Unrecognized values return invalid-argument.")] string? controlType = null,
-        [Description("Optional narrower scope window/element handle to search within instead of hwnd.")] string? scopeHwnd = null,
+        [Description("Window handle to resolve the selector against or activate before coordinate input.")] string hwnd,
+        [Description("Selector strategy: Name or AutomationId. Mutually exclusive with x/y.")] string? strategy = null,
+        [Description("Selector value to match; required with strategy and mutually exclusive with x/y.")] string? value = null,
+        [Description("Optional UIA control type filter, e.g. Button or Text; selector form only.")] string? controlType = null,
+        [Description("Optional narrower scope window/element handle; selector form only.")] string? scopeHwnd = null,
+        [Description("Absolute screen X coordinate in physical pixels. Required with y and mutually exclusive with strategy/value.")] int? x = null,
+        [Description("Absolute screen Y coordinate in physical pixels. Required with x and mutually exclusive with strategy/value.")] int? y = null,
+        [Description("Allow coordinate input outside the hwnd window rectangle.")] bool? allowOutsideWindow = null,
         CancellationToken cancellationToken = default)
-        => RunAsync(BuildArgs("click", ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value), ("--controlType", controlType), ("--scopeHwnd", scopeHwnd)), null, cancellationToken);
+        => RunAsync(BuildArgs("click", ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value), ("--controlType", controlType), ("--scopeHwnd", scopeHwnd), ("--x", x?.ToString(CultureInfo.InvariantCulture)), ("--y", y?.ToString(CultureInfo.InvariantCulture)), ("--allowOutsideWindow", Bool(allowOutsideWindow))), null, cancellationToken);
 
     [McpServerTool(Name = "ui_right_click", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false),
-     Description("Resolves an element via selector and performs a synthetic right-click at its bounding-rect center (e.g. to open a context menu). Changes target application state. If the selector matches more than one element this fails with ambiguous-match (count plus up to 10 candidates) and does nothing; narrow with scopeHwnd or pre-check with ui_find_all.")]
+     Description("Performs a synthetic right-click on either a selector-resolved element or an absolute screen coordinate. Supply exactly one target form: strategy/value or x/y. Changes target application state.")]
     public Task<ToolInvocationResult> RightClick(
-        [Description("Window handle to resolve the selector against.")] string hwnd,
-        [Description("Selector strategy: Name or AutomationId.")] string strategy,
-        [Description("Selector value to match.")] string value,
-        [Description("Optional narrower scope window/element handle to search within instead of hwnd.")] string? scopeHwnd = null,
+        [Description("Window handle to resolve the selector against or activate before coordinate input.")] string hwnd,
+        [Description("Selector strategy: Name or AutomationId. Mutually exclusive with x/y.")] string? strategy = null,
+        [Description("Selector value to match; required with strategy and mutually exclusive with x/y.")] string? value = null,
+        [Description("Optional narrower scope window/element handle; selector form only.")] string? scopeHwnd = null,
+        [Description("Absolute screen X coordinate in physical pixels. Required with y and mutually exclusive with strategy/value.")] int? x = null,
+        [Description("Absolute screen Y coordinate in physical pixels. Required with x and mutually exclusive with strategy/value.")] int? y = null,
+        [Description("Allow coordinate input outside the hwnd window rectangle.")] bool? allowOutsideWindow = null,
         CancellationToken cancellationToken = default)
-        => RunAsync(BuildArgs("right-click", ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value), ("--scopeHwnd", scopeHwnd)), null, cancellationToken);
+        => RunAsync(BuildArgs("right-click", ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value), ("--scopeHwnd", scopeHwnd), ("--x", x?.ToString(CultureInfo.InvariantCulture)), ("--y", y?.ToString(CultureInfo.InvariantCulture)), ("--allowOutsideWindow", Bool(allowOutsideWindow))), null, cancellationToken);
 
     [McpServerTool(Name = "ui_double_click", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false),
-     Description("Resolves an element via selector and double-clicks it (UIA pattern, falling back to two rapid synthetic clicks). Changes target application state. If the selector matches more than one element this fails with ambiguous-match (count plus up to 10 candidates) and does nothing; narrow with scopeHwnd or pre-check with ui_find_all.")]
+     Description("Double-clicks either a selector-resolved element (UIA pattern, falling back to synthetic clicks) or an absolute screen coordinate. Supply exactly one target form: strategy/value or x/y. Changes target application state.")]
     public Task<ToolInvocationResult> DoubleClick(
-        [Description("Window handle to resolve the selector against.")] string hwnd,
-        [Description("Selector strategy: Name or AutomationId.")] string strategy,
-        [Description("Selector value to match.")] string value,
-        [Description("Optional narrower scope window/element handle to search within instead of hwnd.")] string? scopeHwnd = null,
+        [Description("Window handle to resolve the selector against or activate before coordinate input.")] string hwnd,
+        [Description("Selector strategy: Name or AutomationId. Mutually exclusive with x/y.")] string? strategy = null,
+        [Description("Selector value to match; required with strategy and mutually exclusive with x/y.")] string? value = null,
+        [Description("Optional narrower scope window/element handle; selector form only.")] string? scopeHwnd = null,
+        [Description("Absolute screen X coordinate in physical pixels. Required with y and mutually exclusive with strategy/value.")] int? x = null,
+        [Description("Absolute screen Y coordinate in physical pixels. Required with x and mutually exclusive with strategy/value.")] int? y = null,
+        [Description("Allow coordinate input outside the hwnd window rectangle.")] bool? allowOutsideWindow = null,
         CancellationToken cancellationToken = default)
-        => RunAsync(BuildArgs("double-click", ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value), ("--scopeHwnd", scopeHwnd)), null, cancellationToken);
+        => RunAsync(BuildArgs("double-click", ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value), ("--scopeHwnd", scopeHwnd), ("--x", x?.ToString(CultureInfo.InvariantCulture)), ("--y", y?.ToString(CultureInfo.InvariantCulture)), ("--allowOutsideWindow", Bool(allowOutsideWindow))), null, cancellationToken);
 
     [McpServerTool(Name = "ui_drag", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false),
      Description("Resolves a source element and performs a synthetic mouse drag to either another selector-resolved element, or explicit screen coordinates. Changes target application state. If the selector matches more than one element this fails with ambiguous-match (count plus up to 10 candidates) and does nothing; narrow with scopeHwnd or pre-check with ui_find_all.")]

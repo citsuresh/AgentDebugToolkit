@@ -126,9 +126,9 @@ try
             return 1;
     }
 }
-catch (ForegroundActivationException)
+catch (ForegroundActivationException ex)
 {
-    JsonOutput.WriteError("foreground-activation-failed", "The target window is no longer foreground.");
+    JsonOutput.WriteError("foreground-activation-failed", ex.Message);
     return 1;
 }
 catch (InputInjectionException ex)
@@ -195,7 +195,8 @@ static bool IsBooleanFlag(string name) => name.Equals("screenshot", StringCompar
     || name.Equals("verify", StringComparison.OrdinalIgnoreCase)
     || name.Equals("clear", StringComparison.OrdinalIgnoreCase)
     || name.Equals("all", StringComparison.OrdinalIgnoreCase)
-    || name.Equals("includeUntitled", StringComparison.OrdinalIgnoreCase);
+    || name.Equals("includeUntitled", StringComparison.OrdinalIgnoreCase)
+    || name.Equals("allowOutsideWindow", StringComparison.OrdinalIgnoreCase);
 
 } // end Run
 
@@ -733,6 +734,13 @@ internal static class Verbs
 
     public static int Click(Dictionary<string, string> opts)
     {
+        if (!TryParseActionCoordinates(opts, out var x, out var y, out var allowOutsideWindow, out var targetError))
+        {
+            JsonOutput.WriteError("invalid-argument", targetError!);
+            return 1;
+        }
+
+        var hasCoordinates = opts.ContainsKey("x") || opts.ContainsKey("y");
         var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
         if (errorCode is not null)
         {
@@ -744,6 +752,25 @@ internal static class Verbs
         {
             JsonOutput.WriteError("window-not-responding", "The target window is not responding.");
             return 1;
+        }
+
+        if (hasCoordinates)
+        {
+            if (!EnsureTargetWindowForeground(windowHwnd, restoreIfMinimized: true))
+            {
+                JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
+                return 1;
+            }
+
+            if (!TryValidateCoordinateTarget(windowHwnd, x, y, allowOutsideWindow, out var boundsError))
+            {
+                JsonOutput.WriteError("invalid-argument", boundsError!);
+                return 1;
+            }
+
+            NativeMethods.Click(x, y);
+            JsonOutput.WriteSuccess(new { method = "synthetic-click", x, y });
+            return 0;
         }
 
         var (element, elementErrorCode, elementError, elementErrorDetails) =
@@ -773,6 +800,13 @@ internal static class Verbs
 
     public static int RightClick(Dictionary<string, string> opts)
     {
+        if (!TryParseActionCoordinates(opts, out var x, out var y, out var allowOutsideWindow, out var targetError))
+        {
+            JsonOutput.WriteError("invalid-argument", targetError!);
+            return 1;
+        }
+
+        var hasCoordinates = opts.ContainsKey("x") || opts.ContainsKey("y");
         var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
         if (errorCode is not null)
         {
@@ -784,6 +818,25 @@ internal static class Verbs
         {
             JsonOutput.WriteError("window-not-responding", "The target window is not responding.");
             return 1;
+        }
+
+        if (hasCoordinates)
+        {
+            if (!EnsureTargetWindowForeground(windowHwnd, restoreIfMinimized: true))
+            {
+                JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
+                return 1;
+            }
+
+            if (!TryValidateCoordinateTarget(windowHwnd, x, y, allowOutsideWindow, out var boundsError))
+            {
+                JsonOutput.WriteError("invalid-argument", boundsError!);
+                return 1;
+            }
+
+            NativeMethods.RightClick(x, y);
+            JsonOutput.WriteSuccess(new { method = "synthetic-right-click", x, y });
+            return 0;
         }
 
         var (element, elementErrorCode, elementError, elementErrorDetails) = ResolveElement(windowHwnd, opts);
@@ -808,6 +861,13 @@ internal static class Verbs
 
     public static int DoubleClick(Dictionary<string, string> opts)
     {
+        if (!TryParseActionCoordinates(opts, out var x, out var y, out var allowOutsideWindow, out var targetError))
+        {
+            JsonOutput.WriteError("invalid-argument", targetError!);
+            return 1;
+        }
+
+        var hasCoordinates = opts.ContainsKey("x") || opts.ContainsKey("y");
         var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
         if (errorCode is not null)
         {
@@ -819,6 +879,25 @@ internal static class Verbs
         {
             JsonOutput.WriteError("window-not-responding", "The target window is not responding.");
             return 1;
+        }
+
+        if (hasCoordinates)
+        {
+            if (!EnsureTargetWindowForeground(windowHwnd, restoreIfMinimized: true))
+            {
+                JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
+                return 1;
+            }
+
+            if (!TryValidateCoordinateTarget(windowHwnd, x, y, allowOutsideWindow, out var boundsError))
+            {
+                JsonOutput.WriteError("invalid-argument", boundsError!);
+                return 1;
+            }
+
+            NativeMethods.DoubleClick(x, y);
+            JsonOutput.WriteSuccess(new { method = "synthetic-double-click", x, y });
+            return 0;
         }
 
         var (element, elementErrorCode, elementError, elementErrorDetails) = ResolveElement(windowHwnd, opts);
@@ -2913,6 +2992,84 @@ internal static class Verbs
         }
     }
 
+    private static bool TryParseActionCoordinates(
+        Dictionary<string, string> opts, out int x, out int y, out bool allowOutsideWindow, out string? error)
+    {
+        var hasSelector = opts.ContainsKey("strategy") || opts.ContainsKey("value");
+        var hasCoordinates = opts.ContainsKey("x") || opts.ContainsKey("y");
+        x = 0;
+        y = 0;
+        allowOutsideWindow = false;
+
+        if (hasSelector == hasCoordinates)
+        {
+            error = "Exactly one of --strategy/--value or --x/--y is required.";
+            return false;
+        }
+
+        if (!hasCoordinates)
+        {
+            if (opts.ContainsKey("allowOutsideWindow"))
+            {
+                error = "--allowOutsideWindow is only valid with the coordinate form.";
+                return false;
+            }
+
+            error = null;
+            return true;
+        }
+
+        if (opts.ContainsKey("scopeHwnd") || opts.ContainsKey("controlType"))
+        {
+            error = "--scopeHwnd and --controlType are only valid with the selector form.";
+            return false;
+        }
+
+        if (!opts.TryGetValue("x", out var xText)
+            || !int.TryParse(xText, NumberStyles.Integer, CultureInfo.InvariantCulture, out x)
+            || !opts.TryGetValue("y", out var yText)
+            || !int.TryParse(yText, NumberStyles.Integer, CultureInfo.InvariantCulture, out y))
+        {
+            error = "--x and --y must both be valid integers.";
+            return false;
+        }
+
+        if (opts.TryGetValue("allowOutsideWindow", out var allowOutsideText)
+            && !bool.TryParse(allowOutsideText, out allowOutsideWindow))
+        {
+            error = "--allowOutsideWindow must be true or false (a bare flag means true).";
+            return false;
+        }
+
+        error = null;
+        return true;
+    }
+
+    private static bool TryValidateCoordinateTarget(
+        IntPtr hwnd, int x, int y, bool allowOutsideWindow, out string? error)
+    {
+        if (allowOutsideWindow)
+        {
+            error = null;
+            return true;
+        }
+
+        if (!NativeMethods.GetWindowRect(hwnd, out var bounds))
+        {
+            error = "Could not read the target window rectangle; coordinate input was not sent.";
+            return false;
+        }
+
+        if (x < bounds.Left || x >= bounds.Right || y < bounds.Top || y >= bounds.Bottom)
+        {
+            error = "The coordinate point is outside the target window rectangle. Pass --allowOutsideWindow to override.";
+            return false;
+        }
+
+        error = null;
+        return true;
+    }
+
     private static bool TryParseNamedSelector(
         Dictionary<string, string> opts, string prefix, out Selector selector, out string? error)
     {
@@ -3095,12 +3252,51 @@ internal static class Verbs
         return ResolveDiscoveredWindow($"0x{windowHwnd.ToInt64():X}");
     }
 
-    private static bool EnsureTargetWindowForeground(IntPtr targetHwnd)
+    private static bool EnsureTargetWindowForeground(IntPtr targetHwnd, bool restoreIfMinimized = false)
     {
         var targetRoot = NativeMethods.GetAncestor(targetHwnd, NativeMethods.GA_ROOT);
         if (targetRoot == IntPtr.Zero)
         {
             return false;
+        }
+
+        if (restoreIfMinimized && NativeMethods.IsIconic(targetRoot))
+        {
+            NativeMethods.ShowWindow(targetRoot, NativeMethods.SW_RESTORE);
+            const int restoreTimeoutMs = 1000;
+            const int restorePollMs = 20;
+            var restoreTimer = Stopwatch.StartNew();
+            NativeMethods.RECT? previousBounds = null;
+            var restored = false;
+            while (restoreTimer.ElapsedMilliseconds < restoreTimeoutMs)
+            {
+                if (!NativeMethods.IsIconic(targetRoot)
+                    && NativeMethods.GetWindowRect(targetRoot, out var bounds))
+                {
+                    if (previousBounds is { } previous
+                        && previous.Left == bounds.Left && previous.Top == bounds.Top
+                        && previous.Right == bounds.Right && previous.Bottom == bounds.Bottom)
+                    {
+                        restored = true;
+                        break;
+                    }
+
+                    previousBounds = bounds;
+                }
+                else
+                {
+                    previousBounds = null;
+                }
+
+                Thread.Sleep(restorePollMs);
+            }
+
+            if (!restored)
+            {
+                throw new ForegroundActivationException(
+                    "The target window did not finish restoring within 1000 ms " +
+                    "(it must be non-minimized with the same rectangle on two consecutive reads). Coordinate input was not sent.");
+            }
         }
 
         if (NativeMethods.GetForegroundWindow() == targetRoot)

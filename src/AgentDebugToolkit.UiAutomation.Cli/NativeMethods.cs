@@ -5,8 +5,8 @@ namespace AgentDebugToolkit.UiAutomation.Cli;
 
 internal sealed class ForegroundActivationException : Exception
 {
-    public ForegroundActivationException()
-        : base("The target window is no longer foreground.")
+    public ForegroundActivationException(string message = "The target window is no longer foreground.")
+        : base(message)
     {
     }
 }
@@ -133,6 +133,14 @@ internal static class NativeMethods
 
     [DllImport("user32.dll")]
     public static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    public const int SW_RESTORE = 9;
+
+    [DllImport("user32.dll")]
+    public static extern bool IsIconic(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     public static extern IntPtr SendMessageTimeout(

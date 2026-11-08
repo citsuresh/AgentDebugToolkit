@@ -8,10 +8,12 @@ verbs are added in later phases — do not silently diverge from what's document
 
 ## Option parsing
 
-Option flags normally require a value token. Boolean-style options that may be bare (bare means
-`true`) are limited to `--screenshot`, `--paste`, `--verify`, `--clear`, `--all`, and
-`--includeUntitled`; explicit `false` continues to disable those options (any other value enables
-them, as before). A non-boolean flag with no following value, or followed by
+Boolean-style options that may be bare (bare means
+`true`) are limited to `--screenshot`, `--paste`, `--verify`, `--clear`, `--all`,
+`--includeUntitled`, and `--allowOutsideWindow`. `--allowOutsideWindow` accepts only `true` or
+`false` (case-insensitive); any other value returns `invalid-argument`. For the other boolean-style
+options, explicit `false` disables them and any other value enables them, as before.
+A non-boolean flag with no following value, or followed by
 another `--` flag, returns `invalid-argument` before window or element resolution. The error names
 the missing flag and advises `--<flag>=` for an explicit value. For `--text`, the message is
 `--text requires a value. Some shells (Windows PowerShell 5.1) drop empty-string arguments; use
@@ -142,6 +144,15 @@ dispatched key units; if focus changes mid-sequence, it stops before the next un
 the remaining input is not sent to the newly foreground application. Read-only verbs do not change
 activation.
 
+For coordinate-form `click`, `right-click`, and `double-click`, a minimized target is restored with
+`ShowWindow` before foreground verification. After requesting restoration, the CLI polls every
+20 ms for up to 1 second until `IsIconic` is false and `GetWindowRect` returns the same rectangle
+on two consecutive reads. A failed rectangle read or a minimized state resets the consecutive-read
+check. If restoration does not settle before the timeout, the command returns
+`foreground-activation-failed` with a restore-timeout message and sends no coordinate input.
+The point is then checked against a freshly read rectangle after activation, immediately before
+mouse input, unless `--allowOutsideWindow` is true.
+
 ---
 
 ## Phase 1 verbs
@@ -225,7 +236,18 @@ screenshot.
   original root, not just matching controls.
 - Screenshots save to a standard folder, e.g. `%LOCALAPPDATA%\AgentDebugToolkit\screenshots\`.
 
-### `click --hwnd <h> --strategy <s> --value <v> [--controlType <type>] [--scopeHwnd <h2>]`
+### `click --hwnd <h> (--strategy <s> --value <v> [--controlType <type>] [--scopeHwnd <h2>] | --x <n> --y <n> [--allowOutsideWindow])`
+Supply exactly one target form: the existing selector form or an absolute screen coordinate pair.
+Coordinates are physical screen pixels (same coordinate frame as `move-mouse`). The window handle
+is still required and is checked for responsiveness and foreground activation before input; the
+coordinate point itself is not relative to that window. By default, the point must lie within the
+`--hwnd` window rectangle read by `GetWindowRect` after activation (and restoration if minimized),
+immediately before input. `GetWindowRect` includes the invisible resize border of about 7 to 8
+pixels; this is not a visible-content hit test. An outside point or unreadable rectangle returns
+`invalid-argument` without mouse input, but the window may already have been activated/restored.
+`--allowOutsideWindow` disables this bounds check. A point inside the rectangle can still hit
+another window covering it. `--controlType` and `--scopeHwnd` apply only to
+the selector form. The two forms are mutually exclusive.
 - Optional `--controlType` narrows candidates to the named UIA control type before ambiguity is
   checked. Unrecognized short type names return `invalid-argument`; multiple matches of the same
   type still return `ambiguous-match`. Pre-check the count with `find-all`; narrow the search with
@@ -239,7 +261,10 @@ Resolves the element via selector (scoped to `--scopeHwnd` if given, else `--hwn
   documented contract. Applies to both `click` and `type` (both call the same internal resolution
   helper). An invalid or unresolvable `--scopeHwnd` fails with `invalid-argument` /
   `element-not-found` respectively, before the `--strategy`/`--value` selector is even attempted.
-- Success: `{ "success": true, "method": "pattern" | "synthetic-click", "elementFound": ElementInfo }`
+- Selector success: `{ "success": true, "method": "pattern" | "synthetic-click", "elementFound": ElementInfo }`.
+- Coordinate success: `{ "success": true, "method": "synthetic-click", "x": 123, "y": 456 }`.
+  Coordinates use the absolute physical-pixel screen frame and bypass selector resolution and UIA
+  click patterns.
 - `elementFound` reflects the element's state as resolved **before** the click is invoked, not
   after — this avoids reporting the click's own aftereffect (e.g. `isEnabled`/`isOffscreen`
   changing, or the element disappearing) as if it were the pre-click target. A caller that needs
@@ -248,7 +273,18 @@ Resolves the element via selector (scoped to `--scopeHwnd` if given, else `--hwn
   this field.
 - Failure: `element-not-found` if selector resolves to nothing.
 
-### `right-click --hwnd <h> --strategy <s> --value <v> [--scopeHwnd <h2>]`
+### `right-click --hwnd <h> (--strategy <s> --value <v> [--scopeHwnd <h2>] | --x <n> --y <n> [--allowOutsideWindow])`
+Supply exactly one target form: the existing selector form or an absolute screen coordinate pair.
+Coordinates are physical screen pixels (same coordinate frame as `move-mouse`). The required
+`--hwnd` is checked for responsiveness and foreground activation before input; the coordinate point
+itself is not relative to that window. By default, the point must lie within the `--hwnd` window
+rectangle read by `GetWindowRect` after activation (and restoration if minimized), immediately
+before input. `GetWindowRect` includes the invisible resize border of about 7 to 8 pixels; this
+is not a visible-content hit test. An outside point or unreadable rectangle returns
+`invalid-argument` without mouse input, but the window may already have been activated/restored.
+`--allowOutsideWindow` disables this bounds check. A point inside the rectangle can still hit
+another window covering it. `--scopeHwnd` applies only to the selector form. The forms are
+mutually exclusive.
 - Fails with `ambiguous-match` instead of right-clicking the first of several matches. Pre-check
   the count with `find-all`; narrow the search with `--scopeHwnd`.
 Resolves the element via selector (same scoping/error semantics as `click`), then performs a
@@ -256,12 +292,26 @@ synthetic right mouse click at its `BoundingRectangle` center via `SendInput`
 (`MOUSEEVENTF_RIGHTDOWN`/`MOUSEEVENTF_RIGHTUP`). Unlike `click`, no UIA pattern is attempted
 first — a right-click's usual purpose (opening a context menu) isn't expressed via
 `InvokePattern`/`TogglePattern`, so this goes straight to the synthetic mechanism.
-- Success: `{ "success": true, "method": "synthetic-right-click", "elementFound": ElementInfo }`
+- Selector success: `{ "success": true, "method": "synthetic-right-click", "elementFound": ElementInfo }`.
+- Coordinate success: `{ "success": true, "method": "synthetic-right-click", "x": 123, "y": 456 }`.
+  The supplied coordinates are absolute physical-pixel screen positions; selector resolution is
+  skipped.
 - `elementFound` reflects the element's state as resolved **before** the right-click is invoked,
   same pre-action-state rule as `click`.
 - Failure: `element-not-found` if selector resolves to nothing, `window-not-responding`.
 
-### `double-click --hwnd <h> --strategy <s> --value <v> [--scopeHwnd <h2>]`
+### `double-click --hwnd <h> (--strategy <s> --value <v> [--scopeHwnd <h2>] | --x <n> --y <n> [--allowOutsideWindow])`
+Supply exactly one target form: the existing selector form or an absolute screen coordinate pair.
+Coordinates are physical screen pixels (same coordinate frame as `move-mouse`). The required
+`--hwnd` is checked for responsiveness and foreground activation before input; the coordinate point
+itself is not relative to that window. By default, the point must lie within the `--hwnd` window
+rectangle read by `GetWindowRect` after activation (and restoration if minimized), immediately
+before input. `GetWindowRect` includes the invisible resize border of about 7 to 8 pixels; this
+is not a visible-content hit test. An outside point or unreadable rectangle returns
+`invalid-argument` without mouse input, but the window may already have been activated/restored.
+`--allowOutsideWindow` disables this bounds check. A point inside the rectangle can still hit
+another window covering it. `--scopeHwnd` applies only to the selector form. The forms are
+mutually exclusive.
 - Fails with `ambiguous-match` instead of double-clicking the first of several matches. Pre-check
   the count with `find-all`; narrow the search with `--scopeHwnd`.
 Resolves the element via selector (same scoping/error semantics as `click`). Attempts
@@ -273,7 +323,10 @@ it, after subtracting both clicks' hold time — so Windows/the target app recog
 double-click rather than two independent single clicks, even on systems with a short
 custom-configured threshold. Unlike `click`, `TogglePattern` is not attempted as a fallback (a
 double-click semantically differs from a single toggle).
-- Success: `{ "success": true, "method": "pattern" | "synthetic-double-click", "elementFound": ElementInfo }`
+- Selector success: `{ "success": true, "method": "pattern" | "synthetic-double-click", "elementFound": ElementInfo }`.
+- Coordinate success: `{ "success": true, "method": "synthetic-double-click", "x": 123, "y": 456 }`.
+  The supplied coordinates are absolute physical-pixel screen positions; selector resolution and
+  UIA click patterns are skipped.
 - `elementFound` reflects the element's state as resolved **before** the double-click is invoked,
   same pre-action-state rule as `click`.
 - Failure: `element-not-found` if selector resolves to nothing, `window-not-responding`.
