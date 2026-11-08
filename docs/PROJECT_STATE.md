@@ -4,14 +4,22 @@
 
 ## Current Focus
 
-2026-11-08: Items 1, 4 and 5 and the region/scale, pre-activation bounds and resolve-input work are
-committed (`3e63f7d`, `57c821f`, `07fe1d2`). Item 2 is implemented and pending commit: window-level
-`send-keys` (no selector) and the new `paste-text` verb, with a Copilot read-only review applied.
-Item 3 (wheel scrolling) remains deferred. The MCP needs one rebuild (with the Claude sessions
-closed) before the new `ui_*` parameters and `ui_paste_text` are visible.
+2026-11-08: Items 1, 4 and 5, the region/scale, pre-activation bounds and resolve-input work, and
+item 2 (window-level `send-keys`, `paste-text`) are committed (`3e63f7d`, `57c821f`, `07fe1d2`,
+`66b4441`). Item 3, the mouse-wheel `scroll` verb and `ui_scroll` tool, is implemented with a
+Copilot read-only review applied and is pending commit. All Phase 1 items are now done. The MCP
+needs one rebuild (with the Claude sessions closed) before the new `ui_*` parameters,
+`ui_paste_text` and `ui_scroll` are visible.
 
 ## Current Decisions
 
+- `scroll --hwnd --direction up|down|left|right [--clicks 1..50] [--x --y [--allowOutsideWindow]]` sends
+  `SendInput` wheel notches (120 units each) at the window center or an explicit in-window point,
+  after activation. It moves the real cursor and verifies the cursor is at the target point after
+  the move and before every notch (user movement or a clip rectangle stops it with an
+  input-injection error), re-checks the foreground window per notch, and rejects
+  `--allowOutsideWindow` whenever `--x/--y` are absent. It uses no UI Automation, so it also works for
+  Electron windows. Success means input was sent; content movement must be verified separately.
 - Window-level `send-keys` (no `--strategy`/`--value`) requires an explicit `--hwnd` (checked before any
   window resolution), rejects `--scopeHwnd` and any `--focusMode` but `none`, restores a minimized
   window and sends keys to its current focus; success reports `focusMethod: "window"`.

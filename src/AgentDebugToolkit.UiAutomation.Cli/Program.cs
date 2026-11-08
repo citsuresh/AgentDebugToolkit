@@ -105,6 +105,8 @@ try
             return Verbs.SendKeys(opts);
         case "paste-text":
             return Verbs.PasteText(opts);
+        case "scroll":
+            return Verbs.Scroll(opts);
         case "submit-chat-message":
             return Verbs.SubmitChatMessage(opts);
         case "find-first":
@@ -1721,6 +1723,108 @@ internal static class Verbs
             JsonOutput.WriteError("clipboard-unavailable", ex.Message);
             return 1;
         }
+    }
+
+    /// <summary>
+    /// scroll --hwnd h --direction up|down|left|right [--clicks n] [--x n --y n]
+    /// [--allowOutsideWindow]: sends mouse-wheel notches at a screen point, which is the center of
+    /// the window unless --x/--y are given. Unlike scroll-container and scroll-into-view it does
+    /// not use UI Automation, so it also works for apps whose content UIA cannot see.
+    /// </summary>
+    public static int Scroll(Dictionary<string, string> opts)
+    {
+        if (!opts.ContainsKey("hwnd"))
+        {
+            JsonOutput.WriteError("invalid-argument", "scroll requires an explicit --hwnd.");
+            return 1;
+        }
+
+        if (!opts.TryGetValue("direction", out var directionText)
+            || directionText.ToLowerInvariant() is not ("up" or "down" or "left" or "right"))
+        {
+            JsonOutput.WriteError("invalid-argument", "--direction is required and must be one of: up, down, left, right.");
+            return 1;
+        }
+
+        var direction = directionText.ToLowerInvariant();
+
+        var clicks = 3;
+        if (opts.TryGetValue("clicks", out var clicksText)
+            && (!int.TryParse(clicksText, NumberStyles.Integer, CultureInfo.InvariantCulture, out clicks)
+                || clicks < 1 || clicks > 50))
+        {
+            JsonOutput.WriteError("invalid-argument", "--clicks must be an integer from 1 to 50.");
+            return 1;
+        }
+
+        var hasX = opts.ContainsKey("x");
+        var hasY = opts.ContainsKey("y");
+        int pointX = 0, pointY = 0;
+        if (hasX != hasY
+            || (hasX && (!int.TryParse(opts["x"], NumberStyles.Integer, CultureInfo.InvariantCulture, out pointX)
+                || !int.TryParse(opts["y"], NumberStyles.Integer, CultureInfo.InvariantCulture, out pointY))))
+        {
+            JsonOutput.WriteError("invalid-argument", "--x and --y must be given together and be valid integers.");
+            return 1;
+        }
+
+        var allowOutsideWindow = false;
+        if (opts.TryGetValue("allowOutsideWindow", out var allowText)
+            && !bool.TryParse(allowText, out allowOutsideWindow))
+        {
+            JsonOutput.WriteError("invalid-argument", "--allowOutsideWindow must be true or false (a bare flag means true).");
+            return 1;
+        }
+
+        if (opts.ContainsKey("allowOutsideWindow") && !hasX)
+        {
+            JsonOutput.WriteError("invalid-argument", "--allowOutsideWindow is only valid with --x/--y.");
+            return 1;
+        }
+
+        var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
+        if (errorCode is not null)
+        {
+            JsonOutput.WriteError(errorCode, error!);
+            return 1;
+        }
+
+        if (hasX
+            && !TryValidateCoordinateTarget(windowHwnd, pointX, pointY, allowOutsideWindow, out var preflightError, skipIfMinimized: true))
+        {
+            JsonOutput.WriteError("invalid-argument", preflightError!);
+            return 1;
+        }
+
+        if (!EnsureTargetWindowForeground(windowHwnd, restoreIfMinimized: true))
+        {
+            JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
+            return 1;
+        }
+
+        if (!hasX)
+        {
+            // Default target: the center of the window as it is now, after activation or restore.
+            if (!NativeMethods.GetWindowRect(windowHwnd, out var rect) || rect.Right <= rect.Left || rect.Bottom <= rect.Top)
+            {
+                JsonOutput.WriteError("invalid-argument", "Could not read a usable window rectangle; nothing was scrolled.");
+                return 1;
+            }
+
+            pointX = rect.Left + ((rect.Right - rect.Left) / 2);
+            pointY = rect.Top + ((rect.Bottom - rect.Top) / 2);
+        }
+        else if (!TryValidateCoordinateTarget(windowHwnd, pointX, pointY, allowOutsideWindow, out var boundsError))
+        {
+            JsonOutput.WriteError("invalid-argument", boundsError!);
+            return 1;
+        }
+
+        var horizontal = direction is "left" or "right";
+        var positive = direction is "up" or "right";
+        NativeMethods.Scroll(pointX, pointY, horizontal, positive, clicks);
+        JsonOutput.WriteSuccess(new { method = "synthetic-wheel", direction, clicks, x = pointX, y = pointY });
+        return 0;
     }
 
     public static int GetText(Dictionary<string, string> opts)

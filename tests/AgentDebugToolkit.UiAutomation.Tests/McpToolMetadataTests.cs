@@ -51,6 +51,26 @@ public sealed class McpToolMetadataTests
     }
 
     [Fact]
+    public void UiScroll_IsDestructiveWithRequiredHwndAndDirection()
+    {
+        var method = typeof(UiAutomationTools).GetMethod(nameof(UiAutomationTools.Scroll));
+        Assert.NotNull(method);
+
+        var toolMetadata = method.GetCustomAttribute<McpServerToolAttribute>();
+        Assert.NotNull(toolMetadata);
+        Assert.Equal("ui_scroll", toolMetadata.Name);
+        Assert.False(toolMetadata.ReadOnly);
+        Assert.True(toolMetadata.Destructive);
+
+        var parameters = method.GetParameters();
+        Assert.False(parameters.Single(parameter => parameter.Name == "hwnd").IsOptional);
+        Assert.False(parameters.Single(parameter => parameter.Name == "direction").IsOptional);
+        Assert.Equal(typeof(int?), parameters.Single(parameter => parameter.Name == "clicks").ParameterType);
+        Assert.Equal(typeof(bool?), parameters.Single(parameter => parameter.Name == "allowOutsideWindow").ParameterType);
+        Assert.Contains("moves the real cursor", method.GetCustomAttribute<DescriptionAttribute>()!.Description);
+    }
+
+    [Fact]
     public void UiPasteText_IsDestructiveAndRequiresHwndAndText()
     {
         var method = typeof(UiAutomationTools).GetMethod(nameof(UiAutomationTools.PasteText));

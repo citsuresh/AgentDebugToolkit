@@ -1193,6 +1193,38 @@ performs its own client-side filtering (Name/AutomationId/ControlType checks) ov
 existing caller depended on `has-pending-prompt`'s shape, so removing it is not a breaking change
 in practice.
 
+### `scroll --hwnd <h> --direction up|down|left|right [--clicks <1..50>] [--x <n> --y <n> [--allowOutsideWindow]]`
+Scrolls with the mouse wheel, with no UI Automation, so it works for an app whose content UI
+Automation cannot see (for example an Electron/Chromium window). `scroll-container` and
+`scroll-into-view` need UIA patterns and do not.
+- `--hwnd` and `--direction` are required. `--clicks` is the number of wheel notches (default 3,
+  1 to 50); each notch is one standard 120-unit wheel step, and how far the content moves is up to
+  the application. `up`/`down` use the vertical wheel and `left`/`right` the horizontal wheel
+  (`up` and `right` are the positive, away-from-user/rightward directions).
+- The window is brought to the foreground first (restored if minimized). The **real cursor is
+  moved** to the target point and the notches are sent there, so the window under that point
+  receives them. The point is the center of the window rectangle (read after activation) unless
+  `--x`/`--y` are given together (physical screen pixels, same frame as `click --x/--y`).
+- An explicit point must lie inside the `--hwnd` window rectangle, checked before activation for a
+  non-minimized window and again after activation or restore, exactly like the coordinate form of
+  `click`; `--allowOutsideWindow` (true or false, a bare flag means true; only valid with
+  `--x/--y`) disables the check. A point inside the rectangle can still be covered by another
+  window, which would then receive the wheel.
+- The foreground window is re-checked before every notch; if it changes mid-sequence the command
+  stops with `foreground-activation-failed` and the remaining notches are not sent.
+- The cursor position is verified after the move and again before every notch. If it is not at
+  the target point (the user moved the mouse, or a clip rectangle moved the cursor elsewhere), the
+  command stops with an input-injection error and the remaining notches are not sent, so the
+  wheel never goes to a window other than the one under the validated point. Avoid touching the
+  mouse while a scroll runs.
+- `--allowOutsideWindow` is rejected with `invalid-argument` whenever `--x/--y` are absent,
+  including `--allowOutsideWindow=false`.
+- Success: `{ "success": true, "method": "synthetic-wheel", "direction": "down", "clicks": 3,
+  "x": <n>, "y": <n> }`. Success means the wheel input was sent, not that the content moved, so
+  verify independently (for example with a cropped screenshot).
+- Failure: `invalid-argument`, `window-gone`, `window-not-responding`,
+  `foreground-activation-failed`, or an input-injection error if `SendInput` rejects an event.
+
 ### `scroll-container --hwnd <h> --strategy <Name|AutomationId> --value <v> --verticalPercent <0..100> [--scopeHwnd <h2>]`
 Sets the selected container to an absolute vertical scroll percentage via UI Automation `ScrollPattern` only. It does not request window activation and sends no mouse or keyboard input. Container selection follows the standard selector rules: one matching descendant is required; zero matches return `container-not-found`, and multiple matches return `ambiguous-container` with candidate details. An optional `--scopeHwnd` narrows the search.
 

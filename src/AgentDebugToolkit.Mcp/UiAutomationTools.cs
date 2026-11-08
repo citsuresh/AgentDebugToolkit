@@ -358,6 +358,21 @@ public sealed class UiAutomationTools
         => RunAsync(BuildArgs("paste-text", ("--hwnd", hwnd), ("--text", text),
             ("--restoreDelayMs", restoreDelayMs?.ToString(CultureInfo.InvariantCulture))), null, cancellationToken);
 
+    [McpServerTool(Name = "ui_scroll", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false),
+     Description("Scrolls with the mouse wheel: brings the window to the foreground (restoring it if minimized), moves the real cursor to a point (the center of the window unless x and y are given) and sends wheel notches there, so the window under that point scrolls. Unlike ui_scroll_container and ui_scroll_into_view it does not use UI Automation, so it works for apps whose content UI Automation cannot see (for example Electron). Moves the user's cursor, and success means the wheel input was sent, not that the content moved: verify with a screenshot. A point outside the window rectangle is rejected unless allowOutsideWindow is true. Changes target application state.")]
+    public Task<ToolInvocationResult> Scroll(
+        [Description("Window handle to bring to the foreground and scroll. Required.")] string hwnd,
+        [Description("Scroll direction: up, down, left or right. Up/down use the vertical wheel; left/right the horizontal wheel.")] string direction,
+        [Description("Number of wheel notches, 1 to 50 (default 3). One notch is a standard 120-unit wheel step; how far the content moves is up to the application.")] int? clicks = null,
+        [Description("Optional absolute screen X (physical pixels) of the point to scroll at. Give together with y; default is the window center.")] int? x = null,
+        [Description("Optional absolute screen Y (physical pixels). Give together with x.")] int? y = null,
+        [Description("Set true to allow an x/y point outside the window rectangle. Only valid with x and y.")] bool? allowOutsideWindow = null,
+        CancellationToken cancellationToken = default)
+        => RunAsync(BuildArgs("scroll", ("--hwnd", hwnd), ("--direction", direction),
+            ("--clicks", clicks?.ToString(CultureInfo.InvariantCulture)),
+            ("--x", x?.ToString(CultureInfo.InvariantCulture)), ("--y", y?.ToString(CultureInfo.InvariantCulture)),
+            ("--allowOutsideWindow", Bool(allowOutsideWindow))), null, cancellationToken);
+
     [McpServerTool(Name = "ui_submit_chat_message", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false),
      Description("Composite verb for the Copilot Chat input pattern: clicks the input, types text, verifies it landed, then submits (Send button click or SendKeys). Changes target application state and can trigger a real chat submission — treat as high-impact.")]
     public Task<ToolInvocationResult> SubmitChatMessage(

@@ -140,6 +140,68 @@ internal static class NativeMethods
         }
     }
 
+    private const uint MOUSEEVENTF_WHEEL = 0x0800;
+    private const uint MOUSEEVENTF_HWHEEL = 0x1000;
+    private const int WHEEL_DELTA = 120;
+
+    private static void SendMouseWheel(uint dwFlags, int delta)
+    {
+        var inputs = new INPUT[1];
+        inputs[0].type = INPUT_MOUSE;
+        inputs[0].union.mi = new MOUSEINPUT
+        {
+            dx = 0,
+            dy = 0,
+            mouseData = unchecked((uint)delta),
+            dwFlags = dwFlags,
+            time = 0,
+            dwExtraInfo = IntPtr.Zero,
+        };
+
+        var sent = SendInput(1, inputs, Marshal.SizeOf<INPUT>());
+        if (sent != 1)
+        {
+            throw new InputInjectionException(
+                $"SendInput accepted {sent} of 1 mouse wheel events (Win32 error {Marshal.GetLastWin32Error()}).");
+        }
+    }
+
+    /// <summary>
+    /// Moves the cursor to (x, y) and sends <paramref name="clicks"/> mouse-wheel notches there,
+    /// one per call to SendInput, re-checking the expected foreground window before each. A
+    /// positive notch scrolls up (vertical) or right (horizontal), as on a physical wheel. The
+    /// window under the point receives the wheel, which is not necessarily the target window.
+    /// </summary>
+    public static void Scroll(int x, int y, bool horizontal, bool positive, int clicks)
+    {
+        EnsureExpectedForegroundWindow();
+        MoveCursorOrThrow(x, y);
+        // SetCursorPos can succeed while a clip rectangle moves the cursor elsewhere, and the user
+        // can move the mouse between notches; the wheel goes to the window under the cursor, so
+        // stop instead of scrolling something other than the validated point.
+        EnsureCursorAt(x, y);
+        var flags = horizontal ? MOUSEEVENTF_HWHEEL : MOUSEEVENTF_WHEEL;
+        var delta = positive ? WHEEL_DELTA : -WHEEL_DELTA;
+        for (var i = 0; i < clicks; i++)
+        {
+            EnsureExpectedForegroundWindow();
+            EnsureCursorAt(x, y);
+            SendMouseWheel(flags, delta);
+            Thread.Sleep(40);
+        }
+    }
+
+    private static void EnsureCursorAt(int x, int y)
+    {
+        var (cursorX, cursorY) = GetCursorPos();
+        if (cursorX != x || cursorY != y)
+        {
+            throw new InputInjectionException(
+                $"The cursor is at ({cursorX}, {cursorY}), not the target point ({x}, {y}) " +
+                "(moved by the user or clipped); the remaining wheel input was not sent.");
+        }
+    }
+
     [DllImport("user32.dll")]
     public static extern bool SetForegroundWindow(IntPtr hWnd);
 
