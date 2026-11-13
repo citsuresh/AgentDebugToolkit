@@ -63,3 +63,6 @@ tools/_*.json
 
 # Written by scripts\agent\Build-Toolkit.ps1 after a successful build
 .built-version
+
+# Local Copilot session artifacts (never commit)
+session-state/
