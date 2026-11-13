@@ -60,3 +60,6 @@ TestResult.xml
 nunit-*.xml
 
 tools/_*.json
+
+# Written by scripts\agent\Build-Toolkit.ps1 after a successful build
+.built-version
