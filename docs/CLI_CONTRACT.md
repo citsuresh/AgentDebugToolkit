@@ -148,6 +148,24 @@ the first match now fail for `click`, `right-click`, `double-click`, `drag`, sel
 exactly one match behaves as before. `find-first`, `find-all`, `wait-for-element`,
 `set-grid-cell`, and `submit-chat-message` retain their existing resolution semantics.
 
+Missing selectors can add an optional `lookupDiagnostics` object without changing the existing
+error code. `find-first` with `found:false`, `find-all` with `count:0`, and filtered `inspect`
+with `matchCount:0` may add it while **remaining successful**. Missing scope selectors and
+`wait-for-element` timeouts with no matched element can also carry it; polling, timeout,
+depth-limit hints and ambiguity behavior are unchanged.
+```json
+{"rootHwnd":"0x1234","isMinimized":true,"hint":"..."}
+```
+`rootHwnd` is the top-level root of the effective search HWND (`scopeHwnd` when applicable).
+`isMinimized` is an actual Win32 `IsIconic` observation guarded by existence checks, not an
+inference from missing UIA elements; unknown/gone-window facts are omitted rather than false.
+The hint conditionally suggests checking the selected tab **if this is a WinForms tabbed UI**:
+inactive pages may not expose controls, but a failed Name/AutomationId lookup does not prove
+that the control is on another tab. The toolkit never switches tabs or restores/activates a
+window to generate diagnostics. When actually observed minimized, the hint suggests an explicit
+`activate --hwnd <rootHwnd> --restore true` only if interaction is intended, followed by another
+lookup. Restoration cannot guarantee that the provider exposes the desired content.
+
 State-changing UI verbs (`click`, `right-click`, `double-click`, `drag`, selector-based
 `move-mouse`, `type`, `set-grid-cell`, `send-keys`, and `submit-chat-message`) verify that the
 target top-level window is foreground before sending input. If it is not foreground, they request
@@ -681,6 +699,59 @@ Failures during window/selector resolution may have no `state` object because no
 observation was obtained. Inspection uses the same state object and error entries inside
 `State`, while preserving its existing top-level success/error behavior.
 
+### `set-toggle-state --hwnd <h> --strategy Name|AutomationId --value <v> --desiredState on|off|indeterminate --expectedState on|off|indeterminate [--controlType <type>] [--scopeHwnd <h2>]`
+
+Requests a desired `TogglePattern` state with a mandatory expected-state precondition. Both
+state arguments use exactly the lowercase values shown; neither has a default or wildcard.
+Selectors, control-type filtering, HWND/scope validation and ambiguity errors follow
+`get-state`. Missing/malformed arguments return `invalid-argument` before target access.
+
+The operation reads current enabled state and authoritative `TogglePattern` support/value.
+It refuses failed or unknown reads (`state-provider-error` / `stale-context`), unsupported
+patterns (`toggle-not-supported`), an expected-state mismatch (`precondition-mismatch`), and
+disabled targets (`element-disabled`, including no-ops). No refusal calls `Toggle`.
+The expected-state check applies even when the target already has the desired state.
+
+After those checks, an already-correct state is re-read and verified without mutation.
+Otherwise the operation calls **`TogglePattern.Toggle` at most once**, then immediately reads
+and verifies the resulting state. Three-state transitions are provider-defined: requesting
+`indeterminate`, or leaving it, is allowed, but a single toggle may not reach the requested
+state. A wrong result returns `verify-mismatch`; it never cycles or retries to reach a value.
+There is no click, keys, invoke, selection, scrolling, realization, focus or activation fallback.
+The toolkit adds no explicit focus or activation request. During a real `TogglePattern.Toggle`,
+UIA/runtime internals or the target provider may nevertheless focus or activate the target;
+**focus preservation is not guaranteed**. In the synthetic WPF fixture used for validation,
+a direct single-toggle call requested focus once before the provider's toggle method; CLI/MCP
+tests compare equivalent fresh fixtures against that direct-call baseline and prohibit any
+additional focus requests or other forbidden operations. This observation is not a guarantee
+about other providers. No-op and rejected paths retain strict zero-toggle/zero-focus checks.
+
+Success (exit code 0):
+```json
+{"success":true,"desiredState":"on","expectedState":"off","before":{"isEnabled":true,"toggleSupported":true,"toggleState":"off"},"after":{"isEnabled":true,"toggleSupported":true,"toggleState":"on"},"mutationAttempted":true}
+```
+No-op success has `mutationAttempted:false` and two matching observations. Observations use
+the `get-state` field/error semantics, but query only enabled/toggle state; selection fields
+are omitted, not reported as unsupported.
+
+Failure (exit code 1) after resolving and observing the target contains `desiredState`,
+`expectedState`, `before`, `mutationAttempted`, and `after` if verification was attempted:
+```json
+{"success":false,"error":"verify-mismatch","message":"...","desiredState":"off","expectedState":"on","before":{"isEnabled":true,"toggleSupported":true,"toggleState":"on"},"after":{"isEnabled":true,"toggleSupported":true,"toggleState":"indeterminate"},"mutationAttempted":true}
+```
+Unsupported or unreadable values are omitted, never invented as off/false. A throwing toggle
+is marked attempted, is followed by a read-back, and remains a failure even if read-back
+matches. Failed post-reads retain partial `after.errors`; unavailable elements take precedence
+as `stale-context`. Early argument/window/selector errors retain their existing envelope and
+ambiguity details and have no observations. They may omit `mutationAttempted`; no action occurred.
+
+**Safety:** Read-check-action-read is sequential, not atomic or a compare-and-swap. Another
+actor can change state between any steps; the precondition does not lock the application.
+`mutationAttempted:true` means the call was issued, not that it completed or changed state.
+Failure is not rollback: inspect the observations and re-read before deciding what to do;
+never blindly repeat a failed or uncertain request. Verification is one immediate read, not
+an eventual-state wait. UI state does not establish hardware connection or physical state.
+
 ### `set-grid-cell --hwnd <h> --gridStrategy <s> --gridValue <v> --rowStrategy <s> --rowValue <v> --columnIndex <n> --text <input> [--editorControlType Edit|ComboBox|CheckBox] [--applyStrategy <s> --applyValue <v>]`
 Edits a cell in a UIA `DataGrid` without relying on a previously captured screen coordinate.
 `--gridStrategy`/`--gridValue` locate the grid; `--rowStrategy`/`--rowValue` locate a descendant
@@ -955,12 +1026,14 @@ content). Does not activate/focus the window.
 
 ## Phase 9 verbs (reliable interaction primitives)
 
-### `activate --hwnd <h>`
+### `activate --hwnd <h> [--restore true|false]`
 Brings the given window to the foreground via `SetForegroundWindow`. **Unlike every Phase 8
 verb, this is intentionally interactive/non-read-only** — it changes window activation, z-order,
 and input focus rather than only observing the target. Requires an explicit `--hwnd`; does not
 fall back to `--pid`/persisted session context.
-- Success: `{ "success": true, "activated": true }`
+- Omitted `--restore` or `--restore false` keeps the legacy no-explicit-restore behavior and
+  response envelope. The default does not request `ShowWindow` or promise restoration.
+- Default success: `{ "success": true, "activated": true }`
 - Failure: `invalid-argument` if `--hwnd` is missing or malformed.
 - Failure: `window-gone` if the HWND no longer exists; rediscover its replacement as described above.
 - Failure: `window-not-responding` if the window exists but is hung.
@@ -970,6 +1043,35 @@ fall back to `--pid`/persisted session context.
   this is not necessarily a fatal condition for the caller. A caller receiving `stale-context`
   from `activate` should not assume the window is gone; it may retry, or fall back to manual
   activation (e.g. asking the user to click the window) before continuing with `click`/`type`.
+
+**Explicit verified restore:** `--restore true` validates the supplied HWND and its top-level
+root for existence/responsiveness. It observes minimized state and calls `ShowWindow(SW_RESTORE)`
+only if that valid root is actually minimized. Non-minimized normal/maximized placement is
+left unchanged. It reuses the existing restore poll (up to 1000 ms, non-minimized with stable
+bounds on two consecutive 20 ms samples) and foreground verification (up to 250 ms). No dummy
+input, coordinates, keys, tab selection, or provider action is used to restore a window.
+`--restore` requires an explicit boolean value; malformed/missing values return `invalid-argument`.
+
+Opt-in success requires verified foreground activation **and** a final non-minimized observation:
+```json
+{"success":true,"rootHwnd":"0x1234","restoreRequested":true,"restoreAttempted":true,"isMinimizedBefore":true,"isMinimizedAfter":false,"activated":true}
+```
+`restoreAttempted` records an actual restore call, not the initial minimized snapshot or the
+return value of `ShowWindow` (which indicates previous visibility, not restoration success).
+An already non-minimized root has `restoreAttempted:false` and no placement-changing restore.
+Failed restoration or foreground verification returns `stale-context`, `success:false`,
+`activated:false`, and available before/after facts. A restored-but-background window therefore
+reports `isMinimizedAfter:false` while still failing activation. Closure returns `window-gone`;
+an initially hung window retains `window-not-responding` and is not restored. Unknown observations
+are omitted, never invented as non-minimized. Failures before root validation may only carry
+`restoreRequested:true` / `restoreAttempted:false` without before/after fields.
+
+Windows can deny foreground activation; these sequential observations are not atomic and do
+not reserve focus afterward. Restoring/activating does not select a tab, realize a virtualized
+control, bypass UIA/provider restrictions, or prove that a later selector will succeed. Existing
+read-only verbs do not opt into restoration. The historical default-path observations below
+do not establish guaranteed success for another desktop or invocation.
+
 - Validated live (2026-09-15): backgrounded the target Visual Studio Insiders window (hwnd
   `0xCA18B2`) by opening Notepad on top of it, confirmed via `list-windows` that its
   `isForeground` was `false`, then called `activate --hwnd 0xCA18B2` from a shell that was itself
@@ -1223,7 +1325,8 @@ control types) in caller-side scripts/config rather than baked into this exe.
 - Success (found): `{ "success": true, "found": true, "element": { "name", "automationId",
   "controlType", "className" } }`.
 - Success (not found): `{ "success": true, "found": false }` — not an error, matching
-  `wait-for-element`'s non-error "not found" convention.
+  `wait-for-element`'s non-error "not found" convention; optional `lookupDiagnostics` adds facts
+  and conditional recovery guidance without restoring, activating or switching tabs.
 - Failure: same window-resolution error codes as `inspect` (`element-not-found`/
   `ambiguous-window`/`stale-context`/etc.), `window-not-responding` (checked up front, matching
   `click`/`type`/`send-keys`/`submit-chat-message`/`find-all`), and `invalid-argument` if
@@ -1239,6 +1342,7 @@ matching; unrecognized short type names return `invalid-argument`.
   tied to any specific application's semantics.
 - Success: `{ "success": true, "count": N, "elements": [ { "name", "automationId", "controlType",
   "className" }, ... ] }`.
+- Zero results remain successful and can include optional `lookupDiagnostics` as described above.
 - Failure: same error codes as `find-first`.
 
 **Design note — supersedes the former `has-pending-prompt` verb (Phase 11).** That verb hardcoded

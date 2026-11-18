@@ -95,6 +95,8 @@ try
             return Verbs.GetText(opts);
         case "get-state":
             return Verbs.GetState(opts);
+        case "set-toggle-state":
+            return Verbs.SetToggleState(opts);
         case "wait-for-element":
             return Verbs.WaitForElement(opts);
         case "read-visible-text":
@@ -735,6 +737,7 @@ internal static class Verbs
             nodesBeyondDepth = limited ? depthStats.NodesBeyondDepth : (int?)null,
             nodesBeyondDepthCapped = limited && depthStats.Capped ? true : (bool?)null,
             hint = limited ? depthStats.Hint(maxDepth) : null,
+            lookupDiagnostics = filtered && matchCount == 0 ? CreateLookupDiagnostics(windowHwnd) : null,
         });
         return 0;
     }
@@ -1386,7 +1389,8 @@ internal static class Verbs
         var grid = UiaHelper.ResolveSelector(window, gridSelector);
         if (grid is null)
         {
-            JsonOutput.WriteError("element-not-found", "No grid found for the supplied grid selector.");
+            JsonOutput.WriteError("element-not-found", "No grid found for the supplied grid selector.",
+                new { lookupDiagnostics = CreateLookupDiagnostics(windowHwnd) });
             return 1;
         }
 
@@ -1395,7 +1399,8 @@ internal static class Verbs
         {
             JsonOutput.WriteError(
                 "element-not-found",
-                $"No grid cell was found for row selector [{rowSelector.Strategy}] '{rowSelector.Value}' and column {columnIndex}.");
+                $"No grid cell was found for row selector [{rowSelector.Strategy}] '{rowSelector.Value}' and column {columnIndex}.",
+                new { lookupDiagnostics = CreateLookupDiagnostics(windowHwnd) });
             return 1;
         }
 
@@ -1410,7 +1415,8 @@ internal static class Verbs
         {
             JsonOutput.WriteError(
                 "element-not-found",
-                $"No {editorControlTypeText} editor was found in grid column {columnIndex}.");
+                $"No {editorControlTypeText} editor was found in grid column {columnIndex}.",
+                new { lookupDiagnostics = CreateLookupDiagnostics(windowHwnd) });
             return 1;
         }
 
@@ -1850,30 +1856,11 @@ internal static class Verbs
     public static int GetState(Dictionary<string, string> opts,
         Func<IntPtr, AutomationElement?>? acquireWindow = null)
     {
-        var (_, _, selectorErrorCode, selectorError) = ParseSelectorArgs(opts);
-        var (_, controlTypeError) = ParseOptionalControlType(opts);
-        if (selectorErrorCode is not null || controlTypeError is not null)
+        var validationError = ValidateStateTargetArguments(opts);
+        if (validationError is not null)
         {
-            JsonOutput.WriteError("invalid-argument", selectorError ?? controlTypeError!);
+            JsonOutput.WriteError("invalid-argument", validationError);
             return 1;
-        }
-
-        foreach (var key in new[] { "hwnd", "scopeHwnd" })
-        {
-            if (!opts.TryGetValue(key, out var hwnd))
-            {
-                continue;
-            }
-
-            try
-            {
-                UiaHelper.ParseHwnd(hwnd);
-            }
-            catch (Exception ex) when (ex is FormatException or OverflowException or ArgumentException)
-            {
-                JsonOutput.WriteError("invalid-argument", $"Invalid {key} '{hwnd}'.");
-                return 1;
-            }
         }
 
         try
@@ -1908,11 +1895,109 @@ internal static class Verbs
         }
     }
 
+    private static string? ValidateStateTargetArguments(Dictionary<string, string> opts)
+    {
+        var (_, _, selectorErrorCode, selectorError) = ParseSelectorArgs(opts);
+        var (_, controlTypeError) = ParseOptionalControlType(opts);
+        if (selectorErrorCode is not null || controlTypeError is not null)
+        {
+            return selectorError ?? controlTypeError!;
+        }
+
+        foreach (var key in new[] { "hwnd", "scopeHwnd" })
+        {
+            if (!opts.TryGetValue(key, out var hwnd))
+            {
+                continue;
+            }
+
+            try
+            {
+                UiaHelper.ParseHwnd(hwnd);
+            }
+            catch (Exception ex) when (ex is FormatException or OverflowException or ArgumentException)
+            {
+                return $"Invalid {key} '{hwnd}'.";
+            }
+        }
+
+        return null;
+    }
+
+    public static int SetToggleState(Dictionary<string, string> opts,
+        Func<IntPtr, AutomationElement?>? acquireWindow = null)
+    {
+        opts.TryGetValue("desiredState", out var desiredState);
+        opts.TryGetValue("expectedState", out var expectedState);
+        if (!UiaHelper.IsToggleStateName(desiredState) || !UiaHelper.IsToggleStateName(expectedState))
+        {
+            JsonOutput.WriteError("invalid-argument",
+                "--desiredState and --expectedState are required and must be on, off or indeterminate.",
+                new { mutationAttempted = false });
+            return 1;
+        }
+        var validationError = ValidateStateTargetArguments(opts);
+        if (validationError is not null)
+        {
+            JsonOutput.WriteError("invalid-argument", validationError, new { mutationAttempted = false });
+            return 1;
+        }
+
+        AutomationElement target;
+        try
+        {
+            var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
+            if (errorCode is not null)
+            {
+                JsonOutput.WriteError(errorCode, error!, new { mutationAttempted = false });
+                return 1;
+            }
+
+            var (element, elementErrorCode, elementError, elementErrorDetails) =
+                ResolveElement(windowHwnd, opts, includeControlType: true,
+                    propagateWindowErrors: true, acquireWindow: acquireWindow);
+            if (element is null)
+            {
+                JsonOutput.WriteError(elementErrorCode!, elementError!, elementErrorDetails);
+                return 1;
+            }
+
+            target = element;
+        }
+        catch (ElementNotAvailableException ex)
+        {
+            JsonOutput.WriteError("stale-context", ex.Message, new { mutationAttempted = false });
+            return 1;
+        }
+        catch (Exception ex) when (UiaHelper.IsStateProviderError(ex))
+        {
+            JsonOutput.WriteError("state-provider-error", ex.Message, new { mutationAttempted = false });
+            return 1;
+        }
+
+        return WriteToggleStateResult(desiredState, expectedState,
+            UiaHelper.SetToggleState(target, desiredState, expectedState));
+    }
+
+    internal static int WriteToggleStateResult(string desiredState, string expectedState,
+        UiaHelper.ToggleStateChangeResult result)
+    {
+        var payload = new { desiredState, expectedState, before = result.Before, after = result.After,
+            mutationAttempted = result.MutationAttempted };
+        if (result.Error is not null)
+        {
+            JsonOutput.WriteError(result.Error, result.Message!, payload);
+            return 1;
+        }
+
+        JsonOutput.WriteSuccess(payload);
+        return 0;
+    }
+
     internal static int WriteStateResult(ElementStateInfo state)
     {
-        if (state.Errors is { Count: > 0 } errors)
+        if (UiaHelper.StateReadError(state) is { } error)
         {
-            var error = errors.FirstOrDefault(item => item.Error == "stale-context") ?? errors[0];
             JsonOutput.WriteError(error.Error, error.Message, new { state });
             return 1;
         }
@@ -2030,7 +2115,8 @@ internal static class Verbs
             {
                 JsonOutput.WriteError(
                     "timeout",
-                    $"Element [{strategy}] '{value}' did not reach state '{state}' within {timeoutMs}ms.");
+                    $"Element [{strategy}] '{value}' did not reach state '{state}' within {timeoutMs}ms.",
+                    element is null ? new { lookupDiagnostics = CreateLookupDiagnostics(windowHwnd) } : null);
                 return 1;
             }
 
@@ -2193,6 +2279,13 @@ internal static class Verbs
     /// </summary>
     public static int Activate(Dictionary<string, string> opts)
     {
+        var restore = false;
+        if (opts.TryGetValue("restore", out var restoreText) && !bool.TryParse(restoreText, out restore))
+        {
+            JsonOutput.WriteError("invalid-argument", "--restore must be true or false.");
+            return 1;
+        }
+
         if (!opts.TryGetValue("hwnd", out var hwndText))
         {
             JsonOutput.WriteError("invalid-argument", "--hwnd is required.");
@@ -2216,8 +2309,25 @@ internal static class Verbs
         var (_, windowErrorCode, windowError) = ValidateResolvedWindowHwnd(windowHwnd);
         if (windowErrorCode is not null)
         {
-            JsonOutput.WriteError(windowErrorCode, windowError!);
+            JsonOutput.WriteError(windowErrorCode, windowError!,
+                restore ? new { restoreRequested = true, restoreAttempted = false } : null);
             return 1;
+        }
+
+        if (restore)
+        {
+            var root = NativeMethods.GetAncestor(windowHwnd, NativeMethods.GA_ROOT);
+            var (_, rootErrorCode, rootError) = ValidateResolvedWindowHwnd(root);
+            if (rootErrorCode is not null)
+            {
+                JsonOutput.WriteError(rootErrorCode, rootError!,
+                    new { restoreRequested = true, restoreAttempted = false });
+                return 1;
+            }
+
+            var result = ActivateRestoringWindow(() => ReadMinimizedState(root),
+                onRestoreAttempt => EnsureTargetWindowForeground(root, restoreIfMinimized: true, onRestoreAttempt));
+            return WriteActivationRestoreResult(root, result);
         }
 
         // SetForegroundWindow can legitimately return false
@@ -2241,6 +2351,65 @@ internal static class Verbs
         }
 
         JsonOutput.WriteSuccess(new { activated = true });
+        return 0;
+    }
+
+    internal static ActivationRestoreResult ActivateRestoringWindow(Func<bool?> readMinimized,
+        Func<Action, bool> activate)
+    {
+        var before = readMinimized();
+        var attempted = false;
+        if (before is null)
+        {
+            return new(null, null, false, false, "window-gone", "The target window no longer exists; rediscover its HWND.");
+        }
+
+        try
+        {
+            var activated = activate(() => attempted = true);
+            var after = readMinimized();
+            if (after is null)
+            {
+                return new(before, null, attempted, false, "window-gone", "The target window disappeared during activation; rediscover its HWND.");
+            }
+            if (after.Value)
+            {
+                return new(before, after, attempted, false, "stale-context", "The target is still minimized; restoration was not verified.");
+            }
+            if (!activated)
+            {
+                return new(before, after, attempted, false, "stale-context",
+                    "Foreground activation was not verified. Windows may deny foreground activation; check the target manually before continuing.");
+            }
+
+            return new(before, after, attempted, true);
+        }
+        catch (WindowGoneException ex)
+        {
+            return new(before, readMinimized(), attempted, false, "window-gone", ex.Message);
+        }
+        catch (ForegroundActivationException ex)
+        {
+            var after = readMinimized();
+            return new(before, after, attempted, false, after is null ? "window-gone" : "stale-context", ex.Message);
+        }
+    }
+
+    internal sealed record ActivationRestoreResult(bool? IsMinimizedBefore, bool? IsMinimizedAfter,
+        bool RestoreAttempted, bool Activated, string? Error = null, string? Message = null);
+
+    internal static int WriteActivationRestoreResult(IntPtr root, ActivationRestoreResult result)
+    {
+        var payload = new { rootHwnd = $"0x{root.ToInt64():X}", restoreRequested = true,
+            restoreAttempted = result.RestoreAttempted, isMinimizedBefore = result.IsMinimizedBefore,
+            isMinimizedAfter = result.IsMinimizedAfter, activated = result.Activated };
+        if (result.Error is not null)
+        {
+            JsonOutput.WriteError(result.Error, result.Message!, payload);
+            return 1;
+        }
+
+        JsonOutput.WriteSuccess(payload);
         return 0;
     }
 
@@ -2362,7 +2531,7 @@ internal static class Verbs
                 : $"Name '{inputValue}'";
             JsonOutput.WriteError(
                 "element-not-found", $"No input element found for {inputDescription}.",
-                new { step = "resolve-input" });
+                new { step = "resolve-input", lookupDiagnostics = CreateLookupDiagnostics(windowHwnd) });
             return 1;
         }
 
@@ -2546,10 +2715,11 @@ internal static class Verbs
     /// </remarks>
     public static int FindFirst(Dictionary<string, string> opts)
     {
-        var (scope, scopeErrorCode, scopeError) = ResolveFindScope(opts);
+        var (scope, scopeErrorCode, scopeError) = ResolveFindScope(opts, out var diagnosticHwnd);
         if (scope is null)
         {
-            JsonOutput.WriteError(scopeErrorCode!, scopeError!);
+            JsonOutput.WriteError(scopeErrorCode!, scopeError!, scopeErrorCode == "element-not-found"
+                ? new { lookupDiagnostics = CreateLookupDiagnostics(diagnosticHwnd) } : null);
             return 1;
         }
 
@@ -2571,7 +2741,7 @@ internal static class Verbs
             scope, new Selector { Strategy = strategy, Value = value! }, controlType);
         if (match is null)
         {
-            JsonOutput.WriteSuccess(new { found = false });
+            JsonOutput.WriteSuccess(new { found = false, lookupDiagnostics = CreateLookupDiagnostics(diagnosticHwnd) });
             return 0;
         }
 
@@ -2588,10 +2758,11 @@ internal static class Verbs
     /// </summary>
     public static int FindAll(Dictionary<string, string> opts)
     {
-        var (scope, scopeErrorCode, scopeError) = ResolveFindScope(opts);
+        var (scope, scopeErrorCode, scopeError) = ResolveFindScope(opts, out var diagnosticHwnd);
         if (scope is null)
         {
-            JsonOutput.WriteError(scopeErrorCode!, scopeError!);
+            JsonOutput.WriteError(scopeErrorCode!, scopeError!, scopeErrorCode == "element-not-found"
+                ? new { lookupDiagnostics = CreateLookupDiagnostics(diagnosticHwnd) } : null);
             return 1;
         }
 
@@ -2624,7 +2795,8 @@ internal static class Verbs
             elements.Add(ToElementSummary(match));
         }
 
-        JsonOutput.WriteSuccess(new { count = elements.Count, elements });
+        JsonOutput.WriteSuccess(new { count = elements.Count, elements,
+            lookupDiagnostics = elements.Count == 0 ? CreateLookupDiagnostics(diagnosticHwnd) : null });
         return 0;
     }
 
@@ -2706,6 +2878,7 @@ internal static class Verbs
             }
 
             var scope = window;
+            var diagnosticHwnd = windowHwnd;
             if (opts.TryGetValue("scopeHwnd", out var scopeHwndText))
             {
                 IntPtr scopeHwnd;
@@ -2727,9 +2900,11 @@ internal static class Verbs
                 }
 
                 scope = UiaHelper.FindWindowByHwnd($"0x{scopeHwnd.ToInt64():X}");
+                diagnosticHwnd = scopeHwnd;
                 if (scope is null)
                 {
-                    JsonOutput.WriteError("container-not-found", "No scope element found for --scopeHwnd.");
+                    JsonOutput.WriteError("container-not-found", "No scope element found for --scopeHwnd.",
+                        new { lookupDiagnostics = CreateLookupDiagnostics(diagnosticHwnd) });
                     return 1;
                 }
             }
@@ -2739,7 +2914,8 @@ internal static class Verbs
             var matches = UiaHelper.ResolveSelectorAll(scope, selector);
             if (matches.Count == 0)
             {
-                JsonOutput.WriteError("container-not-found", $"No container found for selector [{strategy}] '{value}'.");
+                JsonOutput.WriteError("container-not-found", $"No container found for selector [{strategy}] '{value}'.",
+                    new { lookupDiagnostics = CreateLookupDiagnostics(diagnosticHwnd) });
                 return 1;
             }
 
@@ -3531,9 +3707,10 @@ internal static class Verbs
     /// ambiguous matches elsewhere in the window).
     /// </summary>
     private static (AutomationElement? scope, string? errorCode, string? error) ResolveFindScope(
-        Dictionary<string, string> opts)
+        Dictionary<string, string> opts, out IntPtr diagnosticHwnd)
     {
         var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
+        diagnosticHwnd = windowHwnd;
         if (errorCode is not null)
         {
             return (null, errorCode, error);
@@ -3608,20 +3785,22 @@ internal static class Verbs
             var scopeElement = UiaHelper.FindWindowByHwnd(
                 $"0x{scopeHwnd.ToInt64():X}", propagateWindowErrors, acquireWindow);
             return scopeElement is null
-                ? (null, "element-not-found", $"No scope element found for scopeHwnd '0x{scopeHwnd.ToInt64():X}'.", null)
-                : ResolveElement(scopeElement, opts, strategyKey, valueKey, includeControlType);
+                ? (null, "element-not-found", $"No scope element found for scopeHwnd '0x{scopeHwnd.ToInt64():X}'.",
+                    new { lookupDiagnostics = CreateLookupDiagnostics(scopeHwnd) })
+                : ResolveElement(scopeElement, opts, strategyKey, valueKey, includeControlType, scopeHwnd);
         }
 
         var scope = UiaHelper.FindWindowByHwnd(
             $"0x{windowHwnd.ToInt64():X}", propagateWindowErrors, acquireWindow);
         return scope is null
-            ? (null, "element-not-found", $"No window found for hwnd '0x{windowHwnd.ToInt64():X}'.", null)
-            : ResolveElement(scope, opts, strategyKey, valueKey, includeControlType);
+            ? (null, "element-not-found", $"No window found for hwnd '0x{windowHwnd.ToInt64():X}'.",
+                new { lookupDiagnostics = CreateLookupDiagnostics(windowHwnd) })
+            : ResolveElement(scope, opts, strategyKey, valueKey, includeControlType, windowHwnd);
     }
 
     private static (AutomationElement? element, string? errorCode, string? error, object? errorDetails) ResolveElement(
         AutomationElement scope, Dictionary<string, string> opts, string strategyKey = "strategy", string valueKey = "value",
-        bool includeControlType = false)
+        bool includeControlType = false, IntPtr diagnosticHwnd = default)
     {
         opts.TryGetValue(strategyKey, out var strategyText);
         if (!UiaHelper.TryParseImplementedSelectorStrategy(strategyText, out var strategy, out var strategyError))
@@ -3652,7 +3831,8 @@ internal static class Verbs
         if (matches.Count == 0)
         {
             return (null, "element-not-found",
-                $"No element found for selector [{strategy}] '{value}'.", null);
+                $"No element found for selector [{strategy}] '{value}'.",
+                new { lookupDiagnostics = CreateLookupDiagnostics(diagnosticHwnd) });
         }
 
         if (matches.Count > 1)
@@ -3691,7 +3871,33 @@ internal static class Verbs
         return ResolveDiscoveredWindow($"0x{windowHwnd.ToInt64():X}");
     }
 
-    private static bool EnsureTargetWindowForeground(IntPtr targetHwnd, bool restoreIfMinimized = false)
+    internal static bool? ReadMinimizedState(IntPtr hwnd)
+    {
+        if (!NativeMethods.IsWindow(hwnd))
+        {
+            return null;
+        }
+
+        var minimized = NativeMethods.IsIconic(hwnd);
+        return NativeMethods.IsWindow(hwnd) ? minimized : null;
+    }
+
+    internal static object CreateLookupDiagnostics(IntPtr hwnd)
+    {
+        var root = NativeMethods.IsWindow(hwnd) ? NativeMethods.GetAncestor(hwnd, NativeMethods.GA_ROOT) : IntPtr.Zero;
+        var minimized = ReadMinimizedState(root);
+        var hint = "Check the selector and search scope. If this is a WinForms tabbed UI, check the selected tab; " +
+            "inactive pages may not expose their controls through UIA. No tab was switched.";
+        if (minimized == true)
+        {
+            hint += $" The window is minimized. If interaction is intended, explicitly activate --hwnd 0x{root.ToInt64():X} --restore true, " +
+                "then repeat the lookup. This diagnostic does not restore windows, activate them or switch tabs.";
+        }
+        return new { rootHwnd = minimized is not null ? $"0x{root.ToInt64():X}" : null, isMinimized = minimized, hint };
+    }
+
+    private static bool EnsureTargetWindowForeground(IntPtr targetHwnd, bool restoreIfMinimized = false,
+        Action? onRestoreAttempt = null)
     {
         NativeMethods.EnsureWindowExists(targetHwnd);
         var targetRoot = NativeMethods.GetAncestor(targetHwnd, NativeMethods.GA_ROOT);
@@ -3702,6 +3908,7 @@ internal static class Verbs
 
         if (restoreIfMinimized && NativeMethods.IsIconic(targetRoot))
         {
+            onRestoreAttempt?.Invoke();
             NativeMethods.ShowWindow(targetRoot, NativeMethods.SW_RESTORE);
             const int restoreTimeoutMs = 1000;
             const int restorePollMs = 20;

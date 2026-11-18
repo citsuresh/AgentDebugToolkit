@@ -750,6 +750,113 @@ internal static class UiaHelper
         return toggle.Current.ToggleState == desired;
     }
 
+    public static ToggleStateChangeResult SetToggleState(AutomationElement element, string desiredState, string expectedState)
+    {
+        TogglePattern? toggle = null;
+        return SetToggleState(desiredState, expectedState,
+            () => ReadState(() => element.Current.IsEnabled, () =>
+            {
+                toggle = null;
+                if (!element.TryGetCurrentPattern(TogglePattern.Pattern, out var pattern))
+                {
+                    return null;
+                }
+
+                toggle = pattern as TogglePattern
+                    ?? throw new InvalidOperationException("The provider returned an invalid TogglePattern.");
+                var current = toggle;
+                return () => ToggleStateName(current.Current.ToggleState);
+            }, getSelectionReader: null),
+            () => (toggle ?? throw new InvalidOperationException("TogglePattern is unavailable.")).Toggle());
+    }
+
+    internal static ToggleStateChangeResult SetToggleState(string desiredState, string expectedState,
+        Func<ElementStateInfo> readState, Action toggle)
+    {
+        if (!IsToggleStateName(desiredState) || !IsToggleStateName(expectedState))
+        {
+            return new(null, null, false, "invalid-argument",
+                "--desiredState and --expectedState are required and must be on, off or indeterminate.");
+        }
+
+        var before = readState();
+        var readError = StateReadError(before);
+        if (readError is not null)
+        {
+            return new(before, null, false, readError.Error, readError.Message);
+        }
+        if (before.ToggleSupported == false)
+        {
+            return new(before, null, false, "toggle-not-supported", "The target does not support TogglePattern.");
+        }
+        if (before.ToggleSupported != true || !IsToggleStateName(before.ToggleState) || before.IsEnabled is null)
+        {
+            return new(before, null, false, "state-provider-error", "The target's enabled/toggle state is unknown.");
+        }
+        if (before.ToggleState != expectedState)
+        {
+            return new(before, null, false, "precondition-mismatch", "The current toggle state does not match --expectedState.");
+        }
+        if (before.IsEnabled != true)
+        {
+            return new(before, null, false, "element-disabled", "The target is disabled; nothing was toggled.");
+        }
+
+        var mutationAttempted = before.ToggleState != desiredState;
+        ElementStateError? mutationError = null;
+        if (mutationAttempted)
+        {
+            try
+            {
+                toggle();
+            }
+            catch (ElementNotAvailableException ex)
+            {
+                mutationError = new("TogglePattern", "stale-context", ex.Message);
+            }
+            catch (Exception ex) when (IsStateProviderError(ex))
+            {
+                mutationError = new("TogglePattern", "state-provider-error", ex.Message);
+            }
+        }
+
+        // Even a throwing provider may have mutated the target. Observe, but never retry.
+        var after = readState();
+        readError = StateReadError(after);
+        var error = readError?.Error == "stale-context" ? readError : mutationError ?? readError;
+        if (error is not null)
+        {
+            return new(before, after, mutationAttempted, error.Error, error.Message);
+        }
+        if (after.ToggleSupported != true || !IsToggleStateName(after.ToggleState) || after.IsEnabled is null)
+        {
+            return new(before, after, mutationAttempted, "state-provider-error", "The resulting toggle state could not be verified.");
+        }
+        if (after.ToggleState != desiredState)
+        {
+            return new(before, after, mutationAttempted, "verify-mismatch", "The resulting toggle state does not match --desiredState.");
+        }
+
+        return new(before, after, mutationAttempted);
+    }
+
+    internal sealed record ToggleStateChangeResult(ElementStateInfo? Before, ElementStateInfo? After,
+        bool MutationAttempted, string? Error = null, string? Message = null);
+
+    internal static bool IsToggleStateName([System.Diagnostics.CodeAnalysis.NotNullWhen(true)] string? value) =>
+        value is "on" or "off" or "indeterminate";
+
+    internal static ElementStateError? StateReadError(ElementStateInfo state) =>
+        state.Errors?.FirstOrDefault(error => error.Error == "stale-context") ?? state.Errors?.FirstOrDefault();
+
+    private static string ToggleStateName(ToggleState value) => value switch
+    {
+        ToggleState.On => "on",
+        ToggleState.Off => "off",
+        ToggleState.Indeterminate => "indeterminate",
+        _ => throw new InvalidOperationException("The provider returned an unknown toggle state.")
+    };
+
     public static bool TryParseGridEditorControlType(
         string? text, out ControlType editorControlType, out string error)
     {
@@ -1347,20 +1454,14 @@ internal static class UiaHelper
     public static ElementStateInfo ReadState(AutomationElement element) => ReadState(
         () => element.Current.IsEnabled,
         () => element.TryGetCurrentPattern(TogglePattern.Pattern, out var pattern)
-            ? () => ((TogglePattern)pattern).Current.ToggleState switch
-            {
-                ToggleState.On => "on",
-                ToggleState.Off => "off",
-                ToggleState.Indeterminate => "indeterminate",
-                _ => throw new InvalidOperationException("The provider returned an unknown toggle state.")
-            }
+            ? () => ToggleStateName(((TogglePattern)pattern).Current.ToggleState)
             : null,
         () => element.TryGetCurrentPattern(SelectionItemPattern.Pattern, out var pattern)
             ? () => ((SelectionItemPattern)pattern).Current.IsSelected
             : null);
 
     internal static ElementStateInfo ReadState(Func<bool> readEnabled,
-        Func<Func<string>?> getToggleReader, Func<Func<bool>?> getSelectionReader)
+        Func<Func<string>?> getToggleReader, Func<Func<bool>?>? getSelectionReader)
     {
         var state = new ElementStateInfo();
         Read("IsEnabled", () => state.IsEnabled = readEnabled());
@@ -1373,15 +1474,18 @@ internal static class UiaHelper
                 state.ToggleState = read();
             }
         });
-        Read("SelectionItemPattern", () =>
+        if (getSelectionReader is not null)
         {
-            var read = getSelectionReader();
-            state.SelectionItemSupported = read is not null;
-            if (read is not null)
+            Read("SelectionItemPattern", () =>
             {
-                state.IsSelected = read();
-            }
-        });
+                var read = getSelectionReader();
+                state.SelectionItemSupported = read is not null;
+                if (read is not null)
+                {
+                    state.IsSelected = read();
+                }
+            });
+        }
         return state;
 
         void Read(string pattern, Action read)

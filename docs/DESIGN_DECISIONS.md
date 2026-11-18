@@ -285,3 +285,47 @@ the existing stable-restore wait and fresh bounds check immediately before input
 activation. Replacing the post-activation check would miss movement/restoration; checking a
 minimized rectangle before restoration would incorrectly reject its temporary off-screen bounds.
 Use the root's minimized state, matching the existing activation/restoration target.
+
+## 2026-11-18 -- Precondition-bound toggle changes use exactly zero or one provider action
+
+**Decision:** `set-toggle-state` requires explicit desired and expected states, rejects unsafe
+observations and disabled targets, and verifies both no-ops and single `TogglePattern.Toggle`
+attempts. It queries only enabled/toggle state, preserving optional/unknown state semantics.
+No fallback, retry or cycle is allowed, even when a three-state provider lands elsewhere.
+A throwing call is recorded as attempted and observed afterward, never promoted to success.
+
+**Rationale:** An extra toggle can reverse the intended safety action. Sequential UIA reads
+are not a lock or atomic compare-and-swap, and a provider may mutate before throwing. Report
+known before/after observations and uncertainty rather than guessing hardware state or retrying.
+MCP remains explicitly mutating and non-idempotent for retry purposes because the precondition
+and uncertain outcomes require a fresh observation and decision.
+
+## 2026-11-18 -- Distinguish intrinsic UIA focus from toolkit focus fallbacks
+
+**Decision:** The desired-state toggle operation adds no explicit focus/activation request or
+synthetic input. Focus preservation during the requested TogglePattern call is not guaranteed.
+Actual-toggle integration tests compare focus counts and ordering with a direct single-toggle
+baseline on equivalent fresh fixtures; all other forbidden-operation traps remain strict.
+No-op and rejected paths continue to require zero toggle and focus requests.
+
+**Evidence:** The synthetic WPF provider received one focus request before its toggle method
+even when the test called TogglePattern directly without CLI/MCP. This is a narrow observation,
+not a claim about every provider. Earlier failing traces are retained; the differential check
+permits only that measured intrinsic behavior, not an arbitrary number of focus calls.
+
+## 2026-11-18 -- Lookup diagnostics stay read-only; activation restoration is explicit
+
+**Decision:** Missing/empty selector results can report an existence-guarded IsIconic snapshot
+of the effective root HWND and conditional WinForms selected-tab guidance. They never infer
+an inactive page, switch tabs, or turn successful empty searches into failures. Existing error
+codes, ambiguity rules, depth hints and polling behavior remain intact.
+
+Activation restores only with explicit restore=true, using shared HWND validation and the
+existing stable-restore/foreground-verification helper. The restore-attempt fact is recorded
+immediately before ShowWindow; success requires final non-minimized and verified foreground
+observations, not a Win32 return value. Omitted/false preserves the legacy activation path.
+The optional MCP restore parameter follows the existing cancellation-token slot.
+
+**Rationale:** A minimized window is an observable fact; an unavailable tab control is only a
+possible provider explanation. Recovery must require explicit interaction permission, preserve
+normal/maximized placement, and report partial restoration even when activation is denied.

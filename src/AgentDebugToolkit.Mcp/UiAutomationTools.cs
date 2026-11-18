@@ -225,6 +225,21 @@ public sealed class UiAutomationTools
         => RunAsync(BuildArgs("get-state", ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value),
             ("--controlType", controlType), ("--scopeHwnd", scopeHwnd)), null, cancellationToken);
 
+    [McpServerTool(Name = "ui_set_toggle_state", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false),
+     Description("Requests an explicit desired toggle state with an expected-state precondition (on/off/indeterminate). Reads TogglePattern and enabled state, refuses unsafe targets, skips an already-correct state, otherwise calls Toggle at most once and verifies. No click, keys, invoke, retry, focus, selection or scrolling fallback. The toolkit adds no explicit focus/activation request, but UIA or the target provider may focus or activate during a real toggle; focus preservation is not guaranteed. A failed/uncertain action may still have changed state: inspect mutationAttempted and before/after before deciding what to do. Sequential observations are not atomic and UI state does not establish hardware connection.")]
+    public Task<ToolInvocationResult> SetToggleState(
+        [Description("Window handle to resolve the selector against.")] string hwnd,
+        [Description("Selector strategy: Name or AutomationId.")] string strategy,
+        [Description("Selector value to match.")] string value,
+        [Description("Required desired state: on, off or indeterminate. At most one toggle is attempted.")] string desiredState,
+        [Description("Required precondition: current state must equal on, off or indeterminate as supplied.")] string expectedState,
+        [Description("Optional UIA control type filter, e.g. CheckBox.")] string? controlType = null,
+        [Description("Optional narrower scope window/element handle to search within instead of hwnd.")] string? scopeHwnd = null,
+        CancellationToken cancellationToken = default)
+        => RunAsync(BuildArgs("set-toggle-state", ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value),
+            ("--desiredState", desiredState), ("--expectedState", expectedState),
+            ("--controlType", controlType), ("--scopeHwnd", scopeHwnd)), null, cancellationToken);
+
     [McpServerTool(Name = "ui_set_grid_cell", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false),
      Description("Edits a cell in a UIA DataGrid (locates grid/row/column, scrolls virtualized grids into view, edits via ValuePattern/TogglePattern or synthetic input, optionally invokes an Apply action). Changes target application state.")]
     public Task<ToolInvocationResult> SetGridCell(
@@ -340,11 +355,12 @@ public sealed class UiAutomationTools
             ("--scale", scale?.ToString("R", CultureInfo.InvariantCulture))), null, cancellationToken);
 
     [McpServerTool(Name = "ui_activate", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false),
-     Description("Brings the given window to the foreground (SetForegroundWindow). Unlike read-only verbs, this changes window activation, z-order, and input focus. Risk: can steal focus from whatever the user is currently doing.")]
+     Description("Brings the given window to the foreground (SetForegroundWindow). Unlike read-only verbs, this changes window activation, z-order, and input focus. Optional restore=true restores only an actually minimized valid responsive window, then verifies non-minimized state and foreground activation; reports restoreAttempted and before/after minimized facts. Omitted/false preserves legacy behavior, with no explicit restore. Windows may deny activation and providers may still hide inactive-tab content. Risk: can steal focus from whatever the user is currently doing.")]
     public Task<ToolInvocationResult> Activate(
         [Description("Window handle to bring to the foreground. No fallback to session context/pid.")] string hwnd,
-        CancellationToken cancellationToken = default)
-        => RunAsync(BuildArgs("activate", ("--hwnd", hwnd)), null, cancellationToken);
+        CancellationToken cancellationToken = default,
+        [Description("Explicitly opt into verified restore if minimized, then verified foreground activation. Default false; does not switch tabs or send input.")] bool? restore = null)
+        => RunAsync(BuildArgs("activate", ("--hwnd", hwnd), ("--restore", Bool(restore))), null, cancellationToken);
 
     [McpServerTool(Name = "ui_send_keys", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false),
      Description("Sends raw, unescaped SendKeys syntax (e.g. '^a', '{DELETE}', '{ENTER}', '^{END}') to the resolved element at its CURRENT caret position. focusMode set-focus only establishes focus and does not move the caret; click performs a synthetic click that may reposition the caret depending on the control (unverified). To append after ui_type (which can leave the caret at position 0), send ^{END} first. Newlines from {ENTER} may read back as \"\\r\" in RichEdit-style controls. Changes target application state; can trigger unintended actions if the syntax is wrong for the control. If the selector matches more than one element this fails with ambiguous-match (count plus up to 10 candidates) and does nothing; narrow with scopeHwnd or pre-check with ui_find_all.")]

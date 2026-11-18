@@ -126,7 +126,7 @@ are annotated for every allowed call, so an MCP client can grant/prompt approval
     though the process itself keeps running), `vs_execute_statement` (unsafe/side-effecting
     evaluation), and every state-changing `agentdebug-ui` verb that acts on the target
     application (`ui_click`, `ui_right_click`, `ui_double_click`, `ui_drag`, `ui_type`,
-    `ui_set_grid_cell`, `ui_activate`, `ui_send_keys`, `ui_submit_chat_message`).
+    `ui_set_toggle_state`, `ui_set_grid_cell`, `ui_activate`, `ui_send_keys`, `ui_submit_chat_message`).
   - Debugger **selection-only** tools (`vs_select_thread`, `vs_select_frame`, `ui_attach`,
     `ui_set_context`, `ui_move_mouse`) are marked `readOnlyHint: false` but `destructiveHint: false`
     — they only change which thread/frame/target subsequent calls use, not in a way that destroys
@@ -189,6 +189,7 @@ are annotated for every allowed call, so an MCP client can grant/prompt approval
 | `ui_type` | `type` | Destructive; optional `text`, `clear`, `scopeHwnd`, `verify`, and `paste` parameters |
 | `ui_get_text` | `get-text` | Read-only; optional `controlType` and `scopeHwnd` narrow the selector search |
 | `ui_get_state` | `get-state` | Read-only; required `hwnd`, `strategy`, `value`; optional `controlType`, `scopeHwnd`; explicit toggle/selection-item support, available values, and enabled state; never invokes/toggles/selects/focuses/scrolls/realizes/activates or sends input |
+| `ui_set_toggle_state` | `set-toggle-state` | Destructive; required `hwnd`, `strategy`, `value`, `desiredState`, `expectedState`; optional `controlType`, `scopeHwnd`; guarded zero-or-one toggle with before/after verification; no fallback or retry |
 | `ui_set_grid_cell` | `set-grid-cell` | Destructive |
 | `ui_wait_for_window_change` | `wait-for-window-change` | Read-only; `timeoutMs` capped at 120000; same scope/filter parameters as `ui_list_windows` plus `until` (`settle`/`match`) and `excludeHwnds` |
 | `ui_wait_for_element` | `wait-for-element` | Read-only; optional `controlType`; `timeoutMs` capped at 120000 |
@@ -197,7 +198,7 @@ are annotated for every allowed call, so an MCP client can grant/prompt approval
 | `ui_set_context` | `set-context` | |
 | `ui_read_visible_text` | `read-visible-text` | Read-only |
 | `ui_screenshot` | `screenshot` | Writes a PNG file — not read-only |
-| `ui_activate` | `activate` | Destructive (steals foreground focus) |
+| `ui_activate` | `activate` | Destructive (steals foreground focus); optional `restore:true` opts into verified restore/foreground activation; omitted/false preserves legacy behavior |
 | `ui_send_keys` | `send-keys` | Destructive |
 | `ui_submit_chat_message` | `submit-chat-message` | Destructive; treat as high-impact (real submission) |
 | `ui_find_first` | `find-first` | Read-only; optional `controlType` filters candidates before lookup |
@@ -225,7 +226,7 @@ is marked `readOnlyHint: false`, `destructiveHint: false`,
 
 `ui_list_windows` and `ui_wait_for_window_change` send `all` and `includeUntitled` only when true (false or omitted sends nothing, so `all=false` with `pid` still works). The CLI alone validates scope exclusivity and values. Window titles can contain sensitive data: filter first and return only the rows needed. Discovery never changes the session context; use the returned `hwnd` with hwnd-based tools, or `ui_set_context` for pid-based tools.
 
-Ambiguous selectors in `ui_click`, `ui_right_click`, `ui_double_click`, `ui_drag`, the selector form of `ui_move_mouse`, `ui_type`, `ui_get_text`, `ui_get_state`, and `ui_send_keys` fail with `ambiguous-match` (count plus up to 10 candidates) and do nothing. `ui_click`, `ui_get_text`, and `ui_get_state` can additionally narrow candidates with `controlType`; repeated matches of that type remain ambiguous. Narrow with `scopeHwnd` or pre-check with `ui_find_all`.
+Ambiguous selectors in `ui_click`, `ui_right_click`, `ui_double_click`, `ui_drag`, the selector form of `ui_move_mouse`, `ui_type`, `ui_get_text`, `ui_get_state`, `ui_set_toggle_state`, and `ui_send_keys` fail with `ambiguous-match` (count plus up to 10 candidates) and do nothing. `ui_click`, `ui_get_text`, `ui_get_state`, and `ui_set_toggle_state` can additionally narrow candidates with `controlType`; repeated matches of that type remain ambiguous. Narrow with `scopeHwnd` or pre-check with `ui_find_all`.
 
 `ui_get_state(hwnd, strategy, value, controlType?, scopeHwnd?)` relays the CLI envelope
 unchanged in the existing `ToolInvocationResult.Result` (`ExitCode`, `Result`,
@@ -240,6 +241,51 @@ Selector/window failures retain existing codes and may have no `state`.
 are recorded in `State.errors` without changing the existing inspection success behavior.
 UI control state is not proof of hardware connection state. See `docs/CLI_CONTRACT.md`
 for the exact field and error semantics.
+
+Failed selector lookups and successful empty `ui_find_first`, `ui_find_all` or filtered
+`ui_inspect` responses may include `lookupDiagnostics` (`rootHwnd`, observed `isMinimized`,
+`hint`). Unknown/gone-window facts are omitted, not false. Effective scoped HWNDs determine
+the observed root. Guidance to check the selected tab is conditional on a WinForms tabbed UI;
+a missing selector is not proof of an inactive page. Diagnostics do not restore, activate,
+switch tabs, alter ambiguity handling, convert empty results to errors, or change wait timeouts.
+
+`ui_activate(hwnd, cancellationToken?, restore?)` preserves the existing cancellation-token
+position for source callers; MCP clients pass named `restore:true` to opt in. It remains
+`readOnlyHint:false`, `destructiveHint:true`, `idempotentHint:true`, `openWorldHint:false`.
+Omitted/false keeps the legacy activation path and envelope. True restores only an actually
+minimized, valid responsive root, preserves non-minimized placement, and verifies non-minimized
+state plus foreground activation using existing bounded polls. It relays `restoreRequested`,
+`restoreAttempted`, available `isMinimizedBefore`/`isMinimizedAfter`, `rootHwnd` and `activated`.
+Failed restore/activation returns `stale-context` with `success:false` / `activated:false`;
+closure/hung-window errors retain `window-gone` / `window-not-responding`. A successful Win32
+call alone is not opt-in success. No synthetic input or tab switching is used. Windows may
+deny activation; providers may still hide content after restoration, and focus is not reserved.
+See the CLI contract for exact examples, validation, timing and partial-fact semantics.
+
+`ui_set_toggle_state(hwnd, strategy, value, desiredState, expectedState, controlType?, scopeHwnd?)`
+relays the CLI envelope unchanged in `ToolInvocationResult.Result`. Both state arguments are
+required and must be `on`, `off` or `indeterminate`. An authoritative supported state and
+enabled target are required; expected-state mismatch refuses even an already-desired state.
+The operation skips mutation when already correct, otherwise calls `Toggle` at most once,
+and immediately verifies with no retry/cycling or input/focus/selection/scroll/realize fallback.
+The toolkit adds no explicit focus or activation request, but UIA/runtime internals or the
+target provider may focus or activate during a real toggle; **focus preservation is not
+guaranteed**. A direct single-toggle call on the synthetic WPF validation fixture requested
+focus once before the provider's toggle method. CLI/MCP tests require identical focus
+counts/order to a direct-call baseline on equivalent fresh fixtures, with no extra focus or
+other forbidden operations; this observation does not generalize to every provider.
+No-op and rejected paths retain strict zero-toggle/zero-focus checks.
+Disabled targets, unsupported patterns, unknown/provider reads and precondition failures do
+not mutate. It reports `desiredState`, `expectedState`, `before`, optional `after`, and
+`mutationAttempted`; a failed or throwing action may have changed state and is never reported
+as verified success. Errors include `toggle-not-supported`, `element-disabled`,
+`precondition-mismatch`, `verify-mismatch`, `state-provider-error` and `stale-context`, plus
+existing selector/window/argument errors. See the CLI contract for exact response examples.
+Annotations are `readOnlyHint:false`, `destructiveHint:true`, `idempotentHint:false`,
+`openWorldHint:false`: a precondition-bound attempt must not be blindly repeated after an
+uncertain outcome. The desired-state/no-op semantics do not make a retry safe.
+Read-check-action-verification is sequential/non-atomic; UI state does not establish hardware
+connection. This tool changes application state and requires the caller's mutation approval.
 
 For all UI, VS, and console tools, included empty values and values beginning with `--` are passed as a single `--flag=value` argument, preserving them across native process argument parsing. This includes console launch arguments; optional VS solution values that are empty or whitespace remain omitted.
 

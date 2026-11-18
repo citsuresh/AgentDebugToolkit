@@ -93,6 +93,7 @@ public sealed class WindowAvailabilityTests
         }
 
         yield return new object[] { "type", selector.Concat(new[] { "--text", "test" }).ToArray() };
+        yield return new object[] { "set-toggle-state", selector.Concat(new[] { "--desiredState", "on", "--expectedState", "off" }).ToArray() };
         yield return new object[] { "send-keys", selector.Concat(new[] { "--keys", "{ESC}" }).ToArray() };
         yield return new object[] { "drag", selector.Concat(new[] { "--targetX", "20", "--targetY", "20" }).ToArray() };
         yield return new object[] { "wait-for-element", selector.Concat(new[] { "--timeoutMs", "0" }).ToArray() };
@@ -131,6 +132,7 @@ public sealed class WindowAvailabilityTests
     [InlineData("click")]
     [InlineData("get-text")]
     [InlineData("get-state")]
+    [InlineData("set-toggle-state")]
     [InlineData("scroll-container")]
     public void HwndVerbs_ClosedScopeReturnsWindowGone(string verb)
     {
@@ -144,6 +146,10 @@ public sealed class WindowAvailabilityTests
         if (verb == "scroll-container")
         {
             options = options.Concat(new[] { "--verticalPercent", "50" }).ToArray();
+        }
+        if (verb == "set-toggle-state")
+        {
+            options = options.Concat(new[] { "--desiredState", "on", "--expectedState", "off" }).ToArray();
         }
 
         var result = UiCli.Run(options);
