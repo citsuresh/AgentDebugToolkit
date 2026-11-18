@@ -81,7 +81,7 @@ public sealed class UiAutomationTools
             ("--includeUntitled", TrueOnly(includeUntitled))), null, cancellationToken);
 
     [McpServerTool(Name = "ui_inspect", ReadOnly = true, Destructive = false, OpenWorld = false),
-     Description("Dumps the UIA subtree rooted at the given window/element handle without interacting with the UI or saving a screenshot. Prefer filtered inspection over a full dump; unfiltered output has no matchCount; if the window's own name matches nameContains the whole tree is returned. If the output stopped at maxDepth while nodes at the limit still have children, the result carries depthLimited: true, maxDepth, nodesBeyondDepth and a hint (omitted otherwise); that includes a filtered call with matchCount 0. Re-run with a larger maxDepth before concluding a window is opaque.")]
+     Description("Dumps the UIA subtree rooted at the given window/element handle without interacting with the UI or saving a screenshot. Each element adds State with isEnabled, explicit TogglePattern/SelectionItemPattern support and available state values; State.errors reports failed reads without inventing off/false values. Prefer filtered inspection over a full dump; unfiltered output has no matchCount; if the window's own name matches nameContains the whole tree is returned. If the output stopped at maxDepth while nodes at the limit still have children, the result carries depthLimited: true, maxDepth, nodesBeyondDepth and a hint (omitted otherwise); that includes a filtered call with matchCount 0. Re-run with a larger maxDepth before concluding a window is opaque.")]
     public Task<ToolInvocationResult> Inspect(
         [Description("Window handle, e.g. '0x00123456'.")] string hwnd,
         [Description("Maximum tree depth (default 8, root is 0). Electron/Chromium page content is often deeper than the default (for example 16-30); see depthLimited in the result.")] int? maxDepth = null,
@@ -212,6 +212,18 @@ public sealed class UiAutomationTools
         [Description("Optional narrower scope window/element handle to search within instead of hwnd.")] string? scopeHwnd = null,
         CancellationToken cancellationToken = default)
         => RunAsync(BuildArgs("get-text", ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value), ("--controlType", controlType), ("--scopeHwnd", scopeHwnd)), null, cancellationToken);
+
+    [McpServerTool(Name = "ui_get_state", ReadOnly = true, Destructive = false, OpenWorld = false),
+     Description("Reads IsEnabled, TogglePattern support/state (on/off/indeterminate), and SelectionItemPattern support/IsSelected. Never invokes, toggles, selects, focuses, scrolls, or sends input. Unsupported patterns have support=false and no state value; provider failures return state-provider-error, unavailable elements return stale-context. Ambiguous selectors fail with ambiguous-match; narrow with controlType or scopeHwnd. UI state is not proof of hardware connection state.")]
+    public Task<ToolInvocationResult> GetState(
+        [Description("Window handle to resolve the selector against.")] string hwnd,
+        [Description("Selector strategy: Name or AutomationId.")] string strategy,
+        [Description("Selector value to match.")] string value,
+        [Description("Optional UIA control type filter, e.g. CheckBox or ListItem.")] string? controlType = null,
+        [Description("Optional narrower scope window/element handle to search within instead of hwnd.")] string? scopeHwnd = null,
+        CancellationToken cancellationToken = default)
+        => RunAsync(BuildArgs("get-state", ("--hwnd", hwnd), ("--strategy", strategy), ("--value", value),
+            ("--controlType", controlType), ("--scopeHwnd", scopeHwnd)), null, cancellationToken);
 
     [McpServerTool(Name = "ui_set_grid_cell", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false),
      Description("Edits a cell in a UIA DataGrid (locates grid/row/column, scrolls virtualized grids into view, edits via ValuePattern/TogglePattern or synthetic input, optionally invokes an Apply action). Changes target application state.")]

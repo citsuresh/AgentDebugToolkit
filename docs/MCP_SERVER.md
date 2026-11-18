@@ -111,7 +111,7 @@ are annotated for every allowed call, so an MCP client can grant/prompt approval
   - **Read-only** (`readOnlyHint: true`): `vs_debugger_status`, `vs_get_callstack`,
     `vs_get_locals`, `vs_get_exception_info`, `vs_list_breakpoints`, `vs_list_threads`,
     `vs_evaluate`, `vs_wait_for_break`, `ui_list_windows`, `ui_inspect`, `ui_get_cursor_pos`,
-    `ui_get_text`, `ui_wait_for_window_change`, `ui_wait_for_element`,
+    `ui_get_text`, `ui_get_state`, `ui_wait_for_window_change`, `ui_wait_for_element`,
     `ui_wait_for_process_responding`, `ui_delay`, `ui_read_visible_text`,
     `ui_find_first`, `ui_find_all`.
   - `ui_screenshot` is **not** read-only (`readOnlyHint: false`): it writes a new PNG file to disk.
@@ -188,6 +188,7 @@ are annotated for every allowed call, so an MCP client can grant/prompt approval
 | `ui_cursor_session_stop` | `cursor-session stop` | Optional `kind`; omitted kind clears any session and restores cursors |
 | `ui_type` | `type` | Destructive; optional `text`, `clear`, `scopeHwnd`, `verify`, and `paste` parameters |
 | `ui_get_text` | `get-text` | Read-only; optional `controlType` and `scopeHwnd` narrow the selector search |
+| `ui_get_state` | `get-state` | Read-only; required `hwnd`, `strategy`, `value`; optional `controlType`, `scopeHwnd`; explicit toggle/selection-item support, available values, and enabled state; never invokes/toggles/selects/focuses/scrolls/realizes/activates or sends input |
 | `ui_set_grid_cell` | `set-grid-cell` | Destructive |
 | `ui_wait_for_window_change` | `wait-for-window-change` | Read-only; `timeoutMs` capped at 120000; same scope/filter parameters as `ui_list_windows` plus `until` (`settle`/`match`) and `excludeHwnds` |
 | `ui_wait_for_element` | `wait-for-element` | Read-only; optional `controlType`; `timeoutMs` capped at 120000 |
@@ -224,7 +225,21 @@ is marked `readOnlyHint: false`, `destructiveHint: false`,
 
 `ui_list_windows` and `ui_wait_for_window_change` send `all` and `includeUntitled` only when true (false or omitted sends nothing, so `all=false` with `pid` still works). The CLI alone validates scope exclusivity and values. Window titles can contain sensitive data: filter first and return only the rows needed. Discovery never changes the session context; use the returned `hwnd` with hwnd-based tools, or `ui_set_context` for pid-based tools.
 
-Ambiguous selectors in `ui_click`, `ui_right_click`, `ui_double_click`, `ui_drag`, the selector form of `ui_move_mouse`, `ui_type`, `ui_get_text`, and `ui_send_keys` fail with `ambiguous-match` (count plus up to 10 candidates) and do nothing. `ui_click` and `ui_get_text` can additionally narrow candidates with `controlType`; repeated matches of that type remain ambiguous. Narrow with `scopeHwnd` or pre-check with `ui_find_all`.
+Ambiguous selectors in `ui_click`, `ui_right_click`, `ui_double_click`, `ui_drag`, the selector form of `ui_move_mouse`, `ui_type`, `ui_get_text`, `ui_get_state`, and `ui_send_keys` fail with `ambiguous-match` (count plus up to 10 candidates) and do nothing. `ui_click`, `ui_get_text`, and `ui_get_state` can additionally narrow candidates with `controlType`; repeated matches of that type remain ambiguous. Narrow with `scopeHwnd` or pre-check with `ui_find_all`.
+
+`ui_get_state(hwnd, strategy, value, controlType?, scopeHwnd?)` relays the CLI envelope
+unchanged in the existing `ToolInvocationResult.Result` (`ExitCode`, `Result`,
+`WrapperErrorCode`, `WrapperErrorMessage`, `RawOutput` wrapper). Success returns
+`{"success":true,"state":{"isEnabled":true,"toggleSupported":true,"toggleState":"on","selectionItemSupported":false}}`.
+State values are omitted when unsupported or unreadable, never defaulted to off/false.
+Failed probes omit their support flag; failed values retain a successfully established
+support flag. State-read errors return `success:false`, `state-provider-error` or
+`stale-context`, and partial `state` with `errors` (pattern/error/message).
+Selector/window failures retain existing codes and may have no `state`.
+`ui_inspect` adds the same observation object as per-element `State`; supplemental failures
+are recorded in `State.errors` without changing the existing inspection success behavior.
+UI control state is not proof of hardware connection state. See `docs/CLI_CONTRACT.md`
+for the exact field and error semantics.
 
 For all UI, VS, and console tools, included empty values and values beginning with `--` are passed as a single `--flag=value` argument, preserving them across native process argument parsing. This includes console launch arguments; optional VS solution values that are empty or whitespace remain omitted.
 

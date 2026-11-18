@@ -86,7 +86,7 @@ public sealed class WindowAvailabilityTests
         }
 
         var selector = new[] { "--strategy", "Name", "--value", "Target" };
-        foreach (var verb in new[] { "click", "right-click", "double-click", "move-mouse", "get-text",
+        foreach (var verb in new[] { "click", "right-click", "double-click", "move-mouse", "get-text", "get-state",
             "find-first", "find-all", "scroll-into-view" })
         {
             yield return new object[] { verb, selector };
@@ -130,6 +130,7 @@ public sealed class WindowAvailabilityTests
     [Theory]
     [InlineData("click")]
     [InlineData("get-text")]
+    [InlineData("get-state")]
     [InlineData("scroll-container")]
     public void HwndVerbs_ClosedScopeReturnsWindowGone(string verb)
     {

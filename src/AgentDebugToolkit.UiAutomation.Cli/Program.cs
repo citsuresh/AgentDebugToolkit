@@ -93,6 +93,8 @@ try
             return Verbs.SetGridCell(opts);
         case "get-text":
             return Verbs.GetText(opts);
+        case "get-state":
+            return Verbs.GetState(opts);
         case "wait-for-element":
             return Verbs.WaitForElement(opts);
         case "read-visible-text":
@@ -717,7 +719,7 @@ internal static class Verbs
         var filtered = nameContains is not null || controlType is not null;
         var depthStats = new DepthLimitStats();
         var tree = UiaHelper.ToElementInfo(element, includeChildren: true, maxDepth: maxDepth,
-            nameContains: nameContains, controlType: controlType, out var matchCount, depthStats);
+            nameContains: nameContains, controlType: controlType, out var matchCount, depthStats, includeState: true);
         string? screenshotPath = takeScreenshot ? ScreenshotHelper.Capture(element) : null;
 
         // Depth-limit fields are omitted (null) unless at least one node at the limit has children.
@@ -1842,6 +1844,80 @@ internal static class Verbs
 
         var text = UiaHelper.GetText(element);
         JsonOutput.WriteSuccess(new { text });
+        return 0;
+    }
+
+    public static int GetState(Dictionary<string, string> opts,
+        Func<IntPtr, AutomationElement?>? acquireWindow = null)
+    {
+        var (_, _, selectorErrorCode, selectorError) = ParseSelectorArgs(opts);
+        var (_, controlTypeError) = ParseOptionalControlType(opts);
+        if (selectorErrorCode is not null || controlTypeError is not null)
+        {
+            JsonOutput.WriteError("invalid-argument", selectorError ?? controlTypeError!);
+            return 1;
+        }
+
+        foreach (var key in new[] { "hwnd", "scopeHwnd" })
+        {
+            if (!opts.TryGetValue(key, out var hwnd))
+            {
+                continue;
+            }
+
+            try
+            {
+                UiaHelper.ParseHwnd(hwnd);
+            }
+            catch (Exception ex) when (ex is FormatException or OverflowException or ArgumentException)
+            {
+                JsonOutput.WriteError("invalid-argument", $"Invalid {key} '{hwnd}'.");
+                return 1;
+            }
+        }
+
+        try
+        {
+            var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
+            if (errorCode is not null)
+            {
+                JsonOutput.WriteError(errorCode, error!);
+                return 1;
+            }
+
+            var (element, elementErrorCode, elementError, elementErrorDetails) =
+                ResolveElement(windowHwnd, opts, includeControlType: true,
+                    propagateWindowErrors: true, acquireWindow: acquireWindow);
+            if (element is null)
+            {
+                JsonOutput.WriteError(elementErrorCode!, elementError!, elementErrorDetails);
+                return 1;
+            }
+
+            return WriteStateResult(UiaHelper.ReadState(element));
+        }
+        catch (ElementNotAvailableException ex)
+        {
+            JsonOutput.WriteError("stale-context", ex.Message);
+            return 1;
+        }
+        catch (Exception ex) when (UiaHelper.IsStateProviderError(ex))
+        {
+            JsonOutput.WriteError("state-provider-error", ex.Message);
+            return 1;
+        }
+    }
+
+    internal static int WriteStateResult(ElementStateInfo state)
+    {
+        if (state.Errors is { Count: > 0 } errors)
+        {
+            var error = errors.FirstOrDefault(item => item.Error == "stale-context") ?? errors[0];
+            JsonOutput.WriteError(error.Error, error.Message, new { state });
+            return 1;
+        }
+
+        JsonOutput.WriteSuccess(new { state });
         return 0;
     }
 
@@ -3503,7 +3579,8 @@ internal static class Verbs
 
     private static (AutomationElement? element, string? errorCode, string? error, object? errorDetails) ResolveElement(
         IntPtr windowHwnd, Dictionary<string, string> opts, string strategyKey = "strategy", string valueKey = "value",
-        bool includeControlType = false)
+        bool includeControlType = false, bool propagateWindowErrors = false,
+        Func<IntPtr, AutomationElement?>? acquireWindow = null)
     {
         // --scopeHwnd, when given, narrows the search to that element (and its subtree) instead
         // of the primary --hwnd/session-context window -- e.g. a specific pane/panel handle
@@ -3528,13 +3605,15 @@ internal static class Verbs
                 return (null, scopeErrorCode, scopeError, null);
             }
 
-            var scopeElement = UiaHelper.FindWindowByHwnd($"0x{scopeHwnd.ToInt64():X}");
+            var scopeElement = UiaHelper.FindWindowByHwnd(
+                $"0x{scopeHwnd.ToInt64():X}", propagateWindowErrors, acquireWindow);
             return scopeElement is null
                 ? (null, "element-not-found", $"No scope element found for scopeHwnd '0x{scopeHwnd.ToInt64():X}'.", null)
                 : ResolveElement(scopeElement, opts, strategyKey, valueKey, includeControlType);
         }
 
-        var scope = UiaHelper.FindWindowByHwnd($"0x{windowHwnd.ToInt64():X}");
+        var scope = UiaHelper.FindWindowByHwnd(
+            $"0x{windowHwnd.ToInt64():X}", propagateWindowErrors, acquireWindow);
         return scope is null
             ? (null, "element-not-found", $"No window found for hwnd '0x{windowHwnd.ToInt64():X}'.", null)
             : ResolveElement(scope, opts, strategyKey, valueKey, includeControlType);

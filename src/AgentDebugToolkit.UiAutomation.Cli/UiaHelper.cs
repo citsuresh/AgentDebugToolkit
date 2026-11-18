@@ -199,14 +199,15 @@ internal static class UiaHelper
 
     private static bool IsFinite(double value) => !double.IsNaN(value) && !double.IsInfinity(value);
 
-    public static AutomationElement? FindWindowByHwnd(string hwndText)
+    public static AutomationElement? FindWindowByHwnd(string hwndText, bool propagateErrors = false,
+        Func<IntPtr, AutomationElement?>? acquireWindow = null)
     {
         var hwnd = ParseHwnd(hwndText);
         try
         {
-            return AutomationElement.FromHandle(hwnd);
+            return (acquireWindow ?? AutomationElement.FromHandle)(hwnd);
         }
-        catch
+        catch when (!propagateErrors)
         {
             return null;
         }
@@ -894,9 +895,10 @@ internal static class UiaHelper
     }
 
     public static ElementInfo ToElementInfo(AutomationElement el, bool includeChildren, int maxDepth,
-        string? nameContains, ControlType? controlType, out int matchCount, DepthLimitStats? depthStats = null)
+        string? nameContains, ControlType? controlType, out int matchCount, DepthLimitStats? depthStats = null,
+        bool includeState = false)
     {
-        var info = ToElementInfo(el, includeChildren, maxDepth, 0, depthStats);
+        var info = ToElementInfo(el, includeChildren, maxDepth, 0, depthStats, includeState);
         matchCount = nameContains is null && controlType is null
             ? 0
             : PruneElementInfo(info, nameContains, controlType);
@@ -924,7 +926,7 @@ internal static class UiaHelper
     }
 
     public static ElementInfo ToElementInfo(AutomationElement el, bool includeChildren, int maxDepth, int depth = 0,
-        DepthLimitStats? depthStats = null)
+        DepthLimitStats? depthStats = null, bool includeState = false)
     {
         var r = el.Current.BoundingRectangle;
         var info = new ElementInfo
@@ -938,7 +940,8 @@ internal static class UiaHelper
             BoundingRect = SafeRect(r),
             SupportedPatterns = el.GetSupportedPatterns()
                 .Select(p => p.ProgrammaticName)
-                .ToList()
+                .ToList(),
+            State = includeState ? ReadState(el) : null
         };
 
         if (includeChildren && depth < maxDepth)
@@ -955,7 +958,7 @@ internal static class UiaHelper
 
             foreach (AutomationElement child in children)
             {
-                info.Children.Add(ToElementInfo(child, includeChildren, maxDepth, depth + 1, depthStats));
+                info.Children.Add(ToElementInfo(child, includeChildren, maxDepth, depth + 1, depthStats, includeState));
             }
         }
         else if (includeChildren && depthStats is not null)
@@ -1340,6 +1343,67 @@ internal static class UiaHelper
             }
         }
     }
+
+    public static ElementStateInfo ReadState(AutomationElement element) => ReadState(
+        () => element.Current.IsEnabled,
+        () => element.TryGetCurrentPattern(TogglePattern.Pattern, out var pattern)
+            ? () => ((TogglePattern)pattern).Current.ToggleState switch
+            {
+                ToggleState.On => "on",
+                ToggleState.Off => "off",
+                ToggleState.Indeterminate => "indeterminate",
+                _ => throw new InvalidOperationException("The provider returned an unknown toggle state.")
+            }
+            : null,
+        () => element.TryGetCurrentPattern(SelectionItemPattern.Pattern, out var pattern)
+            ? () => ((SelectionItemPattern)pattern).Current.IsSelected
+            : null);
+
+    internal static ElementStateInfo ReadState(Func<bool> readEnabled,
+        Func<Func<string>?> getToggleReader, Func<Func<bool>?> getSelectionReader)
+    {
+        var state = new ElementStateInfo();
+        Read("IsEnabled", () => state.IsEnabled = readEnabled());
+        Read("TogglePattern", () =>
+        {
+            var read = getToggleReader();
+            state.ToggleSupported = read is not null;
+            if (read is not null)
+            {
+                state.ToggleState = read();
+            }
+        });
+        Read("SelectionItemPattern", () =>
+        {
+            var read = getSelectionReader();
+            state.SelectionItemSupported = read is not null;
+            if (read is not null)
+            {
+                state.IsSelected = read();
+            }
+        });
+        return state;
+
+        void Read(string pattern, Action read)
+        {
+            try
+            {
+                read();
+            }
+            catch (ElementNotAvailableException ex)
+            {
+                (state.Errors ??= new()).Add(new(pattern, "stale-context", ex.Message));
+            }
+            catch (Exception ex) when (IsStateProviderError(ex))
+            {
+                (state.Errors ??= new()).Add(new(pattern, "state-provider-error", ex.Message));
+            }
+        }
+    }
+
+    internal static bool IsStateProviderError(Exception exception) => exception is
+        InvalidOperationException or ArgumentException or NotSupportedException
+        or System.Runtime.InteropServices.COMException;
 
     public static string? GetText(AutomationElement element)
     {

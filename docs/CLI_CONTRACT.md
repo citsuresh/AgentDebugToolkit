@@ -108,6 +108,14 @@ must treat a missing `boundingRect` key as "bounds unavailable", not as an error
 throwing. `inspect` remains successful in this case; only the affected element(s) lack
 `boundingRect`.
 
+`inspect` additionally includes an optional **`State`** object on each element. Existing
+element field names/casing, filters and depth-limit behavior are unchanged (the DTO currently
+serializes its fields in PascalCase, including `State`). The new object's own fields are
+camelCase and follow the `get-state` contract below. Unsupported state values are omitted;
+failed reads appear in `State.errors`, not as off/false defaults. A supplemental state-read
+failure does not turn an otherwise successful inspection into an error. Other verbs returning
+`ElementInfo` do not request the additional state reads.
+
 ### Error envelope (on failure, any verb)
 ```json
 { "success": false, "error": "element-not-found" | "stale-context" | "ambiguous-process" |
@@ -633,6 +641,45 @@ keyboard input.
 Reads current `Name` or `ValuePattern.Value` (whichever is more appropriate/available) of the
 resolved element.
 - Success: `{ "success": true, "text": "192.0.2.10" }`
+
+### `get-state --hwnd <h> --strategy Name|AutomationId --value <v> [--controlType <type>] [--scopeHwnd <h2>]`
+
+Reads `IsEnabled`, `TogglePattern` support/current state, and `SelectionItemPattern`
+support/current selection. Uses the same selector, optional control-type filter, scoped HWND
+and ambiguity rules as `get-text`. Missing/invalid selector arguments, control types and
+malformed handles return `invalid-argument`. No match returns `element-not-found`; multiple
+matches return `ambiguous-match` with the existing count/candidate details. Target and scope
+HWND checks retain `window-gone` / `window-not-responding`.
+
+This operation only reads published UIA properties and patterns. It never invokes, toggles,
+selects, focuses, scrolls, realizes items, sends input or activates a window. Disabled targets
+can still be read. An observed UI control state is not proof of hardware connection state.
+The fields are sequential observations, not an atomic snapshot.
+
+Success (exit code 0):
+```json
+{"success":true,"state":{"isEnabled":false,"toggleSupported":true,"toggleState":"indeterminate","selectionItemSupported":true,"isSelected":false}}
+```
+- `toggleState` is exactly `on`, `off` or `indeterminate`, and is present only after a
+  successful supported-pattern value read.
+- `isSelected` is present only after a successful `SelectionItemPattern.IsSelected` read.
+- Unsupported patterns have the corresponding support flag set to `false` and **no value
+  field**, e.g. `{"toggleSupported":false,"selectionItemSupported":false}`. Unsupported is
+  never represented by `toggleState: "off"` or `isSelected: false`.
+- A failed support probe omits that support flag (unknown); a successful probe followed by a
+  failed value read retains `true` but omits the value. A failed enabled read omits `isEnabled`.
+- `errors` is omitted when all attempted reads succeeded, including unsupported patterns.
+
+State-read failure (exit code 1) retains any successful observations:
+```json
+{"success":false,"error":"state-provider-error","message":"...","state":{"isEnabled":true,"toggleSupported":true,"selectionItemSupported":false,"errors":[{"pattern":"TogglePattern","error":"state-provider-error","message":"..."}]}}
+```
+`errors[].pattern` is `IsEnabled`, `TogglePattern` or `SelectionItemPattern`.
+Unavailable elements are reported as `stale-context`, which takes precedence over other
+state-read errors; provider exceptions are `state-provider-error`, not unsupported patterns.
+Failures during window/selector resolution may have no `state` object because no state
+observation was obtained. Inspection uses the same state object and error entries inside
+`State`, while preserving its existing top-level success/error behavior.
 
 ### `set-grid-cell --hwnd <h> --gridStrategy <s> --gridValue <v> --rowStrategy <s> --rowValue <v> --columnIndex <n> --text <input> [--editorControlType Edit|ComboBox|CheckBox] [--applyStrategy <s> --applyValue <v>]`
 Edits a cell in a UIA `DataGrid` without relying on a previously captured screen coordinate.
