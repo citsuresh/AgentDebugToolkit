@@ -18,8 +18,12 @@ internal static class DteLocator
     [DllImport("ole32.dll")]
     private static extern int CreateBindCtx(uint reserved, out IBindCtx ppbc);
 
-    public static (DTE? dte, string? errorCode, string? error) FindDte(string? solutionNameFilter)
+    public static (DTE? dte, string? errorCode, string? error) FindDte(string? solutionNameFilter, int? instancePid = null) =>
+        FindDte(solutionNameFilter, instancePid, out _);
+
+    public static (DTE? dte, string? errorCode, string? error) FindDte(string? solutionNameFilter, int? instancePid, out string? selectedMoniker)
     {
+        selectedMoniker = null;
         List<(DTE dte, string moniker)> candidates;
         try
         {
@@ -35,33 +39,62 @@ internal static class DteLocator
             return (null, "devenv-not-found", "No running Visual Studio instances were found.");
         }
 
-        if (string.IsNullOrEmpty(solutionNameFilter))
+        try
         {
-            return (candidates[0].dte, null, null);
+            var selection = Select(candidates, solutionNameFilter, instancePid);
+            if (selection.Index is not { } index) return (null, selection.Error,
+                "The explicit Visual Studio target was not uniquely available. Run list-instances and specify --instancePid; no fallback instance was selected.");
+            selectedMoniker = candidates[index].moniker;
+            return (candidates[index].dte, null, null);
         }
-
-        foreach (var (dte, _) in candidates)
+        catch (COMException ex)
         {
-            string? solutionFile = null;
-            try
-            {
-                solutionFile = ComRetry.Invoke(() => dte.Solution?.FullName);
-            }
-            catch (COMException)
-            {
-                continue;
-            }
-
-            if (!string.IsNullOrEmpty(solutionFile)
-                && Path.GetFileNameWithoutExtension(solutionFile)
-                    .Equals(solutionNameFilter, StringComparison.OrdinalIgnoreCase))
-            {
-                return (dte, null, null);
-            }
+            return (null, "instance-unavailable", "Could not verify the explicit target solution; no fallback was selected. " + ex.Message);
         }
+    }
 
-        return (null, "devenv-not-found",
-            $"No running Visual Studio instance has a solution named '{solutionNameFilter}' open.");
+    private static (int? Index, string? Error) Select(List<(DTE dte, string moniker)> candidates, string? solution, int? instancePid) =>
+        DebuggerDiscovery.SelectInstance(candidates.Select(candidate => new InstanceTarget(ParseInstancePid(candidate.moniker), () =>
+        {
+            var path = ComRetry.Invoke(() => candidate.dte.Solution?.FullName);
+            return string.IsNullOrEmpty(path) ? null : Path.GetFileNameWithoutExtension(path);
+        })).ToArray(), solution, instancePid);
+
+    internal static int? ParseInstancePid(string moniker) => int.TryParse(moniker[(moniker.LastIndexOf(':') + 1)..], out var pid) && pid > 0 ? pid : null;
+
+    internal static object DescribeSelected(DTE dte, string moniker) => new
+    {
+        instancePid = ParseInstancePid(moniker), moniker,
+        solutionPath = ComRetry.Invoke(() => dte.Solution?.FullName)
+    };
+
+    internal static int ListInstances()
+    {
+        List<(DTE dte, string moniker)> candidates;
+        try { candidates = EnumerateDteInstances(); }
+        catch (RotUnavailableException) { JsonOutput.WriteError("rot-unavailable", "Could not access the Running Object Table."); return 1; }
+        var instances = candidates.Select(candidate =>
+        {
+            var errors = new List<ContextReadError>();
+            string? Observe(string field, Func<string?> read)
+            {
+                try { return read(); }
+                catch (Exception ex) when (ex is COMException or ComBusyRetryExhaustedException)
+                {
+                    errors.Add(new(field, ex is ComBusyRetryExhaustedException ? "com-busy-retry-exhausted" : "instance-read-failed", ex.Message));
+                    return null;
+                }
+            }
+            return new
+            {
+                instancePid = ParseInstancePid(candidate.moniker), moniker = candidate.moniker,
+                solutionPath = Observe("solutionPath", () => ComRetry.Invoke(() => candidate.dte.Solution?.FullName)),
+                mode = Observe("mode", () => ComRetry.Invoke(() => candidate.dte.Debugger.CurrentMode) switch
+                { dbgDebugMode.dbgDesignMode => "design", dbgDebugMode.dbgRunMode => "run", dbgDebugMode.dbgBreakMode => "break", _ => "unknown" }), errors
+            };
+        }).ToArray();
+        JsonOutput.WriteSuccess(new { count = instances.Length, instances }, preserveNullFields: true);
+        return 0;
     }
 
     /// <summary>
@@ -75,8 +108,8 @@ internal static class DteLocator
     /// `ambiguous-process`/`ambiguous-window` in docs/CLI_CONTRACT.md).
     /// </summary>
     public static (DTE? dte, Process? process, string? errorCode, string? error, object? candidates)
-        FindProcessToAttach(int targetPid, string? solutionNameFilter = null) =>
-        FindProcessByPid(targetPid, solutionNameFilter, dte => ComRetry.Invoke(() => dte.Debugger.LocalProcesses),
+        FindProcessToAttach(int targetPid, string? solutionNameFilter = null, int? instancePid = null) =>
+        FindProcessByPid(targetPid, solutionNameFilter, instancePid, dte => ComRetry.Invoke(() => dte.Debugger.LocalProcesses),
             "process-not-found",
             count => $"No running Visual Studio instance (scanned {count}) can debug process {targetPid}. " +
                 "Confirm the PID is correct and the process is running on this machine.",
@@ -91,8 +124,8 @@ internal static class DteLocator
     /// active debug session rather than merely attachable.
     /// </summary>
     public static (DTE? dte, Process? process, string? errorCode, string? error, object? candidates)
-        FindDebuggedProcess(int targetPid, string? solutionNameFilter = null) =>
-        FindProcessByPid(targetPid, solutionNameFilter, dte => ComRetry.Invoke(() => dte.Debugger.DebuggedProcesses),
+        FindDebuggedProcess(int targetPid, string? solutionNameFilter = null, int? instancePid = null) =>
+        FindProcessByPid(targetPid, solutionNameFilter, instancePid, dte => ComRetry.Invoke(() => dte.Debugger.DebuggedProcesses),
             "process-not-debugged",
             count => $"No running Visual Studio instance (scanned {count}) is currently debugging process {targetPid}.",
             count => $"Process {targetPid} is being debugged by {count} running Visual Studio instances; " +
@@ -102,6 +135,7 @@ internal static class DteLocator
         FindProcessByPid(
             int targetPid,
             string? solutionNameFilter,
+            int? instancePid,
             Func<DTE, Processes?> getProcesses,
             string notFoundErrorCode,
             Func<int, string> notFoundMessage,
@@ -122,17 +156,16 @@ internal static class DteLocator
             return (null, null, "devenv-not-found", "No running Visual Studio instances were found.", null);
         }
 
-        if (!string.IsNullOrEmpty(solutionNameFilter))
+        if (solutionNameFilter is not null || instancePid is not null)
         {
-            instances = instances
-                .Where(i => string.Equals(TryGetSolutionName(i.dte), solutionNameFilter, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-
-            if (instances.Count == 0)
+            try
             {
-                return (null, null, "devenv-not-found",
-                    $"No running Visual Studio instance has a solution named '{solutionNameFilter}' open.", null);
+                var selection = Select(instances, solutionNameFilter, instancePid);
+                if (selection.Index is not { } index) return (null, null, selection.Error,
+                    "Explicit VS target is missing or ambiguous; use list-instances and --instancePid. No fallback was selected.", null);
+                instances = [instances[index]];
             }
+            catch (COMException ex) { return (null, null, "instance-unavailable", "Could not verify the explicit target solution; no fallback was selected. " + ex.Message, null); }
         }
 
         var matches = new List<(DTE dte, string moniker, Process process)>();
@@ -143,10 +176,12 @@ internal static class DteLocator
             {
                 processes = getProcesses(dte);
             }
-            catch (COMException)
+            catch (COMException ex)
             {
-                // Instance may be busy/starting up; skip it rather than failing the whole scan,
-                // consistent with FindDte's handling of per-instance COM failures above.
+                if (solutionNameFilter is not null || instancePid is not null)
+                {
+                    return (null, null, "instance-unavailable", "Could not read the explicit Visual Studio target's process collection; no fallback was selected. " + ex.Message, null);
+                }
                 continue;
             }
 

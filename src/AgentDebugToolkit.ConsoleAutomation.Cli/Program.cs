@@ -1,5 +1,7 @@
 ﻿using AgentDebugToolkit.ConsoleAutomation.Cli;
 
+if (AgentDebugToolkit.Identity.ToolkitIdentity.TryHandle(args, out var identityExitCode)) return identityExitCode;
+
 if (args.Length > 0 && args[0].Equals("--broker", StringComparison.OrdinalIgnoreCase))
 {
     return BrokerProgram.Run(args.Skip(1).ToArray());

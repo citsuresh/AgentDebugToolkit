@@ -6,6 +6,8 @@ using AgentDebugToolkit.Core;
 using AgentDebugToolkit.Core.Models;
 using AgentDebugToolkit.UiAutomation.Cli;
 
+if (AgentDebugToolkit.Identity.ToolkitIdentity.TryHandle(args, out var identityExitCode)) return identityExitCode;
+
 // Declare per-monitor DPI awareness before any window/coordinate work happens: without this,
 // Windows silently virtualizes coordinates for a DPI-unaware process against a scaled ("low-res")
 // virtual desktop, so SetCursorPos/mouse_event/SendInput screen coordinates computed from a real

@@ -1,0 +1,37 @@
+<Project>
+  <PropertyGroup>
+    <ToolkitIdentityEnabled Condition="'$(AssemblyName)' == 'agentdebug-ui' or '$(AssemblyName)' == 'agentdebug-vs' or '$(AssemblyName)' == 'agentdebug-console' or '$(AssemblyName)' == 'agentdebug-mcp'">true</ToolkitIdentityEnabled>
+    <ToolkitDeploymentKind Condition="'$(ToolkitDeploymentKind)' == ''">managed-source</ToolkitDeploymentKind>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(ToolkitIdentityEnabled)' == 'true'">
+    <Compile Include="$(MSBuildThisFileDirectory)src\Shared\ToolkitIdentity.cs" Link="Identity\ToolkitIdentity.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(AssemblyName)' == 'agentdebug-vs' or '$(AssemblyName)' == 'agentdebug-mcp'">
+    <Compile Include="$(MSBuildThisFileDirectory)src\Shared\DebuggerWaitOptions.cs" Link="Contracts\DebuggerWaitOptions.cs" />
+  </ItemGroup>
+  <Target Name="CaptureToolkitIdentity" BeforeTargets="GetAssemblyAttributes" Condition="'$(ToolkitIdentityEnabled)' == 'true' and '$(DesignTimeBuild)' != 'true'">
+    <Exec Command="git -C &quot;$(MSBuildThisFileDirectory).&quot; rev-parse --verify HEAD" ConsoleToMSBuild="true" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" StandardOutputImportance="Low" StandardErrorImportance="Low">
+      <Output TaskParameter="ConsoleOutput" ItemName="_ToolkitCommitLines" />
+      <Output TaskParameter="ExitCode" PropertyName="_ToolkitCommitExitCode" />
+    </Exec>
+    <Exec Command="git -C &quot;$(MSBuildThisFileDirectory).&quot; status --porcelain --untracked-files=normal" ConsoleToMSBuild="true" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" StandardOutputImportance="Low" StandardErrorImportance="Low">
+      <Output TaskParameter="ConsoleOutput" ItemName="_ToolkitChanges" />
+      <Output TaskParameter="ExitCode" PropertyName="_ToolkitStatusExitCode" />
+    </Exec>
+    <PropertyGroup>
+      <_ToolkitSourceCommit Condition="'$(_ToolkitCommitExitCode)' == '0'">@(_ToolkitCommitLines)</_ToolkitSourceCommit>
+      <_ToolkitSourceDirty>unknown</_ToolkitSourceDirty>
+      <_ToolkitSourceDirty Condition="'$(_ToolkitStatusExitCode)' == '0'">false</_ToolkitSourceDirty>
+      <_ToolkitSourceDirty Condition="'$(_ToolkitStatusExitCode)' == '0' and '@(_ToolkitChanges)' != ''">true</_ToolkitSourceDirty>
+    </PropertyGroup>
+    <Warning Condition="'$(_ToolkitCommitExitCode)' != '0' or '$(_ToolkitStatusExitCode)' != '0'" Text="Git build provenance is unavailable; info will report unknown source metadata, not a clean build." />
+    <ItemGroup>
+      <AssemblyMetadata Include="ToolkitSourceCommit" Value="$(_ToolkitSourceCommit)" />
+      <AssemblyMetadata Include="ToolkitSourceDirty" Value="$(_ToolkitSourceDirty)" />
+      <AssemblyMetadata Include="ToolkitConfiguration" Value="$(Configuration)" />
+      <AssemblyMetadata Include="ToolkitRuntimeIdentifier" Value="$(RuntimeIdentifier)" />
+      <AssemblyMetadata Include="ToolkitDeploymentKind" Value="$(ToolkitDeploymentKind)" />
+      <AssemblyMetadata Include="ToolkitSelfContained" Value="$(SelfContained)" />
+    </ItemGroup>
+  </Target>
+</Project>

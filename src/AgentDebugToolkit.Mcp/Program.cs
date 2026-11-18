@@ -3,6 +3,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
+if (AgentDebugToolkit.Identity.ToolkitIdentity.TryHandle(args, out var identityExitCode)) return identityExitCode;
+
 // --tools <comma-separated list from {vs, ui, console}>, default "vs,ui". Controls which tool
 // groups this server process registers — console is opt-in only and never registered unless
 // explicitly listed, since it is the highest-risk group (see ConsoleTools.cs/docs/MCP_SERVER.md).
@@ -31,9 +33,12 @@ builder.Services.AddSingleton(sp =>
     return new CliRunner(logger, vsBinDirectory, uiBinDirectory, consoleBinDirectory);
 });
 
+builder.Services.AddSingleton<IReadOnlySet<string>>(toolGroups);
+
 var mcpBuilder = builder.Services
     .AddMcpServer()
-    .WithStdioServerTransport();
+    .WithStdioServerTransport()
+    .WithTools<ToolkitInfoTools>();
 
 if (toolGroups.Contains("vs"))
 {

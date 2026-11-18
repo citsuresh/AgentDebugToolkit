@@ -7,13 +7,30 @@
 Cowork, etc.) can call this toolkit directly instead of a human/agent shelling out to each CLI.
 An opt-in third group wraps `agentdebug-console.exe` — see "Tool groups and `--tools`" below.
 
-**It is a thin wrapper only.** It contains no debugger, COM, or UIA logic of its own: every tool
-builds an argument list for the matching CLI verb (via `ProcessStartInfo.ArgumentList`, never a
+**Target operations are thin wrappers.** It contains no debugger, COM, or UIA logic of its own:
+apart from server-side `toolkit_info`, each tool builds an argument list for the matching CLI verb (via `ProcessStartInfo.ArgumentList`, never a
 shell/concatenated command string), runs it as a child process, and relays the CLI's own JSON
 output back unchanged. See `docs/CLI_CONTRACT.md` for what each underlying verb actually does —
 this document only covers how the MCP layer maps onto that contract.
 
 ## How a tool call works
+
+### Always-available executable identity
+
+`toolkit_info(tool="server", verifyPackage=false)` is registered regardless of enabled groups.
+It is read-only, non-destructive, idempotent and closed-world. `server` reports the running MCP
+process/assembly; `ui`, `vs` and `console` run `info` in the exact configured CLI directory via
+the existing runner, with no disk search. Each non-server component requires its group enabled:
+`tool-disabled` is returned before launching a disabled console/other CLI. Capabilities do not
+override group gates. `verifyPackage:true` forwards explicit `--verifyPackage true`.
+
+It returns the normal `ToolInvocationResult` wrapper and the CLI identity contract documented
+in CLI_CONTRACT.md: actual paths/SHA-256, embedded build/version/dirty/RID/distribution facts,
+contract version, feature IDs and optional `packageVerification` (`matched`, `mismatched`,
+`not-present`). Missing exes and wrapper failures remain explicit. An old binary rejecting
+`info` returns `info-not-supported`, with no inferred capabilities. Reading identity does not
+initialize UIA/EnvDTE, launch a console session or change application state. Server-side identity
+is the one exception to child-process forwarding: it reads the running server's own metadata.
 
 1. The MCP client calls a tool, e.g. `vs_debugger_status` or `ui_click`.
 2. The server builds the corresponding CLI invocation (e.g. `agentdebug-vs.exe debugger-status`)
@@ -33,11 +50,15 @@ this document only covers how the MCP layer maps onto that contract.
 5. All server logging/diagnostics go to **stderr only** — stdout belongs exclusively to the MCP
    protocol stream, and any stray stdout write would corrupt it.
 
-Every call is bounded by a timeout: the child process is killed if it does not complete in time,
-and the timeout error is reported distinctly (`WrapperErrorCode: "timeout"`). Long-running verbs
-(`vs_wait_for_break`, `ui_wait_for_window_change`, `ui_wait_for_element`,
-`ui_wait_for_process_responding`) accept a `timeoutMs` parameter that is capped at a sane maximum
-(120 seconds) regardless of the value requested.
+Every call has an outer child-process timeout; timeout is reported distinctly as
+`WrapperErrorCode:"timeout"`. Existing runner cleanup can terminate a timed-out child.
+UI waits retain their existing 120000ms limit. `vs_wait_for_break` instead validates exactly
+one `timeoutMs` (0..590000) or `timeoutSeconds` (whole 0..590), with positive `pollMs`
+(default 250). Invalid/missing/conflicting values return the CLI-style `invalid-argument`
+result before launching; there is no silent clamping. Its process budget is the requested
+wait plus 10000ms, at most 600000ms. COM can overrun the polling deadline; the process
+bound is distinct and includes discovery/serialization overhead, not a guaranteed grace
+period. Direct CLI legacy millisecond waits remain supported up to int.MaxValue.
 
 ## Locating the CLI exes
 
@@ -108,7 +129,7 @@ are annotated for every allowed call, so an MCP client can grant/prompt approval
   statements against the live debuggee. Its description explicitly calls out this risk.
 - Every tool's `readOnlyHint`/`destructiveHint` MCP annotations are set to reflect its real
   effect:
-  - **Read-only** (`readOnlyHint: true`): `vs_debugger_status`, `vs_get_callstack`,
+  - **Read-only** (`readOnlyHint: true`): `vs_help`, `vs_list_instances`, `vs_debugger_status`, `vs_get_callstack`,
     `vs_get_locals`, `vs_get_exception_info`, `vs_list_breakpoints`, `vs_list_threads`,
     `vs_evaluate`, `vs_wait_for_break`, `ui_list_windows`, `ui_inspect`, `ui_get_cursor_pos`,
     `ui_get_text`, `ui_get_state`, `ui_wait_for_window_change`, `ui_wait_for_element`,
@@ -148,7 +169,7 @@ are annotated for every allowed call, so an MCP client can grant/prompt approval
 
 | Tool | CLI verb | Notes |
 | --- | --- | --- |
-| `vs_debugger_status` | `debugger-status` | Read-only |
+| `vs_debugger_status` | `debugger-status` | Read-only; optional context adds factual, nullable non-atomic observations |
 | `vs_get_callstack` | `get-callstack` | Read-only |
 | `vs_get_locals` | `get-locals` | Read-only |
 | `vs_get_exception_info` | `get-exception-info` | Read-only |
@@ -161,7 +182,7 @@ are annotated for every allowed call, so an MCP client can grant/prompt approval
 | `vs_set_breakpoint` | `set-breakpoint` | Destructive (changes debugger state) |
 | `vs_list_breakpoints` | `list-breakpoints` | Read-only |
 | `vs_remove_breakpoint` | `remove-breakpoint` | Destructive (changes debugger state) |
-| `vs_wait_for_break` | `wait-for-break` | Read-only; `timeoutMs` capped at 120000 |
+| `vs_wait_for_break` | `wait-for-break` | Read-only; exactly one timeoutMs 0..590000 or timeoutSeconds 0..590; process headroom 10000ms |
 | `vs_attach_process` | `attach-process` | Destructive (attaches debugger to a live process) |
 | `vs_break_all` | `break-all` | Destructive (forces every thread in the debuggee to stop) |
 | `vs_detach` | `detach` | Destructive (ends debug session monitoring); debuggee keeps running afterward |
@@ -170,6 +191,49 @@ are annotated for every allowed call, so an MCP client can grant/prompt approval
 | `vs_select_frame` | `select-frame` | Selection only valid until next continue/step/break |
 | `vs_evaluate` | `evaluate` | Read-only; never passes `--allowSideEffects` |
 | `vs_execute_statement` | `evaluate --allowSideEffects true` | **Unsafe** — the only tool that can run side-effecting evaluation |
+| `vs_help` | `help [--verb V]` | Read-only static JSON; no VS connection; canonical verbs/aliases/options/wait limits. |
+| `vs_list_instances` | `list-instances` | Read-only ROT identity discovery; no activation or debugger mutation. |
+
+### Debugger discovery, targeting and context
+
+`vs_help(verb?, cancellationToken)` forwards static help; aliases resolve to one canonical
+entry. CLI `--help` and `<verb> --help` are also static. `get-call-stack` aliases the existing
+`get-callstack`; the MCP tool remains `vs_get_callstack`, with no duplicate tool/reader.
+`vs_get_exception_info` remains the existing `$exception`-local reader, not a new exception
+cause detector. `info` advertises `vs.help.json.v1`, `vs.wait-for-break.long.v1`,
+`vs.instance-targeting.v1` and `vs.break-context.v1` on the VS executable.
+
+`vs_list_instances(cancellationToken)` returns the CLI envelope with `count` and `instances`.
+Each instance contains nullable `instancePid`, `moniker`, nullable `solutionPath`/`mode`,
+and `errors:[{field,error,message}]`. Only observed ROT objects are listed; busy/unregistered
+instances may be absent. Zero instances is successful. It changes no activation, attachment,
+selection or execution state and is not an atomic process inventory.
+
+All 22 existing targeted debugger operations accept optional `instancePid`, meaning the
+**VS process PID**, not the `pid` debuggee argument on attach/break/detach. Invalid nonpositive
+pins fail before launch. The pin is forwarded as `--instancePid` without disk/instance
+fallback; `solution` is an additional AND constraint, and explicitly blank solutions are
+forwarded for rejection rather than silently omitted. Missing/ambiguous explicit instances
+fail with `devenv-not-found`/`ambiguous-instance`; unverifiable metadata/process collections
+fail with `instance-unavailable` or `com-busy-retry-exhausted`. With no explicit target,
+legacy selection behavior remains. These options do not grant mutation permission.
+
+`vs_debugger_status(solution?, cancellationToken, context?, instancePid?)` preserves old
+output when context is omitted/false. True adds `context` with nullable `instance`
+(`instancePid,moniker,solutionPath`), `selectedThreadId`, `selectedFrameFunction`,
+`exceptionLocal` (`type,value`), `lastBreakpointHit` (`file,line`), `modeAtEnd`,
+`breakReason:"unknown"`, `observationsAreAtomic:false`, `errors` and `hint`.
+Provider errors remain recorded errors with null observations, not zero/false defaults.
+Break-only fields are not read outside break mode. Root last-hit location is not the selected
+frame's source location. Neither `$exception` nor a last breakpoint establishes the current
+stop cause; no expression side-effect flags are enabled and no state is changed.
+
+`vs_wait_for_break(timeoutMs?, pollMs?, solution?, cancellationToken, timeoutSeconds?, instancePid?)`
+requires one timeout unit even though both parameters are nullable. Existing positional
+invocations keep the cancellation-token slot; new parameters follow it. Other targeted tools
+also append instancePid after the existing token slot (status appends context first).
+Tool names and pre-existing mutating/read-only annotations remain unchanged. The new help
+and discovery tools are read-only, non-destructive, idempotent and closed-world.
 
 ### UI automation tools (`UiAutomationTools`, wrapping `agentdebug-ui.exe`)
 

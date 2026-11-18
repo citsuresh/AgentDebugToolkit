@@ -5,7 +5,10 @@ Builds a self-contained Windows x64 toolkit package in a timestamp-free folder.
 Modifies build outputs and the destination folder. Publishes all four tools to a
 fresh staging folder before installing the package. Existing packages require
 -ReplaceExisting and are preserved in a uniquely named backup folder. Failed
-staging folders are retained for diagnosis. Does not stop processes or change
+staging folders are retained for diagnosis. Embeds portable-package identity,
+writes package-manifest.json with per-tool provenance and SHA-256 payload hashes,
+and verifies the package through every tool before installing it.
+Does not stop processes or change
 NuGet sources. Requires approval before each run; -WhatIf makes no changes.
 .PARAMETER RepoRoot
 Repository root; defaults to two directories above this script. Specify this
@@ -69,12 +72,13 @@ New-Item -ItemType Directory -Path $staging -ErrorAction Stop | Out-Null
 Write-Output "Staging: $staging (retained if publishing fails)"
 $hadDotnetRoot = Test-Path Env:DOTNET_ROOT
 $previousDotnetRoot = $env:DOTNET_ROOT
+$identities = @()
 try {
     Remove-Item Env:DOTNET_ROOT -ErrorAction SilentlyContinue
     foreach ($tool in $tools) {
         $output = Join-Path $staging $tool.Folder
         & $dotnet publish $tool.ProjectPath --configuration $Configuration --runtime win-x64 --self-contained true `
-            -p:PublishSingleFile=false -p:PublishTrimmed=false -p:DebugType=None -p:DebugSymbols=false `
+            -p:PublishSingleFile=false -p:PublishTrimmed=false -p:DebugType=None -p:DebugSymbols=false -p:ToolkitDeploymentKind=portable-package `
             --output $output --nologo
         if ($LASTEXITCODE -ne 0) {
             throw "Publishing $($tool.Exe) failed (exit $LASTEXITCODE). Destination unchanged; staging retained at $staging. Inspect the build output; no retry or NuGet source changes performed."
@@ -84,6 +88,17 @@ try {
                 throw "Published package is missing $($tool.Folder)\$file. Destination unchanged; staging retained at $staging."
             }
         }
+        $identityJson = & (Join-Path $output "$($tool.Exe).exe") info | Out-String
+        if ($LASTEXITCODE -ne 0) { throw "Identity query failed for $($tool.Exe). Staging retained at $staging." }
+        $identity = $identityJson | ConvertFrom-Json -ErrorAction Stop
+        $expectedTool = $tool.Folder
+        if ($expectedTool -eq 'mcp') { $expectedTool = 'server' }
+        if ($identity.success -ne $true -or $identity.tool -ne $expectedTool -or
+            $identity.build.deploymentKind -ne 'portable-package' -or $identity.build.selfContained -ne $true -or
+            $identity.build.configuration -ne $Configuration -or $identity.build.runtimeIdentifier -ne 'win-x64') {
+            throw "Unexpected embedded identity for $($tool.Exe). Destination unchanged; staging retained at $staging."
+        }
+        $identities += $identity
     }
 }
 finally {
@@ -134,7 +149,59 @@ Console MCP tools are opt-in. See docs\MCP_SERVER.md for enablement and the
 executable allowlist restrictions; never allowlist shells or interpreters.
 See docs\CLI_CONTRACT.md for CLI usage. Source build instructions in README.md
 apply to the source repository, not this portable package.
+
+Each executable supports info --verifyPackage. Require packageVerification.status
+matched to confirm the package still matches package-manifest.json, including
+copied packages. not-present is not verification. Hashes detect accidental drift,
+not an attacker who can replace both the files and the unsigned manifest.
 '@ | Set-Content -LiteralPath (Join-Path $staging 'START-HERE.txt') -Encoding UTF8
+
+$source = $identities[0].build
+foreach ($identity in $identities) {
+    if ($identity.build.sourceCommit -ne $source.sourceCommit -or $identity.build.sourceDirty -ne $source.sourceDirty) {
+        throw "Source identity changed during publishing. Destination unchanged; staging retained at $staging."
+    }
+}
+$toolIdentities = @()
+for ($i = 0; $i -lt $tools.Count; $i++) {
+    $identity = $identities[$i]
+    $tool = $tools[$i]
+    $toolIdentities += [ordered]@{
+        tool = $identity.tool
+        executablePath = "$($tool.Folder)\$($tool.Exe).exe"
+        assemblyPath = "$($tool.Folder)\$($tool.Exe).dll"
+        version = $identity.version
+        moduleVersionId = $identity.moduleVersionId
+        contractVersion = $identity.contractVersion
+        capabilities = @($identity.capabilities)
+        build = $identity.build
+    }
+}
+$files = @(Get-ChildItem -LiteralPath $staging -Recurse -Force -ErrorAction Stop | ForEach-Object {
+    if (($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw "Package reparse points are not supported: $($_.FullName)" }
+    if (-not $_.PSIsContainer) {
+        [ordered]@{ path = $_.FullName.Substring($staging.Length + 1); sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256 -ErrorAction Stop).Hash.ToLowerInvariant() }
+    }
+})
+$manifest = [ordered]@{
+    schemaVersion = 1
+    createdUtc = [DateTime]::UtcNow.ToString('o')
+    sourceCommit = $source.sourceCommit
+    sourceDirty = $source.sourceDirty
+    configuration = $Configuration
+    runtimeIdentifier = 'win-x64'
+    tools = $toolIdentities
+    files = $files
+}
+$manifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $staging 'package-manifest.json') -Encoding UTF8
+foreach ($tool in $tools) {
+    $verificationJson = & (Join-Path $staging "$($tool.Folder)\$($tool.Exe).exe") info --verifyPackage | Out-String
+    if ($LASTEXITCODE -ne 0) { throw "Package verification failed for $($tool.Exe). Destination unchanged; staging retained at $staging. $verificationJson" }
+    $verification = $verificationJson | ConvertFrom-Json -ErrorAction Stop
+    if ($verification.success -ne $true -or $verification.packageVerification.status -ne 'matched') {
+        throw "Package verification was not matched for $($tool.Exe). Destination unchanged; staging retained at $staging."
+    }
+}
 
 $backup = $null
 if (Test-Path -LiteralPath $Destination) {

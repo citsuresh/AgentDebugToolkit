@@ -12,11 +12,23 @@ graph LR
 	Tests[AgentDebugToolkit.UiAutomation.Tests] --> Core
 	Tests --> Mcp[AgentDebugToolkit.Mcp]
 	Tests --> Ui
+	Tests --> Debugger
+	Tests --> Console
 	Debugger[AgentDebugToolkit.Debugger.VisualStudio]
 	Console[AgentDebugToolkit.ConsoleAutomation.Cli]
 ```
 
 ## Symbol Index
+
+### Shared executable identity (linked source, no new project dependency)
+
+`Directory.Build.targets` compiles `src/Shared/ToolkitIdentity.cs` into each executable and
+embeds Git source identity, configuration, RID and distribution intent at build time.
+`ToolkitIdentity` implements read-only `info` before UIA/COM/broker/server initialization;
+`PackageVerifier` checks bounded package manifests, payload hashes and running build identity.
+The publisher creates and verifies `package-manifest.json` before moving a staged package.
+`src/Shared/DebuggerWaitOptions.cs` is linked into VS and MCP only: shared explicit-unit
+validation, bounded MCP process headroom and an injectable-clock polling loop.
 
 ### AgentDebugToolkit.Core
 
@@ -41,8 +53,10 @@ graph LR
 
 | Symbol | File | Responsibility |
 |---|---|---|
-| `Program` | `Program.cs` | EnvDTE debugger verb dispatch and JSON results |
-| `DteLocator` / `ComRetry` | `DteLocator.cs`, `ComRetry.cs` | Finds a Visual Studio ROT instance and retries transient COM-busy calls |
+| `Program` | `Program.cs` | Static discovery dispatch, exact-instance debugger verbs, opt-in factual status context and JSON results |
+| `DteLocator` / `ComRetry` | `DteLocator.cs`, `ComRetry.cs` | Discovers ROT identities, resolves explicit PID/solution constraints without fallback, preserves unpinned legacy behavior and retries transient COM-busy calls |
+| `DebuggerDiscovery` / `InstanceTarget` | `DebuggerDiscovery.cs` | Static JSON help/canonical alias mapping, target validation and pure unique-instance selection |
+| `BreakContextReader` / `ContextReadError` | `BreakContextReader.cs` | Sequential nullable break-context observations with per-field provider errors, never inferred stop cause |
 
 ### AgentDebugToolkit.ConsoleAutomation.Cli
 
@@ -60,6 +74,7 @@ graph LR
 | `Program` | `Program.cs` | Starts the stdio MCP server and registers requested VS/UI/console tool groups; console is opt-in |
 | `CliRunner` | `CliRunner.cs` | Launches existing CLI executables, relays JSON, and reports wrapper-level failures |
 | `ArgumentFormatting` | `ArgumentFormatting.cs` | Shared option serialization for empty and `--`-prefixed values across all three MCP tool builders |
+| `ToolkitInfoTools` | `ToolkitInfoTools.cs` | Always-registered read-only server/configured-CLI identity; enforces enabled groups and reports unsupported old binaries without capability inference |
 | `VsDebuggerTools` / `UiAutomationTools` / `ConsoleTools` | `VsDebuggerTools.cs`, `UiAutomationTools.cs`, `ConsoleTools.cs` | Exposes CLI verbs as MCP tools, including UIA-only absolute container scrolling; console launch is gated by an explicit executable allowlist |
 
 See `docs/KEY_FLOWS.md` for traced end-to-end call flows.

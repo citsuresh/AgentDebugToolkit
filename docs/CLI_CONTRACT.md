@@ -6,6 +6,73 @@ Exit code 0 = success, non-zero = failure (with `"error"`/`"message"` fields pop
 This document covers Phases 1-4 verbs (see `IMPLEMENTATION_PLAN.md`). Extend this file as new
 verbs are added in later phases — do not silently diverge from what's documented here.
 
+## Executable identity (all four executables)
+
+`agentdebug-ui.exe`, `agentdebug-vs.exe`, `agentdebug-console.exe` and `agentdebug-mcp.exe`
+support `info [--verifyPackage [true|false]]` (also `--verifyPackage=true|false`). Only this verb
+accepts bare `--verifyPackage`; malformed booleans/unknown info arguments return `invalid-argument`.
+It prints one minified JSON envelope and exits before DPI/STA setup, UIA, EnvDTE, broker/session
+access, or MCP hosting. No target HWND, debugger instance or console session is required.
+
+Success fields (camelCase, identity `contractVersion:1`):
+- `tool`: `ui`, `vs`, `console`, or `server` (the MCP executable).
+- `version`: assembly informational version; `moduleVersionId`: compiled module identity.
+- `executablePath` / `executableSha256`: actual process executable and lowercase SHA-256.
+- `assemblyPath` / `assemblySha256`: this component's actual loaded assembly path and file hash.
+  Under `dotnet component.dll`, the process executable is dotnet, not an invented apphost path.
+- `architecture`: actual process architecture (`x64`, `x86`, etc.), not an inference from RID.
+- `build`: embedded `sourceCommit`, nullable `sourceDirty`, `configuration`, nullable
+  `runtimeIdentifier`, `deploymentKind`, nullable `selfContained`. Unknown Git facts are null,
+  never a fabricated clean build. Git failures during compilation emit a build warning.
+  `managed-source` denotes an ordinary source build; the publisher explicitly embeds
+  `portable-package` with win-x64/self-contained identity. This is build distribution intent,
+  not a guess based on a directory name or the presence of a manifest.
+- `capabilities`: versioned feature IDs compiled into this binary, not inferred from a live
+  checkout, installer marker, file timestamp, provider, or another executable. Common IDs are
+  `toolkit.info.v1` and `toolkit.package-verification.sha256.v1`. UI IDs include
+  `ui.get-state.v1`, `ui.set-toggle-state.v1`, `ui.activate.restore.v1`,
+  `ui.lookup-diagnostics.v1`, `ui.click.coordinates.v1`, `ui.send-keys.window.v1`.
+  VS IDs include `vs.get-callstack.v1`, `vs.get-exception-info.v1`,
+  `vs.evaluate.side-effect-opt-in.v1`; console has `console.sessions.v1`; server has
+  `mcp.toolkit-info.v1` and `mcp.tool-groups.v1`. These do not grant mutation permissions.
+
+Build facts never query Git or .built-version at runtime. Copied managed builds retain their
+embedded facts but report their new actual paths/hashes. A dirty source commit cannot reproduce
+the modified source by itself; the binary hashes identify the exact observed files. An unreadable
+identity file returns `identity-read-failed`, not success with a missing/default hash.
+
+### Portable package provenance
+
+The existing publisher writes `package-manifest.json` only in its fresh staging package,
+after publishing all four tools and copying docs. Schema 1 records `createdUtc`, `sourceCommit`,
+nullable `sourceDirty`, `configuration`, `runtimeIdentifier`, four `tools` entries and `files`.
+Each tool entry records `tool`, package-relative `executablePath`/`assemblyPath`, `version`,
+`moduleVersionId`, `contractVersion`, `capabilities`, and embedded `build`. Each file entry has
+a Windows-relative `path` and lowercase `sha256`; every payload file (including docs and native
+runtime files) is covered, except the manifest itself. Source identity changes during publishing
+abort before destination replacement. The publisher requires every tool's verification to match
+before it moves the staged package; existing destination/backup behavior is unchanged.
+
+`info --verifyPackage` checks the assembly directory, then its immediate parent only; it never
+searches the disk/checkout. It adds `packageVerification`:
+```json
+{"status":"matched","manifestPath":"C:\\package\\package-manifest.json","checkedFiles":123,"issues":[]}
+```
+- `matched`: all listed payload hashes, required tool identities, running module/build/capabilities
+  and paths match; relocation is allowed because manifest tool/file paths are relative.
+- `mismatched`: malformed/unsupported manifest, missing/extra/tampered files or mixed/stale identity.
+  Exit 1, `success:false`, `error:"package-verification-failed"`; identity and available verification
+  facts remain present. `issues` entries have `path` and `reason`; uncertain checks never match.
+- `not-present`: no manifest at either supported location. Identity read succeeds (exit 0), but
+  this **does not mean verified**. `manifestPath:null`, `checkedFiles:0`. Consumers requiring a
+  portable package must explicitly require `status == "matched"`.
+
+Verification is read-only, rejects traversal/rooted/alternate-stream paths and reparse points,
+and caps the manifest at 4 MiB/depth 32 and package entries at 10,000. It is a sequential snapshot,
+not an atomic lock, code signature or trust mechanism: anyone able to replace both payload and
+unsigned manifest can forge integrity evidence. Missing manifests do not reclassify portable
+builds as managed builds; no installed toolkit or installer is updated by `info`.
+
 ## Option parsing
 
 Boolean-style options that may be bare (bare means
@@ -1499,7 +1566,7 @@ JSON envelope *style* (see `docs/ARCHITECTURE.md`).
 
 ## Option parsing
 
-Only `--allowSideEffects` and `--all` may be bare, meaning `true`. Their existing evaluation
+Only `--allowSideEffects`, `--all` and `--context` may be bare, meaning `true`. Existing evaluation
 semantics are unchanged: `allowSideEffects` enables side effects only for a case-insensitive
 `true` value. All other flags require a value token that does not begin with `--`, or the
 `--name=value` form. Missing values return `invalid-argument` through the JSON error envelope
@@ -1516,9 +1583,19 @@ expression, but must now be supplied as `--expression=--i`, not `--expression "-
 
 ## Attaching to Visual Studio
 
-Every verb accepts an optional `--solution <name>` (solution file name, without extension) to
-pick a specific running `devenv.exe` instance when more than one is open. If omitted, the first
-running instance found via the Running Object Table (ROT) is used.
+All targeted verbs accept optional `--solution <name>` (solution file name without extension)
+and/or `--instancePid <n>` (the **Visual Studio process PID**, not the debuggee PID). These
+common options apply to the signatures below even when omitted for brevity. Static `help`/
+`info` do not select an instance; `list-instances` accepts no options.
+
+With neither option, ordinary verbs retain first-ROT-instance behavior; PID-targeted process
+operations retain their existing cross-instance scan. Explicit `--solution` must not be empty
+or whitespace; `--instancePid` must be a positive integer. Both together are AND constraints.
+PID filtering precedes solution metadata reads. No match returns `devenv-not-found`, multiple
+explicit matches return `ambiguous-instance`, and unverifiable explicit target metadata or
+process collections return `instance-unavailable` or `com-busy-retry-exhausted`. Duplicate
+solution names require an exact VS PID rather than first-match guessing. An explicit target
+never falls through to another instance; no new default target is persisted.
 
 - Failure (any verb, if no matching instance is found or the ROT can't be read):
   `{ "success": false, "error": "devenv-not-found" | "rot-unavailable", "message": "..." }`
@@ -1540,15 +1617,59 @@ running instance found via the Running Object Table (ROT) is used.
 
 ## Verbs
 
-### `debugger-status [--solution <name>]`
-Reports the debugger's current mode and, if stopped at a breakpoint, the last-hit
-file/line (via `Debugger.BreakpointLastHit`; `null` if break mode was entered some other way,
-e.g. an unhandled exception or "Break All", where no single breakpoint object applies).
+### `help [--verb V]` / `--help` / `<verb> --help`
+
+Returns static JSON without contacting VS, including when none is running. `--verb=V` works;
+unknown/empty verbs and malformed help arguments return `invalid-argument`.
+Success fields: `success:true`, `tool:"vs"`, `contractVersion:1`, `verbs`, `wait`, `hint`.
+Each canonical `verbs` item has `name`, `aliases`, `readOnlyByDefault`, `options` (strings).
+Filtered aliases resolve to one canonical entry: `get-call-stack` calls the existing
+`get-callstack` implementation, not a second reader. `get-exception-info` is not duplicated.
+Help/capabilities do not grant permission to enable side effects.
+
+`wait` contains `defaultPollMs:250`, `maxMcpTimeoutMs:590000`, `processHeadroomMs:10000`,
+`legacyCliMaxTimeoutMs:2147483647`, `maxTimeoutSeconds:590`. VS `info` advertises additional
+IDs `vs.help.json.v1`, `vs.wait-for-break.long.v1`, `vs.instance-targeting.v1`,
+`vs.break-context.v1`.
+
+### `list-instances`
+
+Read-only ROT discovery; no activation, attachment, execution or selection change.
+Success fields: `success:true`, `count`, `instances:[{instancePid,moniker,solutionPath,mode,errors}]`.
+`instancePid`, `solutionPath`, `mode` may be null; mode otherwise is `design`, `run`, `break`
+or `unknown`. Each error contains `field,error,message`, using `instance-read-failed` or
+`com-busy-retry-exhausted`; unavailable facts never become false/zero defaults.
+Zero instances succeeds with an empty array. ROT failure returns `rot-unavailable`.
+Busy/unregistered instances may be absent; this is not an atomic process inventory.
+Extra options fail with `invalid-argument`, rather than silently ignoring a supplied target.
+
+### `debugger-status [--solution <name>] [--instancePid <n>] [--context [true|false]]`
+Reports current mode and the location observed via `Debugger.BreakpointLastHit` while in
+break mode. An unavailable location is null; a last-hit location may be historical and does
+not establish the current stop cause or selected frame's source. Omitted/false `context`
+preserves the existing response. Invalid context booleans fail before contacting VS.
 - Success: `{ "success": true, "mode": "design" | "run" | "break", "activeDocument": "C:\\...\\Foo.cs" | null, "activeLine": 42 | null }`
   `activeDocument`/`activeLine` are always present as explicit JSON `null` (not omitted) when
   not applicable — this verb opts into `preserveNullFields`, the same behavior documented for
   `wait-for-element` above, since callers need to distinguish "field present but null" from a
   malformed/older response.
+
+With `--context true`, the root gains a `context` object:
+- Nullable `instance`: `{instancePid,moniker,solutionPath}`.
+- `breakReason:"unknown"`; no exception/manual/breakpoint cause is inferred.
+- Nullable `selectedThreadId`, `selectedFrameFunction`, observed only in break mode.
+- Nullable `exceptionLocal:{type,value}` from an exposed `$exception` local in the selected
+  frame, using the existing locals reader without evaluation or side-effect enablement.
+- Nullable `lastBreakpointHit:{file,line}`, distinct from selected frame/current source.
+- Nullable `modeAtEnd`, a second mode observation.
+- `observationsAreAtomic:false`, `errors:[{field,error,message}]`, explanatory `hint`.
+
+Nullable fields stay present. Known COM/provider failures produce recorded
+`context-read-failed`/`com-busy-retry-exhausted` errors, never zero/false defaults. Break-only
+fields are not read outside initial break mode. Observations are sequential, not locked;
+even equal starting/ending modes do not prove an unchanged session/thread/frame. Neither an
+exposed nor absent `$exception` proves cause. Current selected-frame source is not provided.
+Existing root status failures remain failures rather than fabricated context.
 
 ### `get-callstack [--solution <name>]`
 Returns the current thread's call stack. Requires break mode.
@@ -1564,11 +1685,10 @@ Returns local variables for the current (innermost) stack frame. Requires break 
 - Failure: `no-stack-frame` if the debugger has no current stack frame (see above).
 
 ### `get-exception-info [--solution <name>]`
-Returns exception details if break mode was triggered by a thrown exception (detected via the
-debugger's synthetic `$exception` pseudo-variable in the current frame's locals). Requires
-break mode.
+Reads the exposed synthetic `$exception` local in the selected frame. Requires break mode.
+Its presence/absence does not establish why the debugger currently stopped.
 - Success: `{ "success": true, "exceptionType": "System.NullReferenceException", "message": "Object reference not set to an instance of an object." }`
-- Failure: `{ "success": false, "error": "no-active-exception", "message": "Break mode was not triggered by an exception." }`
+- Failure: `{ "success": false, "error": "no-active-exception", "message": "No $exception local is exposed in the selected frame; its absence does not establish the break cause." }`
 - Failure: `no-stack-frame` if the debugger has no current stack frame (see above).
 
 ### `continue [--solution <name>]`
@@ -1631,27 +1751,36 @@ exclusive with `--file`/`--line`; without `--all`, both `--file` and `--line` ar
   `--file`/`--line` when `--all` is not given; `breakpoint-not-found` if `--file`/`--line` are
   given but no matching breakpoint exists; same attach-resolution errors otherwise.
 
-### `wait-for-break --timeoutMs <n> [--pollMs <n>] [--solution <name>]`
-Analogous to `agentdebug-ui`'s `wait-for-element`: resolves the target Visual Studio instance once
-up front, then polls `debugger-status`'s underlying state every `--pollMs` (default `250`) until
-break mode is entered or `--timeoutMs` elapses. `--timeoutMs` (required, non-negative integer) and
-`--pollMs` (positive integer if given) are validated before resolving the instance or polling
-begins — a zero `--timeoutMs` still checks status once before timing out.
+### `wait-for-break (--timeoutMs <n> | --timeoutSeconds <n>) [--pollMs <n>] [--solution <name>] [--instancePid <n>]`
+Exactly one timeout unit is required. Missing/both, malformed/negative values and nonpositive
+poll intervals return `invalid-argument` before resolving VS. Whole `timeoutSeconds` is 0..590;
+legacy direct-CLI `timeoutMs` remains 0..2147483647 milliseconds, not a 170-second ceiling.
+`pollMs` defaults to 250 milliseconds. Target resolution precedes the polling clock.
+
+Status is observed before checking the deadline, including once with zero budget. Sleeps
+never exceed remaining budget. COM calls/retries can overrun that deadline; the polling
+budget cannot interrupt an in-flight COM call or guarantee an atomic snapshot.
 - Success: `{ "success": true, "mode": "break", "activeDocument": "C:\\...\\Foo.cs" | null, "activeLine": 42 | null }`
   — the same shape as `debugger-status`, including `preserveNullFields` (see above).
 - Failure: `{ "success": false, "error": "timeout", "message": "..." }` if break mode is never
-  reached in time; same attach-resolution errors as other verbs otherwise (including
+  reached in time; adds `timeoutMs`, `pollMs`, `elapsedMs` observations. Same target errors otherwise (including
   `com-busy-retry-exhausted` if a poll iteration's COM call exhausts its retries mid-wait).
+
+MCP accepts milliseconds 0..590000 or whole seconds 0..590, with identical unit/poll validation.
+Out-of-range requests fail explicitly rather than silently clamping to the prior 120000ms cap.
+The outer process budget is requested wait plus 10000ms, at most 600000ms. Headroom includes
+target discovery/COM/serialization overhead, not a promise of completion. Outer timeout is
+a distinct MCP wrapper error. UI wait limits are unchanged.
 
 ## Phase 21 verbs (PID-targeted attach/break-all/detach, 2026-10-02)
 
 These three verbs operate on an explicit `--pid` (target debuggee process), unlike every other
-verb above which operates on the Visual Studio instance itself (`--solution` only disambiguates
+verb above which operates on the Visual Studio instance itself (`--solution`/`--instancePid` disambiguate
 *which* `devenv.exe`, never *which* debuggee process). All three use EnvDTE/COM exclusively — no
 UI automation/SendKeys is involved in locating or attaching to the target process.
 
 Resolution for `--pid` is unambiguous by construction: every running `devenv.exe` instance (or
-just the one matching `--solution`, if given) is scanned for a `Process` with a matching
+just the unique one matching explicit `--solution`/`--instancePid` constraints) is scanned for a `Process` with a matching
 `ProcessID`. If the PID is visible to more than one instance, or isn't found in any instance's
 candidate set, the verb fails rather than guessing — see the `ambiguous-process` /
 `process-not-found` / `process-not-debugged` errors below, each of which includes a `candidates`

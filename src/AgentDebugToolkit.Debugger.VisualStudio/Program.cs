@@ -2,16 +2,25 @@
 using System.Runtime.InteropServices;
 using AgentDebugToolkit.Debugger.VisualStudio;
 
+if (DebuggerDiscovery.TryHandleHelp(args, out var helpExitCode)) return helpExitCode;
+if (AgentDebugToolkit.Identity.ToolkitIdentity.TryHandle(args, out var identityExitCode)) return identityExitCode;
+
 if (args.Length == 0)
 {
     JsonOutput.WriteError("invalid-argument", "No verb specified. See docs/CLI_CONTRACT.md.");
     return 1;
 }
 
-var verb = args[0];
+var verb = DebuggerDiscovery.Canonicalize(args[0]);
 if (!TryParseOptions(args.Skip(1).ToArray(), out var opts, out var parseError))
 {
     JsonOutput.WriteError("invalid-argument", parseError!);
+    return 1;
+}
+
+if (DebuggerDiscovery.ValidateTarget(opts) is { } targetError)
+{
+    JsonOutput.WriteError("invalid-argument", targetError);
     return 1;
 }
 
@@ -19,6 +28,13 @@ try
 {
     switch (verb)
     {
+        case "list-instances":
+            if (opts.Count != 0)
+            {
+                JsonOutput.WriteError("invalid-argument", "list-instances accepts no options; use the returned instancePid with a targeted verb.");
+                return 1;
+            }
+            return DteLocator.ListInstances();
         case "debugger-status":
             return Verbs.DebuggerStatus(opts);
         case "get-callstack":
@@ -105,7 +121,8 @@ static bool TryParseOptions(string[] args, out Dictionary<string, string> dict, 
                 value = args[++i];
             }
             else if (key.Equals("allowSideEffects", StringComparison.OrdinalIgnoreCase)
-                || key.Equals("all", StringComparison.OrdinalIgnoreCase))
+                || key.Equals("all", StringComparison.OrdinalIgnoreCase)
+                || key.Equals("context", StringComparison.OrdinalIgnoreCase))
             {
                 value = "true";
             }
@@ -125,7 +142,14 @@ internal static class Verbs
 {
     public static int DebuggerStatus(Dictionary<string, string> opts)
     {
-        var (dte, errorCode, error) = ResolveDte(opts);
+        var includeContext = false;
+        if (opts.TryGetValue("context", out var contextText) && !bool.TryParse(contextText, out includeContext))
+        {
+            JsonOutput.WriteError("invalid-argument", "--context must be true or false.");
+            return 1;
+        }
+        opts.TryGetValue("solution", out var solutionName);
+        var (dte, errorCode, error) = DteLocator.FindDte(solutionName, InstancePid(opts), out var selectedMoniker);
         if (dte is null)
         {
             JsonOutput.WriteError(errorCode!, error!);
@@ -133,7 +157,24 @@ internal static class Verbs
         }
 
         var (mode, activeDocument, activeLine) = GetStatusSnapshot(dte);
-        JsonOutput.WriteSuccess(new { mode, activeDocument, activeLine }, preserveNullFields: true);
+        if (includeContext)
+        {
+            var context = BreakContextReader.Read(mode, () => DteLocator.DescribeSelected(dte, selectedMoniker!),
+                () => ComRetry.Invoke(() => dte.Debugger.CurrentThread?.ID),
+                () => ComRetry.Invoke(() => dte.Debugger.CurrentStackFrame?.FunctionName),
+                () =>
+                {
+                    var observed = ReadExceptionLocal(ComRetry.Invoke(() => dte.Debugger.CurrentStackFrame));
+                    return observed is { } fact ? new { type = fact.Type, value = fact.Value } : null;
+                },
+                () =>
+                {
+                    var hit = ComRetry.Invoke(() => dte.Debugger.BreakpointLastHit);
+                    return hit is null ? null : new { file = ComRetry.Invoke(() => hit.File), line = ComRetry.Invoke(() => hit.FileLine) };
+                }, () => ToModeString(ComRetry.Invoke(() => dte.Debugger.CurrentMode)));
+            JsonOutput.WriteSuccess(new { mode, activeDocument, activeLine, context }, preserveNullFields: true);
+        }
+        else JsonOutput.WriteSuccess(new { mode, activeDocument, activeLine }, preserveNullFields: true);
         return 0;
     }
 
@@ -757,6 +798,20 @@ internal static class Verbs
             return 1;
         }
 
+        var observation = ReadExceptionLocal(stackFrame);
+        if (observation is null)
+        {
+            JsonOutput.WriteError("no-active-exception", "No $exception local is exposed in the selected frame; its absence does not establish the break cause.");
+            return 1;
+        }
+        var fact = observation.Value;
+        JsonOutput.WriteSuccess(new { exceptionType = fact.Type, message = fact.Value });
+        return 0;
+    }
+
+    private static (string? Type, string? Value)? ReadExceptionLocal(StackFrame? stackFrame)
+    {
+        if (stackFrame is null) return null;
         Expression? exceptionExpr = null;
         ComRetry.ForEach<Expression>(ComRetry.Invoke(() => stackFrame.Locals), local =>
         {
@@ -768,18 +823,7 @@ internal static class Verbs
             return true;
         });
 
-        if (exceptionExpr is null)
-        {
-            JsonOutput.WriteError("no-active-exception", "Break mode was not triggered by an exception.");
-            return 1;
-        }
-
-        JsonOutput.WriteSuccess(new
-        {
-            exceptionType = ComRetry.Invoke(() => exceptionExpr.Type),
-            message = ComRetry.Invoke(() => exceptionExpr.Value),
-        });
-        return 0;
+        return exceptionExpr is null ? null : (ComRetry.Invoke(() => exceptionExpr.Type), ComRetry.Invoke(() => exceptionExpr.Value));
     }
 
     public static int Continue(Dictionary<string, string> opts)
@@ -1039,21 +1083,12 @@ internal static class Verbs
 
     public static int WaitForBreak(Dictionary<string, string> opts)
     {
-        if (!opts.TryGetValue("timeoutMs", out var timeoutText) || !int.TryParse(timeoutText, out var timeoutMs) || timeoutMs < 0)
+        if (!AgentDebugToolkit.Debugger.Contracts.DebuggerWaitOptions.TryParse(opts, int.MaxValue, out var parsed, out var validationError))
         {
-            JsonOutput.WriteError("invalid-argument", "--timeoutMs is required and must be a non-negative integer.");
+            JsonOutput.WriteError("invalid-argument", validationError!);
             return 1;
         }
-
-        var pollMs = 250;
-        if (opts.TryGetValue("pollMs", out var pollText))
-        {
-            if (!int.TryParse(pollText, out pollMs) || pollMs <= 0)
-            {
-                JsonOutput.WriteError("invalid-argument", "--pollMs must be a positive integer.");
-                return 1;
-            }
-        }
+        var wait = parsed!;
 
         var (dte, errorCode, error) = ResolveDte(opts);
         if (dte is null)
@@ -1068,23 +1103,20 @@ internal static class Verbs
         // exhaust their retries mid-poll, that exception already propagates up to Main's
         // existing handler and is reported as "com-busy-retry-exhausted" rather than
         // "unhandled-exception".
-        while (true)
+        (string mode, string? activeDocument, int? activeLine) snapshot = default;
+        var reached = AgentDebugToolkit.Debugger.Contracts.DebuggerWaitOptions.Poll(() =>
         {
-            var (mode, activeDocument, activeLine) = GetStatusSnapshot(dte);
-            if (mode == "break")
-            {
-                JsonOutput.WriteSuccess(new { mode, activeDocument, activeLine }, preserveNullFields: true);
-                return 0;
-            }
-
-            if (stopwatch.ElapsedMilliseconds >= timeoutMs)
-            {
-                JsonOutput.WriteError("timeout", $"Break mode was not reached within {timeoutMs}ms.");
-                return 1;
-            }
-
-            System.Threading.Thread.Sleep(Math.Min(pollMs, (int)Math.Max(0, timeoutMs - stopwatch.ElapsedMilliseconds)));
+            snapshot = GetStatusSnapshot(dte);
+            return snapshot.mode == "break";
+        }, () => stopwatch.ElapsedMilliseconds, System.Threading.Thread.Sleep, wait);
+        if (reached)
+        {
+            JsonOutput.WriteSuccess(new { snapshot.mode, snapshot.activeDocument, snapshot.activeLine }, preserveNullFields: true);
+            return 0;
         }
+        JsonOutput.WriteError("timeout", $"Break mode was not reached within {wait.TimeoutMs}ms.",
+            new { timeoutMs = wait.TimeoutMs, pollMs = wait.PollMs, elapsedMs = stopwatch.ElapsedMilliseconds });
+        return 1;
     }
 
     public static int AttachProcess(Dictionary<string, string> opts)
@@ -1095,7 +1127,7 @@ internal static class Verbs
         }
 
         opts.TryGetValue("solution", out var solutionName);
-        var (dte, process, errorCode, error, candidates) = DteLocator.FindProcessToAttach(pid, solutionName);
+        var (dte, process, errorCode, error, candidates) = DteLocator.FindProcessToAttach(pid, solutionName, InstancePid(opts));
         if (dte is null || process is null)
         {
             JsonOutput.WriteError(errorCode!, error!, candidates is null ? null : new { candidates });
@@ -1125,7 +1157,7 @@ internal static class Verbs
         }
 
         opts.TryGetValue("solution", out var solutionName);
-        var (dte, process, errorCode, error, candidates) = DteLocator.FindDebuggedProcess(pid, solutionName);
+        var (dte, process, errorCode, error, candidates) = DteLocator.FindDebuggedProcess(pid, solutionName, InstancePid(opts));
         if (dte is null || process is null)
         {
             JsonOutput.WriteError(errorCode!, error!, candidates is null ? null : new { candidates });
@@ -1156,7 +1188,7 @@ internal static class Verbs
         }
 
         opts.TryGetValue("solution", out var solutionName);
-        var (dte, process, errorCode, error, candidates) = DteLocator.FindDebuggedProcess(pid, solutionName);
+        var (dte, process, errorCode, error, candidates) = DteLocator.FindDebuggedProcess(pid, solutionName, InstancePid(opts));
         if (dte is null || process is null)
         {
             JsonOutput.WriteError(errorCode!, error!, candidates is null ? null : new { candidates });
@@ -1194,8 +1226,10 @@ internal static class Verbs
     private static (DTE? dte, string? errorCode, string? error) ResolveDte(Dictionary<string, string> opts)
     {
         opts.TryGetValue("solution", out var solutionName);
-        return DteLocator.FindDte(solutionName);
+        return DteLocator.FindDte(solutionName, InstancePid(opts));
     }
+
+    private static int? InstancePid(Dictionary<string, string> opts) => opts.TryGetValue("instancePid", out var value) ? int.Parse(value) : null;
 
     private static (DTE? dte, string? errorCode, string? error) RequireBreakMode(Dictionary<string, string> opts)
     {

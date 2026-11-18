@@ -1,5 +1,9 @@
 # Key Flows
 
+Executable Program -> ToolkitIdentity.TryHandle -> ToolkitIdentity.Read -> PackageVerifier.Verify (optional) -> minified identity envelope, before live subsystem initialization
+
+ToolkitInfoTools.Info -> enabled-group gate -> CliRunner.RunAsync(info) / ToolkitIdentity.CreateResult(server) -> ToolInvocationResult
+
 Program.Verbs.Attach -> SessionContext.Save -> UiaHelper.ListTopLevelWindows -> JsonOutput.WriteSuccess
 
 Program.Verbs.ListWindows/Attach -> UiaHelper.ListTopLevelWindows -> NativeMethods.EnumerateVisibleTopLevelWindows -> JsonOutput.WriteSuccess
@@ -41,3 +45,13 @@ Program.Verbs.ResolveWindowHwnd/ResolveElement -> Program.Verbs.ValidateResolved
 Program.Verbs.Screenshot -> Program.Verbs.ResolveWindowHwnd -> ScreenshotHelper.CaptureWindow -> NativeMethods.GetWindowRect/GetDpiForWindow -> ScreenshotHelper.TryPrintWindow/CaptureScreenRegion -> ScreenshotHelper.CropAndScale (optional) -> ScreenshotHelper.SaveBitmap -> JsonOutput.WriteSuccess
 
 Program.Verbs.Click/RightClick/DoubleClick (coordinates) -> TryValidateCoordinateTarget (preflight unless minimized) -> EnsureTargetWindowForeground (restore/wait if minimized) -> TryValidateCoordinateTarget (fresh bounds) -> NativeMethods.Click/RightClick/DoubleClick
+
+VS Program -> DebuggerDiscovery.TryHandleHelp -> canonical verb/alias descriptors -> JsonOutput.WriteSuccess (no DTE lookup)
+
+VsDebuggerTools.ListInstances -> CliRunner.RunAsync -> DteLocator.ListInstances -> EnumerateDteInstances/ParseInstancePid -> nullable per-field observations/errors -> JsonOutput.WriteSuccess
+
+VsDebuggerTools targeted operation -> RunAsync (instancePid validation/forwarding) -> VS Program target validation -> DteLocator.FindDte/FindProcessByPid -> DebuggerDiscovery.SelectInstance (PID then solution, unique explicit match) -> existing debugger verb
+
+Verbs.DebuggerStatus (context=true) -> DteLocator.FindDte (selected moniker) -> GetStatusSnapshot -> BreakContextReader.Read -> ReadExceptionLocal/observed thread/frame/last-hit/end-mode -> nullable non-atomic context
+
+VsDebuggerTools.WaitForBreak -> DebuggerWaitOptions.TryParse/ProcessTimeoutMs -> CliRunner.RunAsync -> Verbs.WaitForBreak -> DebuggerWaitOptions.TryParse/Poll -> GetStatusSnapshot -> existing success or timeout facts

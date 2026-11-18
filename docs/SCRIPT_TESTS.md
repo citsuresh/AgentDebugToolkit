@@ -1,11 +1,21 @@
 # Script tests
 
 Test cases for the helper scripts that are not covered by `dotnet test`:
-`scripts\agent\Rebuild-Mcp.ps1` and `tools\Test-McpServer.ps1`. Read the cases for a script before
+`scripts\agent\Rebuild-Mcp.ps1`, `scripts\agent\Publish-AgentDebugToolkit.ps1` and `tools\Test-McpServer.ps1`. Read the cases for a script before
 changing it and update them after. Results are recorded with the date; a case marked *Not run* has
 not been run, whatever the script's design suggests.
 
 Run all commands from the repo root in Windows PowerShell 5.1.
+
+## Publish-AgentDebugToolkit.ps1 provenance
+
+| ID | Case | Expected | Result |
+|----|------|----------|--------|
+| P-01 | Normal portable publication | Embedded portable-package, win-x64/self-contained identity for every tool; manifest covers all staged payload files except itself; every tool verifies matched before replacement. | *Not run in identity tranche: no publication/installation authorized.* |
+| P-02 | Copied package | Actual paths change; build facts and payload hashes remain; all tools still report matched. | *Real portable publication not run; synthetic relative-path verifier cases are automated in PackageVerificationTests.* |
+| P-03 | Tamper/mix/remove/add a file | Verification is mismatched and nonzero; no success-shaped fallback. | *Synthetic verifier cases automated; real portable package not run.* |
+| P-04 | Source identity changes between tool builds | Publisher stops before destination replacement and retains staging. | *Not run.* |
+| P-05 | Manifest malformed, missing, unsafe path or wrong tool identity | Invalid manifests fail explicitly; missing is not-present, never matched; unsafe paths are not hashed. | *Synthetic verifier cases automated; real portable package not run.* |
 
 ## Rebuild-Mcp.ps1
 

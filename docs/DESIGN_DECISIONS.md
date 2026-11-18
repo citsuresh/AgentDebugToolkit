@@ -329,3 +329,60 @@ The optional MCP restore parameter follows the existing cancellation-token slot.
 **Rationale:** A minimized window is an observable fact; an unavailable tab control is only a
 possible provider explanation. Recovery must require explicit interaction permission, preserve
 normal/maximized placement, and report partial restoration even when activation is denied.
+
+## 2026-11-18 -- Embedded executable identity and portable provenance are separate from installer markers
+
+**Decision:** Link one identity/verifier source into all four independent executables. MSBuild
+embeds Git commit/dirty observations, configuration, RID and distribution intent. Runtime info
+reports those facts plus actual executable/assembly paths and hashes; it never reads the current
+checkout's HEAD or .built-version. Unknown Git metadata stays unknown. MCP identity enforces
+enabled tool groups and reports old unsupported binaries without guessing capabilities.
+
+The publisher explicitly marks portable builds and creates a relative-path manifest covering
+all payload files and each tool's embedded identity. All four tools must verify before staged
+replacement. Missing manifests remain not-present, not matched; verification rejects unsafe paths
+and reports mixed, extra, missing or tampered payload. Hash integrity is not authenticity or an
+atomic guarantee against files changing after observation.
+
+**Rationale:** An installer commit marker cannot identify a copied or stale binary. Linked source
+preserves component independence without adding Core dependencies to debugger/console/MCP.
+Relative manifest paths allow copying a complete package without rewriting build provenance.
+
+## 2026-11-18 -- Static debugger discovery and exact instance pins fail closed
+
+**Decision:** JSON help is resolved before identity/live-DTE dispatch; get-call-stack maps to
+get-callstack rather than implementing a second reader. list-instances reports observed ROT
+monikers, VS PIDs and nullable per-field facts/errors, without activation or debugger mutation.
+All existing targeted CLI/MCP operations support an explicit VS instance PID, distinct from
+the debuggee PID. PID and solution constraints combine, ambiguity/unverifiable explicit
+metadata fails closed, and no explicit target falls through to another instance. Omitted
+targets retain legacy ordinary first-instance/process-scan behavior. New MCP arguments follow
+existing cancellation-token slots for positional-call source compatibility.
+
+**Rationale:** Multiple IDEs can share solution names; process identity must be observed and
+pinned, not guessed. A partial ROT observation is not a complete or atomic process inventory.
+Capabilities describe implemented features, never permission to mutate a debugger.
+
+## 2026-11-18 -- Explicit wait units separate polling budgets from process bounds
+
+**Decision:** CLI/MCP share validation and polling semantics. Exactly one millisecond or
+whole-second unit is required; seconds are bounded to 590. Legacy direct-CLI millisecond
+range remains int.MaxValue. MCP milliseconds are 0..590000, with 10000ms process headroom
+within the existing 600000ms runner limit; invalid requests fail rather than silently clamp.
+Zero observes once, and sleeps never exceed the remaining polling budget.
+
+**Rationale:** There was no demonstrated 170-second CLI ceiling. COM calls/retries can overrun
+an elapsed polling deadline; an outer process budget is a separate bound, including target
+discovery and serialization, not a promise of completion within a fixed grace period.
+
+## 2026-11-18 -- Rich break context reports observations, not an inferred stop cause
+
+**Decision:** debugger-status context is explicit opt-in; omitted/false preserves the old
+shape. Sequential instance/thread/frame/exception-local/last-hit/end-mode observations remain
+nullable, carry field errors, and always report breakReason unknown and observationsAreAtomic
+false. Break-only reads are gated by initial break mode. The exception-local reader is reused
+without evaluating expressions or enabling side effects; no thread/frame is selected.
+
+**Rationale:** BreakpointLastHit may be historical, and an exposed or absent $exception does
+not establish the current stop cause. A mode change can occur between reads; even equal modes
+do not prove snapshot consistency. Provider errors must not become numeric/boolean defaults.
