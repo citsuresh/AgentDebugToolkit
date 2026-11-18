@@ -4,6 +4,7 @@ using System.IO;
 using System.Windows.Automation;
 using AgentDebugToolkit.Core;
 using AgentDebugToolkit.Core.Models;
+using AgentDebugToolkit.Inspection;
 using AgentDebugToolkit.UiAutomation.Cli;
 
 if (AgentDebugToolkit.Identity.ToolkitIdentity.TryHandle(args, out var identityExitCode)) return identityExitCode;
@@ -56,12 +57,18 @@ if (args.Length == 0)
 }
 
 var verb = args[0];
-if (!TryParseOptions(args.Skip(1).ToArray(), out var opts, out var parseError))
+if (!TryParseOptions(args.Skip(1).ToArray(), out var opts, out var parseError, verb is "read-rows" or "read-tree-items" or "select-item" or "select-row"))
 {
     var message = verb.Equals("list-windows", StringComparison.OrdinalIgnoreCase)
         ? $"{parseError} Accepted list-windows flags: {Verbs.ListWindowsAcceptedFlags}."
         : parseError!;
     JsonOutput.WriteError("invalid-argument", message);
+    return 1;
+}
+
+if (verb is not ("inspect" or "read-visible-text" or "read-rows" or "read-tree-items" or "select-item" or "select-row") && (opts.ContainsKey("maxNodes") || opts.ContainsKey("maxDurationMs")))
+{
+    JsonOutput.WriteError("invalid-argument", "--maxNodes and --maxDurationMs apply only to inspection, paged readers and verified selection.");
     return 1;
 }
 
@@ -103,6 +110,14 @@ try
             return Verbs.WaitForElement(opts);
         case "read-visible-text":
             return Verbs.ReadVisibleText(opts);
+        case "read-rows":
+            return Verbs.ReadPage(opts, tree: false);
+        case "read-tree-items":
+            return Verbs.ReadPage(opts, tree: true);
+        case "select-item":
+            return Verbs.Select(opts, row: false);
+        case "select-row":
+            return Verbs.Select(opts, row: true);
         case "screenshot":
             return Verbs.Screenshot(opts);
         case "activate":
@@ -157,7 +172,7 @@ catch (Exception ex)
     return 1;
 }
 
-static bool TryParseOptions(string[] args, out Dictionary<string, string> dict, out string? error)
+static bool TryParseOptions(string[] args, out Dictionary<string, string> dict, out string? error, bool strict = false)
 {
     dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
     error = null;
@@ -167,6 +182,7 @@ static bool TryParseOptions(string[] args, out Dictionary<string, string> dict, 
         var argument = args[i];
         if (!argument.StartsWith("--", StringComparison.Ordinal))
         {
+            if (strict) { error = $"Unexpected positional argument '{argument}'."; return false; }
             continue;
         }
 
@@ -199,6 +215,11 @@ static bool TryParseOptions(string[] args, out Dictionary<string, string> dict, 
             }
         }
 
+        if ((strict || key.Equals("maxNodes", StringComparison.OrdinalIgnoreCase) || key.Equals("maxDurationMs", StringComparison.OrdinalIgnoreCase)) && dict.ContainsKey(key))
+        {
+            error = $"--{key} must not be specified more than once.";
+            return false;
+        }
         dict[key] = value;
     }
 
@@ -693,6 +714,11 @@ internal static class Verbs
 
     public static int Inspect(Dictionary<string, string> opts)
     {
+        if (!InspectionLimits.TryParse(opts, out var limits, out var budgetError))
+        {
+            JsonOutput.WriteError("invalid-argument", budgetError!);
+            return 1;
+        }
         opts.TryGetValue("nameContains", out var nameContains);
         ControlType? controlType = null;
         if (opts.TryGetValue("controlType", out var controlTypeText)
@@ -722,8 +748,23 @@ internal static class Verbs
 
         var filtered = nameContains is not null || controlType is not null;
         var depthStats = new DepthLimitStats();
-        var tree = UiaHelper.ToElementInfo(element, includeChildren: true, maxDepth: maxDepth,
-            nameContains: nameContains, controlType: controlType, out var matchCount, depthStats, includeState: true);
+        object? traversalReport = null;
+        bool? truncated = null;
+        ElementInfo? tree;
+        int matchCount;
+        if (limits.IsBounded)
+        {
+            var traversal = new InspectionTraversal(limits);
+            tree = UiaHelper.InspectBounded(element, maxDepth, traversal, depthStats, nameContains, controlType, out matchCount);
+            traversalReport = traversal.Report;
+            truncated = traversal.Truncated;
+            if (tree is null)
+            {
+                return WriteIncompleteInspection(traversalReport);
+            }
+        }
+        else tree = UiaHelper.ToElementInfo(element, includeChildren: true, maxDepth: maxDepth,
+            nameContains: nameContains, controlType: controlType, out matchCount, depthStats, includeState: true);
         string? screenshotPath = takeScreenshot ? ScreenshotHelper.Capture(element) : null;
 
         // Depth-limit fields are omitted (null) unless at least one node at the limit has children.
@@ -732,6 +773,8 @@ internal static class Verbs
         JsonOutput.WriteSuccess(new
         {
             root = tree,
+            traversal = traversalReport,
+            truncated,
             screenshotPath,
             matchCount = filtered ? matchCount : (int?)null,
             depthLimited = limited ? true : (bool?)null,
@@ -2128,6 +2171,11 @@ internal static class Verbs
 
     public static int ReadVisibleText(Dictionary<string, string> opts)
     {
+        if (!InspectionLimits.TryParse(opts, out var limits, out var budgetError))
+        {
+            JsonOutput.WriteError("invalid-argument", budgetError!);
+            return 1;
+        }
         var (windowHwnd, errorCode, error) = ResolveWindowHwnd(opts);
         if (errorCode is not null)
         {
@@ -2164,13 +2212,28 @@ internal static class Verbs
         }
 
         var depthStats = new DepthLimitStats();
-        var (lines, truncated) = UiaHelper.CollectVisibleText(element, maxDepth, depthStats);
+        object? traversalReport = null;
+        List<string> lines;
+        bool truncated;
+        if (limits.IsBounded)
+        {
+            var traversal = new InspectionTraversal(limits);
+            lines = UiaHelper.CollectBoundedText(element, maxDepth ?? UiaHelper.DefaultTextMaxDepth, traversal, depthStats);
+            traversalReport = traversal.Report;
+            truncated = traversal.Truncated;
+            if (traversal.NodesCaptured == 0)
+            {
+                return WriteIncompleteInspection(traversalReport, lines);
+            }
+        }
+        else (lines, truncated) = UiaHelper.CollectVisibleText(element, maxDepth, depthStats);
         var limited = depthStats.IsLimited;
         var usedDepth = maxDepth ?? UiaHelper.DefaultTextMaxDepth;
         JsonOutput.WriteSuccess(new
         {
             lines,
             truncated,
+            traversal = traversalReport,
             depthLimited = limited ? true : (bool?)null,
             maxDepth = limited ? usedDepth : (int?)null,
             nodesBeyondDepth = limited ? depthStats.NodesBeyondDepth : (int?)null,
@@ -2178,6 +2241,92 @@ internal static class Verbs
             hint = limited ? depthStats.Hint(usedDepth) : null,
         });
         return 0;
+    }
+
+    internal static int ReadPage(Dictionary<string, string> opts, bool tree)
+    {
+        if (!PageReadOptions.TryParse(opts, tree, out var options, out var error))
+        { JsonOutput.WriteError("invalid-argument", error!); return 1; }
+        if (ValidateStructuredTargetArguments(opts) is { } validationError)
+        { JsonOutput.WriteError("invalid-argument", validationError); return 1; }
+        try
+        {
+            var resolved = ResolveStructuredTarget(opts);
+            if (resolved.element is null)
+            { JsonOutput.WriteError(resolved.errorCode!, resolved.error!, resolved.details); return 1; }
+            var budget = new InspectionTraversal(options!.Budget);
+            var reader = new PagedUiaReader<AutomationElement>(new UiaPageSource(budget), options, tree, budget);
+            return WritePage(reader.Read(resolved.element), reader.Error);
+        }
+        catch (ElementNotAvailableException ex) { JsonOutput.WriteError("stale-context", ex.Message); return 1; }
+        catch (Exception ex) when (UiaHelper.IsStateProviderError(ex))
+        { JsonOutput.WriteError("page-provider-error", ex.Message); return 1; }
+    }
+
+    private static string? ValidateStructuredTargetArguments(Dictionary<string, string> opts)
+    {
+        foreach (var key in new[] { "hwnd", "scopeHwnd" })
+        {
+            if (!opts.TryGetValue(key, out var text)) continue;
+            try { UiaHelper.ParseHwnd(text); }
+            catch (Exception ex) when (ex is FormatException or OverflowException or ArgumentException)
+            { return $"Invalid {key} '{text}'."; }
+        }
+        return opts.ContainsKey("strategy") ? ValidateStateTargetArguments(opts) : null;
+    }
+
+    private static (AutomationElement? element, string? errorCode, string? error, object? details) ResolveStructuredTarget(Dictionary<string, string> opts)
+    {
+        var (hwnd, code, message) = ResolveWindowHwnd(opts);
+        if (code is not null) return (null, code, message, null);
+        if (opts.ContainsKey("strategy")) return ResolveElement(hwnd, opts, includeControlType: true, propagateWindowErrors: true);
+        var root = opts.TryGetValue("scopeHwnd", out var scope) ? UiaHelper.ParseHwnd(scope) : hwnd;
+        var validated = ValidateResolvedWindowHwnd(root);
+        if (validated.errorCode is not null) return (null, validated.errorCode, validated.error, null);
+        var target = UiaHelper.FindWindowByHwnd($"0x{root.ToInt64():X}", propagateErrors: true);
+        return target is null ? (null, "element-not-found", "No UIA root was returned for the requested handle.", null) : (target, null, null, null);
+    }
+
+    internal static int Select(Dictionary<string, string> opts, bool row)
+    {
+        if (!SelectionOptions.TryParse(opts, row, out var options, out var error))
+        { JsonOutput.WriteError("invalid-argument", error!, new { actionAttempted = false }); return 1; }
+        if (ValidateStructuredTargetArguments(opts) is { } validationError)
+        { JsonOutput.WriteError("invalid-argument", validationError, new { actionAttempted = false }); return 1; }
+        var budget = new InspectionTraversal(options!.Bounds.Budget);
+        var source = new UiaSelectionSource(() =>
+        {
+            try
+            {
+                var target = ResolveStructuredTarget(opts);
+                return new SelectionResolution<AutomationElement>(target.element, target.errorCode, target.error, target.details);
+            }
+            catch (WindowGoneException ex) { return new(null, "window-gone", ex.Message); }
+        }, options, budget);
+        var selection = new VerifiedSelection<AutomationElement>(source, budget);
+        var result = selection.Run(new { operation = row ? "select-row" : "select-item", row = row ? options.Bounds.Offset : (int?)null,
+            rowKind = options.RowKind, maxDepth = row ? options.Bounds.MaxDepth : (int?)null });
+        return WriteSelection(result, selection.Error);
+    }
+
+    internal static int WriteSelection(object result, string? error)
+    {
+        if (error is null) { JsonOutput.WriteSuccess(result); return 0; }
+        JsonOutput.WriteError(error, "Selection was not verified; inspect actionAttempted, partial observations and mutation uncertainty before retrying.", result);
+        return 1;
+    }
+
+    internal static int WritePage(object page, string? error)
+    {
+        if (error is null) { JsonOutput.WriteSuccess(page); return 0; }
+        JsonOutput.WriteError(error, "Page observation failed or changed; examine partial records, traversal and retry guidance.", page);
+        return 1;
+    }
+
+    internal static int WriteIncompleteInspection(object traversal, List<string>? lines = null)
+    {
+        JsonOutput.WriteError("inspection-incomplete", "No complete root node snapshot was captured; inspect traversal for limits or provider errors.", new { traversal, lines });
+        return 1;
     }
 
     /// <summary>Captures a window PNG, optionally cropped/scaled, with physical bounds and saved image dimensions.</summary>

@@ -313,7 +313,7 @@ filtering, in every mode. Order is Win32 `EnumWindows` order: top of the z-order
   visible to the CLI. Windows of elevated processes may be listed but probably cannot be driven
   from a non-elevated CLI (UIPI; not verified).
 
-### `inspect --hwnd <h> [--maxDepth <n>] [--screenshot true|false] [--nameContains <substring>] [--controlType <short name>]`
+### `inspect --hwnd <h> [--maxDepth <n>] [--maxNodes <n>] [--maxDurationMs <ms>] [--screenshot true|false] [--nameContains <substring>] [--controlType <short name>]`
 Dumps the UIA subtree rooted at the given window/element handle, and optionally saves a
 screenshot.
 - `--screenshot` is off by default: a screenshot is saved only when `--screenshot true` (or a
@@ -356,6 +356,244 @@ screenshot.
   deeper than 8 (for example the Claude desktop chat input is at depth 16): a frame-only result
   with `depthLimited: true` is not an opaque app, so re-run with a larger `--maxDepth`. The hint
   suggests `max(30, 2 * maxDepth)`, always deeper than the depth already used.
+
+#### Opt-in bounded inspection (also `read-visible-text`)
+
+- `--maxNodes` accepts 1..100000 and counts admitted node snapshot attempts, including the
+  root and failed reads. `--maxDurationMs` accepts 1..120000 milliseconds. Either flag enables
+  incremental raw-UIA first-child/next-sibling traversal instead of eager child-list materialization.
+  Both may be supplied; the first exhausted bound stops traversal. Repeating either flag,
+  missing/noninteger/zero/negative/out-of-range values, or using them on an unsupported verb
+  returns `invalid-argument`; paged readers and verified selection also accept these budgets.
+  Bounded `--maxDepth` must be a nonnegative integer (default 8, root 0).
+- Omit **both** flags to retain the legacy traversal and response shape. Limits are not new
+  implicit defaults. Bounded inspection adds top-level `truncated` and `traversal`; bounded
+  text retains `lines`/`truncated` and adds `traversal`. Existing `ElementInfo` names/casing,
+  state, filters, depth-limit fields and optional screenshot behavior remain available.
+- The cooperative timer covers traversal and its UIA property/pattern/navigation reads, not
+  window resolution, subsequent filter pruning, screenshots, serialization or process startup.
+  It is checked before/after provider reads; an **in-flight UIA call cannot be interrupted**
+  and can overrun arbitrarily. This is not a hard wall-clock deadline or a provider-work limit.
+  Providers may internally build children even for a first-child request. One extra navigation
+  probe may detect an omitted node; it does not admit/read that node's snapshot. Exactly N
+  exposed nodes at a budget of N are complete if no other limit/error intervenes.
+- Example bounded envelope (normal success still does not mean exhaustive observation):
+  ```json
+  {"success":true,"root":{"Name":"Example","Children":[]},"truncated":true,
+   "traversal":{"scope":"exposed-uia-tree","complete":false,"truncated":true,
+    "nodesVisited":1,"nodesCaptured":1,"elapsedMs":12,"maxNodes":1,
+    "stopReasons":["node-budget"],"errorCount":0,"errors":[],"errorsTruncated":false,
+    "hint":"Partial observation: retry from the root with a smaller root HWND or deliberately larger budgets/depth. Filters prune output after traversal; counts cover visited nodes only, and zero matches do not prove absence. No resume token is provided. Provider calls cannot be interrupted by this budget."}}
+  ```
+  The root above abbreviates unchanged element fields. `nodesCaptured` counts returned node
+  snapshots, not atomic/fully successful state observations; partial `State.errors` remain
+  explicit and also make traversal incomplete. `elapsedMs` freezes when traversal finishes.
+  Requested `maxNodes`/`maxDurationMs` appear only when supplied; text also reports
+  `legacyNodeLimit:5000`. `stopReasons`/`errors` are arrays even when empty.
+- Possible reasons: `node-budget`, `time-budget`, `legacy-node-limit`, `max-depth`,
+  `depth-probe-limit`, `child-limit`, `text-limit`, `provider-error`. `complete` is true only
+  when there are none. `truncated` means a known limit or capped depth-probe uncertainty;
+  provider errors alone give `complete:false,truncated:false`. Completeness concerns only
+  the exposed UIA tree, not virtualized/inactive content or hardware state.
+- Known provider failures record `errors:[{stage,error,message}]`, with
+  `inspection-provider-error` or `stale-context` (state failures retain their state codes).
+  At most 20 examples of 1024 message characters are returned; `errorCount` counts all,
+  and `errorsTruncated` marks omitted examples or shortened messages. Failed branches are
+  not fabricated as disabled/off/empty successful nodes. Unexpected exceptions still fail.
+  If no root snapshot can be captured, exit 1 returns
+  `{"success":false,"error":"inspection-incomplete","message":"...","traversal":{...}}`
+  (text also returns `lines`). A partial captured root can instead succeed with incomplete metadata.
+- Filters still prune **after** bounded traversal. `matchCount` covers captured nodes only;
+  zero partial matches do not establish absence. Matching a node retains only its captured
+  subtree. Narrow the root HWND or deliberately increase budgets/depth and rerun from the root;
+  there is no paging/resume token. No focus, activation, selection, scrolling or realization is added.
+- Bounded text retains the existing 5000-node, 200-child-per-node and 2000-character-per-value
+  caps, even if a larger node budget is requested. It requests 2001 TextPattern characters to
+  detect clipping beyond 2000; Name/ValuePattern may still return larger strings before clipping.
+  All limits, including depth, affect its `truncated`. Legacy text truncation semantics below
+  remain unchanged when both new flags are omitted. Existing depth probes retain 300/50 caps.
+- Capabilities: `ui.inspect.bounded.v1`, `ui.read-visible-text.bounded.v1`.
+
+### `read-rows --hwnd <h> --offset <n> --limit <n> [--strategy <s> --value <v> [--controlType <type>]] [--scopeHwnd <h2>] [--maxColumns <n>] [--maxDepth <n>] [--maxNodes <n>] [--maxDurationMs <ms>]`
+
+Read-only structured row observations, not the mutating `set-grid-cell` scroll-search path.
+Targets the explicit HWND/scope root, or uses existing Name/AutomationId selectors and
+control-type/scoping/ambiguity rules to resolve one container. Does not auto-discover a grid
+among multiple children. Existing window-gone/unresponsive/selector errors are unchanged.
+
+- Required `offset` is zero-based 0..int.MaxValue; required `limit` is 1..100. No implicit
+  first-page defaults. Optional `maxColumns` defaults to 32 (1..64); `maxDepth` defaults to
+  8 (0..64 raw UIA edges). Both readers have finite defaults `maxNodes=5000` (1..100000)
+  and `maxDurationMs=10000` (1..120000 milliseconds). Unlike opt-in `inspect`, these new
+  readers are always bounded. Unknown flags, duplicate flags (even identical), positional
+  garbage, missing/noninteger/invalid values and conflicting selector/options fail
+  `invalid-argument` before target lookup. `maxColumns` is invalid on the tree reader.
+- Prefer GridPattern when the target supports it: `backend:"uia-grid-pattern"`,
+  `scope:"logical-grid-rows"`, `offsetCost:"provider-coordinate-access"`. Read sequential
+  RowCount/ColumnCount, only requested GetItem coordinates, then counts again. No skipped
+  row enumeration in toolkit code; provider work/seek complexity is unknown, **not promised
+  O(1)**. Row `index` is the requested provider-logical row coordinate, not a row element ID;
+  `cells[].index` is the requested column coordinate. Cells expose actual UIA identity and
+  optional GridItem row/column/spans; merged spans are valid, unrelated coordinates fail.
+- Without GridPattern, List/DataGrid/Table containers use incremental raw UIA enumeration of
+  DataItem/ListItem descendants: `backend:"uia-exposed-rows"`, `scope:"exposed-rows"`,
+  `offsetCost:"scan-from-root"`. Wrappers count against the budget; matched rows are not
+  descended for more rows. Skipped rows must be scanned/classified but are not snapshotted.
+  Each returned row has its own element and at most maxColumns immediate exposed children
+  as `cells`. These child indices are **not invented logical column numbers**; only an
+  available GridItem observation supplies column coordinates. No children means no exposed
+  cells, not zero logical columns. WinForms SysListView32 and DataGrid are not assumed to be
+  interchangeable native controls; this mode uses only what their UIA providers expose.
+- `rows:[{index,element?,path?,depth?,parentIndex?,cells:[{index,status,element?}],
+  cellsComplete,exposedCellCount?}]`. Grid rows omit row-element identity when no row element
+  was acquired; their root identity plus requested coordinate locates the observation.
+  Cell status is `read`, `partial`, `unavailable` (failed read), or `incomplete` (snapshot not
+  captured before a limit). Failed cells remain indexed placeholders. Exposed cell counts
+  are supplied only after successful sibling exhaustion, not guessed after a cap/error.
+
+### `read-tree-items --hwnd <h> --offset <n> --limit <n> [--strategy <s> --value <v> [--controlType <type>]] [--scopeHwnd <h2>] [--maxDepth <n>] [--maxNodes <n>] [--maxDurationMs <ms>]`
+
+Same targeting, finite budgets and shared response semantics. Requires a Tree/TreeItem root;
+`backend:"uia-exposed-tree"`, `scope:"exposed-tree-items"`. Enumerates exposed TreeItem
+**descendants** depth-first; the root itself is excluded. Supports SysTreeView32 only through
+its exposed UIA representation, not native messages/remote memory. Returns
+`items:[{index,path,depth,parentIndex?,element?}]`. Index counts matching exposed items, not
+wrappers. Path contains raw child/sibling ordinals from the resolved root; depth counts raw
+edges. ParentIndex references the nearest enumerated TreeItem ancestor, possibly outside this
+page; it is omitted when no such ancestor exists. Paths/indices are not persistent IDs.
+Never expand collapsed nodes or fetch missing virtualized content.
+
+#### Shared structured-page envelope and limitations
+
+- Success adds `backend`, `scope`, `atomic:false`, `offsetCost`, `root`, `offset`, `limit`,
+  `maxDepth`, row-only `maxColumns`, `rows` or `items`, `returned`, `pageComplete`, `complete`,
+  optional `hasMore`/`nextOffset`/`retryOffset`, `traversal` and `hint`.
+  Root/item/cell element fields are camelCase: `runtimeId` (up to 32 integers), `processId`,
+  `automationId`, `name`, `controlType`, `className`, `isOffscreen`, existing `state`,
+  `valueSupported`/`value`, `textSupported`/`text`, `gridItemSupported`/`gridItem`,
+  `expandCollapseSupported`/`expandCollapseState`, `virtualizedItemSupported`, `complete`.
+  Unsupported values are omitted with support false; failed probes leave support unknown and
+  report errors. Disabled/offscreen items are included. VirtualizedItem support is not proof
+  of current virtualization; expansion states are UIA enum names such as `Collapsed`/`LeafNode`.
+  Name is a label, not a fabricated ValuePattern cell value. Empty text can be genuine.
+- Every string data field is capped at 512 characters; supported TextPattern reads request
+  513 to detect clipping. Name/ValuePattern may return larger values before clipping.
+  Runtime-ID/text clipping is explicit and incomplete. Maximum output is 100 rows/items,
+  64 cells per row, bounded strings/IDs and the Phase 3 20-example/1024-message error report.
+  Read state uses its existing nullable/error semantics; state error strings are also capped.
+- Grid `total`/`logicalTotal` and `totalColumns` are valid **entry provider observations**;
+  `totalKind:"provider-logical-rows"`. These are not verified application/database totals.
+  Valid ending counts appear as `logicalTotalAfter`/`totalColumnsAfter`; changed counts fail
+  `snapshot-changed` while preserving both observations. Equal counts do not prove consistency.
+  Exposed modes omit logical totals and columns. They return `total` with
+  `totalKind:"observed-exposed-items"` only after successful exhaustion without hidden-depth
+  uncertainty; they do not scan the whole collection merely to compute totals.
+- `pageComplete` means the requested page was read (or a genuine empty/out-of-range page
+  was established), with no errors, missing requested cells or exhausted work/depth/text caps.
+  `complete` is stricter: only a complete offset-zero logical GridPattern collection can
+  establish it. Exposed modes always carry `exposure-only` and `complete:false`, including
+  empty exposure with unknown logical data. Offset pages carry `offset`; full pages with
+  verified additional entries carry `page-limit`. These deliberate omissions are not errors.
+  A one-match lookahead distinguishes exactly-limit exhaustion from more exposed items.
+- Known `hasMore` concerns rows/items in the selected backend, not missing virtualized data.
+  It is omitted when enumeration is uncertain. A clean page with more entries provides
+  `nextOffset`; use it with identical target/options. Partial pages give `retryOffset` equal
+  to the requested offset: fix errors or deliberately increase budgets/caps and reread that
+  page rather than skipping lost cells. Offset scans restart at the root and can exhaust the
+  work budget before reaching a distant offset; there is no cheap seek/resume-token guarantee.
+- `traversal` reuses Phase 3 counts, requested node/time budgets, bounded provider errors and
+  stop reasons, with the backend-specific scope. Here node counts mean admitted node-read
+  attempts, including root metadata/pattern reads, skipped-node classification and cell/item
+  snapshots; a node can be read more than once. Additional reasons: `offset`, `page-limit`,
+  `column-limit`, `identity-limit`, `exposure-only`, `unsupported-provider`, `snapshot-changed`.
+  Provider failure, unsupported, changed-snapshot and exposure-only reasons are not themselves
+  limit truncation. No complete tree is built before slicing a page.
+- Unsupported roots return exit 1 `unsupported-provider`, not a successful empty collection.
+  Provider failures return exit 1 `page-provider-error` with partial records and traversal;
+  no root captured within a budget returns `page-incomplete`. Budget/output limits may return
+  successful **partial** observations; inspect pageComplete/complete rather than success alone.
+  Field/cell failures are never silently dropped or changed into false/zero/off. Errors before
+  reader setup retain existing window/selector/stale codes and may lack page metadata.
+- Only read-only UIA getters/pattern probes/navigation are requested. No scrolling, expansion,
+  realization, selection, editing, input, focus or activation fallback; no native remote-memory
+  APIs or x86/x64 structure marshalling. UIA/provider internals can perform their own work.
+  Window/selector resolution is outside the cooperative timer and retains existing costs;
+  in-flight provider calls may overrun arbitrarily. No hard deadline, atomic snapshot, stable
+  cross-page identity or proof of hardware connection is promised. Legacy get-text and
+  read-visible-text behavior is unchanged.
+- Capabilities: `ui.read-rows.uia-paged.v1`, `ui.read-tree-items.uia-paged.v1`.
+
+### Verified replacement selection
+
+```
+select-item --hwnd H --strategy S --value V --mode replace
+  [--controlType T] [--scopeHwnd H2] [--maxNodes N] [--maxDurationMs MS]
+select-row --hwnd H --row N --rowKind logical|exposed --mode replace
+  [--strategy S --value V [--controlType T]] [--scopeHwnd H2]
+  [--maxDepth N] [--maxNodes N] [--maxDurationMs MS]
+```
+
+- Both commands **mutate selection** and may deselect other items. `mode=replace` is required;
+  add/remove modes are not implemented. Replacement is scoped to the target's actual UIA
+  SelectionContainer, not every control in a window. An item can be a cell; selecting an item
+  does not assert selection of its row. No session/host discovery is used: HWND is explicit.
+- `select-item` requires a unique existing selector match. For `select-row`, the optional
+  selector identifies the List/DataGrid/Table **container**, not the row. `row` is an explicit
+  zero-based decimal integer 0..2147483647; `rowKind` is never inferred:
+  - `logical`: GridPattern.GetItem(row,0), exact GridItem row/column and containing-grid identity,
+    rowSpan=1, and a **proper row ancestor** establish the requested row. A DataItem ancestor
+    must not itself expose GridItemPattern. The coordinate cell is never selected. Providers
+    returning the row itself as the coordinate cell, spanning rows, or exposing only cells
+    cannot establish this contract and fail explicitly.
+  - `exposed`: the paged reader's same DataItem/ListItem descendant ordinal, excluding the root
+    and not descending into matched rows. It scans from the root, including skipped items;
+    ordinals are not logical GridPattern row numbers. Cell-like candidates are rejected, not
+    skipped to renumber later rows. Missing/virtualized rows are never realized. No partial or
+    failed prefix scan is accepted as exact ordinal evidence.
+- Shared finite budgets: maxNodes=5000 (1..100000), maxDurationMs=10000 (1..120000);
+  select-row maxDepth=8 (0..64). Unknown, duplicate, positional and conflicting page/input flags
+  fail before mutation. Scoping, selector ambiguity and HWND availability checks are reused.
+  Three fresh resolutions guard before/preAction/after target identity, row anchor and grid
+  dimensions; each resolve/state observation, selected member and exposed/ancestor classification
+  consumes the shared node budget. Snapshot properties use cooperative time checks. Selector/HWND
+  acquisition is an operation checked around the call, not incremental per-match enumeration.
+  In-flight provider calls (including FindAll/SelectionPattern.Current.GetSelection) cannot be interrupted and may
+  allocate internally or exceed the requested time. There is no hard end-to-end deadline.
+- Require a readable enabled target, SelectionItemPattern and the container's SelectionPattern.
+  Read authoritative IsSelected and SelectionPattern.Current.GetSelection, validating every returned item's full
+  runtime/process identity, selected state and container ownership. At most **128** selected
+  identities are accepted per observation; larger arrays fail with `selection-limit` and the
+  reported count, without reading a prefix as a complete set. IDs remain capped at 32 integers,
+  snapshot strings at 512 characters; incomplete/clipped snapshots conservatively refuse action.
+- No-op requires the full reported set to be exactly the selected target, with fresh final
+  verification. Target IsSelected=true with other items still selected is **not** a no-op.
+  Otherwise invoke SelectionItemPattern.Select **at most once**, then freshly verify the same
+  identity/container, target IsSelected=true and full singleton target set. Unsupported/unknown,
+  disabled, inconsistent or changed-before-action evidence causes zero Select calls. There is
+  no click/key/invoke/native-memory/scroll/expand/realize/focus/activation fallback or retry.
+  UIA/provider internals may focus or activate on Select; focus preservation is not guaranteed.
+- Success requires `verified:true`. Output includes request, mode, atomic:false, stage,
+  actionAttempted, noOp, nullable postconditionSatisfied/selectionChanged, mutationOutcome,
+  partialMutationPossible, before/preAction/after observations and resolution evidence
+  (target/expectedContainer/coordinateCell/known dimensions), actionError, details and traversal.
+  Observations retain target identity/state, actual container, support/multiple/required flags,
+  reportedSelectionCount, selectedItems, selectionSetComplete and complete. Null/unknown fields
+  may be omitted by the normal JSON envelope; omission never means false or empty.
+- Failures preserve known observations and actionAttempted. Selection errors include
+  unsupported-selection, unsupported-row-selection, row-out-of-range, row-identity-unavailable,
+  element-disabled, selection-incomplete, selection-inconsistent, selection-provider-error,
+  selection-changed, selection-container-mismatch/changed, selection-action-failed and
+  selection-verification-failed; existing argument/window/selector codes remain applicable.
+  A thrown Select never becomes verified success, even if the postcondition is observed true.
+  `partialMutationPossible:true` means an attempted operation was not verified; it does not prove
+  causality or a particular partial change. mutationOutcome is not-attempted, unknown,
+  selection-change-observed, or no-net-selection-change-observed, comparing available full
+  reported sets in the same container. No-net change is not proof that no transient change occurred.
+  After attempted failure, inspect current state before retrying; no rollback is attempted.
+- These sequential observations are **non-atomic**. Equal endpoint identities/sets cannot rule
+  out intervening changes, runtime IDs are not persistent cross-call identifiers, and UI selection
+  does not establish hardware state. Legacy get-text/read-visible-text behavior is unchanged.
+  Capabilities: `ui.select-item.verified.v1`, `ui.select-row.verified.v1`.
 
 ### `click --hwnd <h> (--strategy <s> --value <v> [--controlType <type>] [--scopeHwnd <h2>] | --x <n> --y <n> [--allowOutsideWindow])`
 Supply exactly one target form: the existing selector form or an absolute screen coordinate pair.
@@ -946,7 +1184,9 @@ otherwise alter target process/window state. They are strictly read-only observa
 added to let the agent inspect visible text and capture screenshots from an existing window
 (e.g. a Visual Studio Copilot Chat panel) without interacting with it.
 
-### `read-visible-text --hwnd <h> [--maxDepth <n>]`
+### `read-visible-text --hwnd <h> [--maxDepth <n>] [--maxNodes <n>] [--maxDurationMs <ms>]`
+Optional traversal budgets and their additive metadata are specified under **Opt-in bounded
+inspection** above. The following depth/truncation distinctions describe the legacy unbounded mode.
 Traverses the UIA subtree rooted at the given window handle (bounded depth/breadth/node-count,
 mirroring `inspect`'s traversal caps) and returns de-duplicated, ordered text extracted
 opportunistically from `TextPattern`, `ValuePattern`, and element `Name`. `--maxDepth` defaults

@@ -204,6 +204,9 @@ public sealed class PointerCoordinateTargetTests
         {
             window.Invoke(() => Window.GetWindow(button).WindowState = WindowState.Minimized);
             Assert.Equal(WindowState.Minimized, window.Invoke(() => Window.GetWindow(button).WindowState));
+            Assert.True(SpinWait.SpinUntil(
+                () => NativeMethods.IsIconic(window.Hwnd),
+                TimeSpan.FromSeconds(2)), "The fixture window did not reach the native minimized state.");
         }
 
         var result = UiCli.Run(verb, "--hwnd", window.HwndArgument,

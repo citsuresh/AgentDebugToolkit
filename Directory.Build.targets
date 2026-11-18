@@ -9,6 +9,11 @@
   <ItemGroup Condition="'$(AssemblyName)' == 'agentdebug-vs' or '$(AssemblyName)' == 'agentdebug-mcp'">
     <Compile Include="$(MSBuildThisFileDirectory)src\Shared\DebuggerWaitOptions.cs" Link="Contracts\DebuggerWaitOptions.cs" />
   </ItemGroup>
+  <ItemGroup Condition="'$(AssemblyName)' == 'agentdebug-ui' or '$(AssemblyName)' == 'agentdebug-mcp'">
+    <Compile Include="$(MSBuildThisFileDirectory)src\Shared\InspectionLimits.cs" Link="Contracts\InspectionLimits.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src\Shared\PageReadOptions.cs" Link="Contracts\PageReadOptions.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src\Shared\SelectionOptions.cs" Link="Contracts\SelectionOptions.cs" />
+  </ItemGroup>
   <Target Name="CaptureToolkitIdentity" BeforeTargets="GetAssemblyAttributes" Condition="'$(ToolkitIdentityEnabled)' == 'true' and '$(DesignTimeBuild)' != 'true'">
     <Exec Command="git -C &quot;$(MSBuildThisFileDirectory).&quot; rev-parse --verify HEAD" ConsoleToMSBuild="true" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" StandardOutputImportance="Low" StandardErrorImportance="Low">
       <Output TaskParameter="ConsoleOutput" ItemName="_ToolkitCommitLines" />

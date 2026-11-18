@@ -386,3 +386,61 @@ without evaluating expressions or enabling side effects; no thread/frame is sele
 **Rationale:** BreakpointLastHit may be historical, and an exposed or absent $exception does
 not establish the current stop cause. A mode change can occur between reads; even equal modes
 do not prove snapshot consistency. Provider errors must not become numeric/boolean defaults.
+
+## 2026-11-18: Opt-in cooperative bounded UIA inspection
+
+**Decision:** node/time budgets enable incremental first-child/next-sibling traversal shared by
+inspection and visible-text observation. Omitted budgets preserve the old paths. Count admitted
+snapshots (including failed attempts), and probe for an additional candidate before declaring
+a node cap exhausted, so exactly-N-node trees can be complete. Check elapsed time around provider
+reads but do not claim that a call in flight is interruptible. Window lookup, post-traversal
+pruning, screenshots and serialization are outside this timer. MCP adds separate process headroom.
+
+**Rationale:** eager child-list materialization defeats client-side node limits. UIA can still do
+unbounded work inside a single provider call, so a hard-deadline guarantee would be false.
+Expose completeness separately from limit truncation and record provider errors rather than
+inventing empty/disabled/off nodes. Partial filter matches are not exhaustive and retry starts
+at the root; resumable paging and structured readers remain separate work. Existing text and
+depth-probe caps remain, with explicit uncertainty when probing is capped. Pure fake-provider
+and clock seams exercise the actual shared traversal without desktop or focus interactions.
+
+## 2026-11-18: Read-only provider-coordinate and exposed-item pages
+
+**Decision:** new row/tree readers require explicit offset/limit and always have finite work,
+time, depth, column and field-size bounds. Prefer GridPattern coordinate reads with entry/exit
+dimension observations; otherwise incrementally enumerate exposed rows/items, including the
+cost of skipped nodes and one-match lookahead. No complete tree is materialized to page it.
+Exposed modes never assert logical completeness or invent logical column identities/totals.
+Retain inaccessible cells as indexed placeholders and return partial records on provider errors.
+
+**Rationale:** SysListView32, DataGrid and SysTreeView32 have distinct UIA exposures; class names
+do not establish native layouts or available logical data. Existing grid helpers intentionally
+scroll/realize and therefore cannot be reused for these read-only operations. Reuse shared HWND,
+selector ambiguity, state and cooperative-budget contracts instead. Only root/provider-scoped
+read-only calls are available through the paging adapter; no native memory, scrolling, expansion,
+realization, editing, selection or focus fallback. A provider can still do arbitrary internal
+work. Equal endpoint counts and runtime IDs do not make a snapshot atomic or stable across pages.
+
+**Continuation:** nextOffset is issued only for a clean page with more exposed/provider rows;
+partial pages retry the requested offset after correcting errors or caps. Repeated exposed scans
+start at the root and can cost more as offset grows. Selection remains a separate later phase.
+
+## 2026-11-18: Authoritatively verified replacement item/row selection
+
+**Decision:** require explicit replacement mode and logical/exposed row coordinates. Reuse
+selectors, paging identity/state snapshots, bounded enumeration and budgets. Logical row
+selection needs exact owned cell coordinates plus a proper row ancestor, never the cell itself.
+Require target SelectionItemPattern and full container SelectionPattern selection membership,
+with a 128-identity acceptance cap. Resolve freshly and compare before/preAction observations;
+perform zero or one Select and verify the same target/container's full singleton set afterward.
+Already selected plus other selected items is not a no-op. No alternative input, scrolling,
+realization, focus request, retry or rollback is added.
+
+**Rationale:** target IsSelected alone cannot establish replacement or row selection. Providers
+without authoritative row/set support must fail, not synthesize success. Repeated identities,
+counts and states guard observed races but cannot make UIA atomic or identities persistent.
+Select may change state before throwing, and post-verification may time out; preserve attempted
+status, known observations and uncertainty rather than imply failure means no mutation. Full
+snapshots conservatively reject clipping/unreadable properties. Provider calls may allocate or
+overrun internally and may focus/activate; neither hard deadlines nor focus preservation can
+be promised. Pure source/clock tests validate this contract without live input or hardware.

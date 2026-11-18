@@ -306,6 +306,112 @@ are recorded in `State.errors` without changing the existing inspection success 
 UI control state is not proof of hardware connection state. See `docs/CLI_CONTRACT.md`
 for the exact field and error semantics.
 
+### Structured paged UIA readers
+
+`ui_read_rows(hwnd, offset, limit, strategy?, value?, controlType?, scopeHwnd?, maxColumns?,
+maxDepth?, maxNodes?, maxDurationMs?, cancellationToken?)` maps to CLI `read-rows`.
+`ui_read_tree_items(hwnd, offset, limit, strategy?, value?, controlType?, scopeHwnd?,
+maxDepth?, maxNodes?, maxDurationMs?, cancellationToken?)` maps to `read-tree-items`.
+Both are read-only, non-destructive, idempotent and closed-world. Offset and limit are required,
+zero-based offset 0..int.MaxValue and limit 1..100. Defaults/ranges: maxColumns=32 (1..64,
+rows only), maxDepth=8 (0..64), maxNodes=5000 (1..100000), maxDurationMs=10000 (1..120000).
+Shared validation rejects invalid page requests before launching; CLI-only malformed/repeated
+flags fail at the CLI. Existing selector ambiguity/scoping is reused without mutation.
+Process timeout is effective duration + 10000ms: 20000ms by default, maximum 130000ms.
+
+Rows prefer GridPattern coordinates; absent GridPattern uses only exposed DataItem/ListItem
+descendants and immediate child cells, never invented logical columns or native memory.
+Tree mode returns exposed TreeItem descendants depth-first, without expansion/realization.
+Direct provider coordinate access does not promise cheap provider work. Exposed offsets scan
+skipped nodes from the root, without prebuilding a complete tree. Disabled/offscreen items remain.
+
+Results relay CLI page envelopes unchanged: actual bounded identity/state/value observations,
+backend/scope, atomic:false, known-only totals, pageComplete/complete, hasMore, nextOffset or
+retryOffset, and traversal errors/stopReasons. Cells remain indexed placeholders on failure.
+Exposed modes always report complete:false/exposure-only and omit logical totals; a known
+empty exposed page is not proof of empty logical data. Unsupported providers fail explicitly;
+provider errors, changed grid counts and no captured root are distinct CLI-style failures,
+not success-shaped empty results. See CLI_CONTRACT.md for exact element/row/item fields,
+512-character and 32-ID limits, paging semantics and error codes.
+
+Capabilities: `ui.read-rows.uia-paged.v1`, `ui.read-tree-items.uia-paged.v1`. No implicit
+scrolling, expansion, realization, selection, editing, activation or focus is requested.
+Window/selector resolution and serialization are outside the cooperative timer; an in-flight
+provider call cannot be interrupted. No atomic snapshot, cheap skipped offsets, stable
+cross-page identities or hardware connection inference is guaranteed.
+
+### Verified replacement selection
+
+`ui_select_item(hwnd, strategy, value, mode, controlType?, scopeHwnd?, maxNodes?,
+maxDurationMs?, cancellationToken?)` maps to CLI `select-item`.
+`ui_select_row(hwnd, row, rowKind, mode, strategy?, value?, controlType?, scopeHwnd?,
+maxDepth?, maxNodes?, maxDurationMs?, cancellationToken?)` maps to CLI `select-row`.
+Both are **mutating/destructive**, idempotent and closed-world; clients must obtain mutation
+permission. `mode="replace"` is required and may deselect other items in the target's actual
+SelectionContainer. No additive/removal mode, input or realization fallback is provided.
+
+Row and rowKind are required: zero-based decimal row 0..int.MaxValue, explicit logical or
+exposed. Logical uses an owned exact GridPattern coordinate cell to prove a proper row ancestor,
+never selects the cell as the row; exposed uses the same bounded row-reader ordinals and scans
+skipped exposure from the root. Optional row selectors resolve the container. Unsupported row
+identity, cell-only evidence, unavailable/disabled/incomplete state and uncertain exposure fail
+explicitly. Item selection does not imply row selection. See CLI_CONTRACT.md for exact restrictions.
+
+Shared defaults/ranges: maxNodes=5000 (1..100000), maxDurationMs=10000 (1..120000), row-only
+maxDepth=8 (0..64). Argument plans validate before launch and safely forward all options.
+Process timeout is effective duration + 10000ms (default 20000, maximum 130000); wrapper timeout
+does not establish that no selection occurred. Calls in flight, selector acquisition and provider
+SelectionPattern.Current.GetSelection allocation are not interruptible. No hard deadline is promised.
+
+The CLI freshly resolves before/preAction/after, requires SelectionItemPattern and container
+SelectionPattern.Current.GetSelection, and validates at most 128 full selected identities and
+ownership per observation. A no-op needs the complete singleton selected target, not IsSelected
+alone. Otherwise at most one Select is attempted and the same scope's full replacement state is
+verified. No click/key/invoke/scroll/expand/realize/native-memory/focus/activation fallback.
+UIA/provider internals may focus/activate during Select; preservation is not guaranteed.
+
+Results relay all CLI fields: request/mode/atomic:false, verified, actionAttempted/noOp,
+postconditionSatisfied, selectionChanged/mutationOutcome, partialMutationPossible,
+before/preAction/after observations, resolution identity/coordinate evidence, actionError,
+details and traversal errors/stop reasons. Unknown fields may be omitted, never inferred false.
+Attempted but unverified operations fail explicitly even when Select threw after changing state;
+inspect state before retrying. Observations are sequential, not atomic, and runtime identities
+are not persistent across calls. No UI state establishes hardware state.
+Capabilities: `ui.select-item.verified.v1`, `ui.select-row.verified.v1`.
+
+### Bounded tree observation
+
+`ui_inspect(hwnd, maxDepth?, nameContains?, controlType?, cancellationToken?, maxNodes?, maxDurationMs?)`
+and `ui_read_visible_text(hwnd, maxDepth?, cancellationToken?, maxNodes?, maxDurationMs?)`
+append budgets after the original cancellation token, preserving existing positional source
+calls. MCP clients use named arguments. Both remain read-only, non-destructive and closed-world;
+there is no screenshot, focus, activation, selection, scroll or realization fallback.
+
+`maxNodes` is 1..100000; `maxDurationMs` is 1..120000 milliseconds. Invalid bounds return
+`ExitCode:1` with CLI-style `invalid-argument` in `Result` before launching a child, not a
+wrapper error. Either bound enables incremental traversal; both combine. Bounded `maxDepth`
+must be nonnegative. Omitted budgets preserve legacy behavior, including default depth 8.
+The shared validated request forwards these as `--maxNodes` / `--maxDurationMs` with no clamping.
+
+CLI envelopes are relayed unchanged: optional `traversal` reports `scope`, `complete`,
+`truncated`, `nodesVisited`, `nodesCaptured`, `elapsedMs`, requested budgets, optional
+`legacyNodeLimit`, `stopReasons`, `errorCount`, `errors`, `errorsTruncated` and `hint`.
+Bounded inspect adds top-level `truncated`; bounded text retains `lines` and `truncated`.
+Partial trees may succeed without being complete; no captured root returns
+`inspection-incomplete`. Provider-only failures are incomplete but not limit truncation.
+Filters are applied afterward, so partial zero matches do not prove absence. Rerun from a
+narrower root or deliberately larger budgets/depth; no resume token is supported.
+Text retains 5000-node/200-child/2000-character caps; bounded text also counts depth as truncation.
+See CLI_CONTRACT.md for exact fields, stop reasons and bounded provider-error details.
+
+A duration supplies a distinct child-process timeout of `maxDurationMs + 10000` (at most
+130000ms); without it, the existing runner timeout applies, even for a node-only budget.
+Startup/window resolution, pruning and serialization consume process headroom but are outside
+the traversal timer. A UIA provider call may overrun and cannot be interrupted by traversal;
+outer runner timeout can return a wrapper timeout without partial JSON. Neither budget promises
+a hard provider deadline. Capabilities are `ui.inspect.bounded.v1` and
+`ui.read-visible-text.bounded.v1`.
+
 Failed selector lookups and successful empty `ui_find_first`, `ui_find_all` or filtered
 `ui_inspect` responses may include `lookupDiagnostics` (`rootHwnd`, observed `isMinimized`,
 `hint`). Unknown/gone-window facts are omitted, not false. Effective scoped HWNDs determine

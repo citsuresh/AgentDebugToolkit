@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Globalization;
+using AgentDebugToolkit.Inspection;
 using ModelContextProtocol.Server;
 
 namespace AgentDebugToolkit.Mcp;
@@ -41,6 +42,130 @@ public sealed class UiAutomationTools
 
     private static string? Bool(bool? value) => value is null ? null : (value.Value ? "true" : "false");
 
+    private const string InspectionBudgetNotes =
+        " Optional maxNodes (1..100000) and maxDurationMs (1..120000) enable bounded, incremental read-only traversal; omitted limits preserve legacy behavior. " +
+        "Bounds combine, stopping at the first exhausted budget. traversal reports complete/truncated, visited/captured counts, stopReasons, elapsedMs and provider errors. " +
+        "A provider call cannot be interrupted; this is not a hard deadline. Filtering, screenshots and serialization are outside the traversal budget. " +
+        "Partial zero matches do not establish absence; narrow the root or deliberately increase limits and retry from the root (no resume token).";
+
+    private static (List<string>? Args, int? TimeoutMs, string? Error) InspectionArgs(string verb, string hwnd,
+        int? maxDepth, int? maxNodes, int? maxDurationMs, string? nameContains, string? controlType)
+    {
+        var options = new Dictionary<string, string>();
+        if (maxNodes is not null) options["maxNodes"] = maxNodes.Value.ToString(CultureInfo.InvariantCulture);
+        if (maxDurationMs is not null) options["maxDurationMs"] = maxDurationMs.Value.ToString(CultureInfo.InvariantCulture);
+        if (maxDepth is not null) options["maxDepth"] = maxDepth.Value.ToString(CultureInfo.InvariantCulture);
+        if (!InspectionLimits.TryParse(options, out var limits, out var error)) return (null, null, error);
+        return (BuildArgs(verb, ("--hwnd", hwnd), ("--maxDepth", maxDepth?.ToString(CultureInfo.InvariantCulture)),
+            ("--nameContains", nameContains), ("--controlType", controlType),
+            ("--maxNodes", maxNodes?.ToString(CultureInfo.InvariantCulture)),
+            ("--maxDurationMs", maxDurationMs?.ToString(CultureInfo.InvariantCulture))), limits.ProcessTimeoutMs, null);
+    }
+
+    private Task<ToolInvocationResult> RunInspection(string verb, string hwnd, int? maxDepth, int? maxNodes,
+        int? maxDurationMs, CancellationToken ct, string? nameContains = null, string? controlType = null)
+    {
+        var request = InspectionArgs(verb, hwnd, maxDepth, maxNodes, maxDurationMs, nameContains, controlType);
+        if (request.Error is not null)
+            return Task.FromResult(new ToolInvocationResult(1,
+                System.Text.Json.JsonSerializer.SerializeToElement(new { success = false, error = "invalid-argument", message = request.Error }), null, null, null));
+        return RunAsync(request.Args!, request.TimeoutMs, ct);
+    }
+
+    private const string PageReadNotes =
+        " Read-only non-atomic page observations: never scroll, expand, realize, select, edit, activate or request focus. " +
+        "offset is zero-based; limit is 1..100. Finite defaults: maxNodes=5000, maxDurationMs=10000, maxDepth=8. " +
+        "Bounds: maxNodes 1..100000, maxDurationMs 1..120000 milliseconds, maxDepth 0..64. In-flight provider calls cannot be interrupted. " +
+        "Result includes actual identities/state, known-only totals, pageComplete/complete, hasMore, nextOffset/retryOffset and traversal errors/stopReasons. " +
+        "Exposed enumeration scans skipped nodes from the root, has unknown logical totals and does not prove hidden/virtualized completeness. " +
+        "Use the returned nextOffset with identical options; partial pages require retryOffset plus corrected errors or larger budgets/caps. " +
+        "Disabled/offscreen items are included. UI state does not establish hardware connection.";
+
+    private static (List<string>? Args, int? TimeoutMs, string? Error) PageArgs(string verb, string hwnd, int offset, int limit,
+        string? strategy, string? value, string? controlType, string? scopeHwnd, int? maxColumns, int? maxDepth, int? maxNodes, int? maxDurationMs)
+    {
+        var options = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["hwnd"] = hwnd,
+            ["offset"] = offset.ToString(CultureInfo.InvariantCulture), ["limit"] = limit.ToString(CultureInfo.InvariantCulture) };
+        foreach (var (key, text) in new (string, string?)[] { ("strategy", strategy), ("value", value), ("controlType", controlType), ("scopeHwnd", scopeHwnd),
+            ("maxColumns", maxColumns?.ToString(CultureInfo.InvariantCulture)), ("maxDepth", maxDepth?.ToString(CultureInfo.InvariantCulture)),
+            ("maxNodes", maxNodes?.ToString(CultureInfo.InvariantCulture)), ("maxDurationMs", maxDurationMs?.ToString(CultureInfo.InvariantCulture)) })
+            if (text is not null) options[key] = text;
+        if (!PageReadOptions.TryParse(options, verb == "read-tree-items", out var page, out var error)) return (null, null, error);
+        return (BuildArgs(verb, options.Select(pair => ("--" + pair.Key, (string?)pair.Value)).ToArray()), page!.Budget.ProcessTimeoutMs, null);
+    }
+
+    private Task<ToolInvocationResult> RunPage(string verb, string hwnd, int offset, int limit, string? strategy, string? value,
+        string? controlType, string? scopeHwnd, int? columns, int? depth, int? nodes, int? duration, CancellationToken ct)
+    {
+        var page = PageArgs(verb, hwnd, offset, limit, strategy, value, controlType, scopeHwnd, columns, depth, nodes, duration);
+        if (page.Error is not null)
+            return Task.FromResult(new ToolInvocationResult(1,
+                System.Text.Json.JsonSerializer.SerializeToElement(new { success = false, error = "invalid-argument", message = page.Error }), null, null, null));
+        return RunAsync(page.Args!, page.TimeoutMs, ct);
+    }
+
+    [McpServerTool(Name = "ui_read_rows", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false),
+     Description("Reads structured rows using GridPattern coordinates when supported, otherwise exposed DataItem/ListItem descendants of a List/DataGrid/Table root. " +
+        "Grid cells retain requested coordinates and provider identity/spans. Fallback cells are exposed immediate children, not invented logical columns. " +
+        "maxColumns defaults to 32, range 1..64. No native remote-memory backend; unsupported providers fail explicitly." + PageReadNotes)]
+    public Task<ToolInvocationResult> ReadRows(string hwnd, int offset, int limit,
+        string? strategy = null, string? value = null, string? controlType = null, string? scopeHwnd = null,
+        int? maxColumns = null, int? maxDepth = null, int? maxNodes = null, int? maxDurationMs = null, CancellationToken cancellationToken = default)
+        => RunPage("read-rows", hwnd, offset, limit, strategy, value, controlType, scopeHwnd, maxColumns, maxDepth, maxNodes, maxDurationMs, cancellationToken);
+
+    [McpServerTool(Name = "ui_read_tree_items", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false),
+     Description("Reads exposed TreeItem descendants of a Tree/TreeItem root in depth-first order without expansion. Root itself is excluded. " +
+        "Returns raw UIA paths/depth and observed parent item indices; collapsed or virtualized content is not fetched. No native remote-memory backend." + PageReadNotes)]
+    public Task<ToolInvocationResult> ReadTreeItems(string hwnd, int offset, int limit,
+        string? strategy = null, string? value = null, string? controlType = null, string? scopeHwnd = null,
+        int? maxDepth = null, int? maxNodes = null, int? maxDurationMs = null, CancellationToken cancellationToken = default)
+        => RunPage("read-tree-items", hwnd, offset, limit, strategy, value, controlType, scopeHwnd, null, maxDepth, maxNodes, maxDurationMs, cancellationToken);
+
+    private const string SelectionNotes =
+        " Explicit mode=replace only: may deselect other items in the target's UIA SelectionContainer. " +
+        "Fresh unique resolution and bounded authoritative before/preAction/after observations; at most one SelectionItemPattern.Select call. " +
+        "A verified no-op requires the full reported selection set to contain only the selected target, not target IsSelected alone. " +
+        "Requires readable enabled target, SelectionItemPattern, and container SelectionPattern.Current.GetSelection; at most 128 selected identities. " +
+        "maxNodes defaults 5000 (1..100000); maxDurationMs defaults 10000 (1..120000), with 10000ms process headroom. " +
+        "Failures retain actionAttempted, partial observations and partialMutationPossible; never retry blindly after an attempted action. " +
+        "No click/key/native-memory/scroll/expand/realize/focus fallback. Sequential, not atomic; provider focus preservation and persistent cross-call runtime identities are not guaranteed.";
+
+    private static (List<string>? Args, int? TimeoutMs, string? Error) SelectionArgs(string verb, string hwnd, string mode,
+        string? strategy, string? value, string? controlType, string? scopeHwnd, int? row, string? rowKind, int? maxDepth, int? maxNodes, int? maxDurationMs)
+    {
+        var options = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["hwnd"] = hwnd, ["mode"] = mode };
+        foreach (var (key, text) in new (string, string?)[] { ("strategy", strategy), ("value", value), ("controlType", controlType), ("scopeHwnd", scopeHwnd),
+            ("row", row?.ToString(CultureInfo.InvariantCulture)), ("rowKind", rowKind), ("maxDepth", maxDepth?.ToString(CultureInfo.InvariantCulture)),
+            ("maxNodes", maxNodes?.ToString(CultureInfo.InvariantCulture)), ("maxDurationMs", maxDurationMs?.ToString(CultureInfo.InvariantCulture)) })
+            if (text is not null) options[key] = text;
+        if (!SelectionOptions.TryParse(options, verb == "select-row", out var selection, out var error)) return (null, null, error);
+        return (BuildArgs(verb, options.Select(pair => ("--" + pair.Key, (string?)pair.Value)).ToArray()), selection!.Bounds.Budget.ProcessTimeoutMs, null);
+    }
+
+    private Task<ToolInvocationResult> RunSelection(string verb, string hwnd, string mode, string? strategy, string? value, string? controlType,
+        string? scopeHwnd, int? row, string? rowKind, int? depth, int? nodes, int? duration, CancellationToken ct)
+    {
+        var selection = SelectionArgs(verb, hwnd, mode, strategy, value, controlType, scopeHwnd, row, rowKind, depth, nodes, duration);
+        if (selection.Error is not null)
+            return Task.FromResult(new ToolInvocationResult(1,
+                System.Text.Json.JsonSerializer.SerializeToElement(new { success = false, error = "invalid-argument", message = selection.Error, actionAttempted = false }), null, null, null));
+        return RunAsync(selection.Args!, selection.TimeoutMs, ct);
+    }
+
+    [McpServerTool(Name = "ui_select_item", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false),
+     Description("Replaces the selection with one uniquely selector-resolved UIA item, only when authoritative verification is supported." + SelectionNotes)]
+    public Task<ToolInvocationResult> SelectItem(string hwnd, string strategy, string value, string mode,
+        string? controlType = null, string? scopeHwnd = null, int? maxNodes = null, int? maxDurationMs = null, CancellationToken cancellationToken = default)
+        => RunSelection("select-item", hwnd, mode, strategy, value, controlType, scopeHwnd, null, null, null, maxNodes, maxDurationMs, cancellationToken);
+
+    [McpServerTool(Name = "ui_select_row", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false),
+     Description("Replaces selection with one provable row, never a cell. row is zero-based; explicit rowKind logical uses owned GridPattern cell coordinates and strict row ancestry; exposed uses the paged reader's exposed DataItem/ListItem ordinal. " +
+        "Requires actual row SelectionItemPattern and the resolved container's full selected-row state; unsupported row identity/verification fails without fallback. maxDepth defaults 8 (0..64)." + SelectionNotes)]
+    public Task<ToolInvocationResult> SelectRow(string hwnd, int row, string rowKind, string mode,
+        string? strategy = null, string? value = null, string? controlType = null, string? scopeHwnd = null,
+        int? maxDepth = null, int? maxNodes = null, int? maxDurationMs = null, CancellationToken cancellationToken = default)
+        => RunSelection("select-row", hwnd, mode, strategy, value, controlType, scopeHwnd, row, rowKind, maxDepth, maxNodes, maxDurationMs, cancellationToken);
+
     // Emits a boolean flag only when true, so false/null never adds a scope flag.
     private static string? TrueOnly(bool? value) => value == true ? "true" : null;
 
@@ -81,14 +206,16 @@ public sealed class UiAutomationTools
             ("--includeUntitled", TrueOnly(includeUntitled))), null, cancellationToken);
 
     [McpServerTool(Name = "ui_inspect", ReadOnly = true, Destructive = false, OpenWorld = false),
-     Description("Dumps the UIA subtree rooted at the given window/element handle without interacting with the UI or saving a screenshot. Each element adds State with isEnabled, explicit TogglePattern/SelectionItemPattern support and available state values; State.errors reports failed reads without inventing off/false values. Prefer filtered inspection over a full dump; unfiltered output has no matchCount; if the window's own name matches nameContains the whole tree is returned. If the output stopped at maxDepth while nodes at the limit still have children, the result carries depthLimited: true, maxDepth, nodesBeyondDepth and a hint (omitted otherwise); that includes a filtered call with matchCount 0. Re-run with a larger maxDepth before concluding a window is opaque.")]
+     Description("Dumps the UIA subtree rooted at the given window/element handle without interacting with the UI or saving a screenshot. Each element adds State with isEnabled, explicit TogglePattern/SelectionItemPattern support and available state values; State.errors reports failed reads without inventing off/false values. Prefer filtered inspection over a full dump; unfiltered output has no matchCount; if the window's own name matches nameContains the whole captured tree is returned. If the output stopped at maxDepth while nodes at the limit still have children, the result carries depthLimited: true, maxDepth, nodesBeyondDepth and a hint (omitted otherwise); that includes a filtered call with matchCount 0. Re-run with a larger maxDepth before concluding a window is opaque." + InspectionBudgetNotes)]
     public Task<ToolInvocationResult> Inspect(
         [Description("Window handle, e.g. '0x00123456'.")] string hwnd,
         [Description("Maximum tree depth (default 8, root is 0). Electron/Chromium page content is often deeper than the default (for example 16-30); see depthLimited in the result.")] int? maxDepth = null,
         [Description("Case-insensitive substring filter on element Name. Returns a pruned tree (matches plus ancestors) with a matchCount field.")] string? nameContains = null,
         [Description("UIA control type short name, e.g. Button or Edit. An unrecognized value returns invalid-argument.")] string? controlType = null,
-        CancellationToken cancellationToken = default)
-        => RunAsync(BuildArgs("inspect", ("--hwnd", hwnd), ("--maxDepth", maxDepth?.ToString()), ("--nameContains", nameContains), ("--controlType", controlType)), null, cancellationToken);
+        CancellationToken cancellationToken = default,
+        [Description("Optional visited-node budget, 1..100000; root counts as one. Omitted preserves legacy traversal.")] int? maxNodes = null,
+        [Description("Optional cooperative traversal budget in milliseconds, 1..120000. In-flight provider calls may overrun it; MCP process budget adds 10000ms headroom.")] int? maxDurationMs = null)
+        => RunInspection("inspect", hwnd, maxDepth, maxNodes, maxDurationMs, cancellationToken, nameContains, controlType);
 
     [McpServerTool(Name = "ui_click", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false),
      Description("Clicks either a selector-resolved element (UIA pattern, falling back to a synthetic click) or an absolute screen coordinate. Supply exactly one target form: strategy/value or x/y. Changes target application state.")]
@@ -337,12 +464,14 @@ public sealed class UiAutomationTools
         => RunAsync(BuildArgs("set-context", ("--pid", pid.ToString())), null, cancellationToken);
 
     [McpServerTool(Name = "ui_read_visible_text", ReadOnly = true, Destructive = false, OpenWorld = false),
-     Description("Traverses the UIA subtree rooted at the given window and returns de-duplicated visible text (TextPattern/ValuePattern/Name). Never activates/focuses/clicks/types. Strictly read-only. depthLimited: true (with maxDepth, nodesBeyondDepth, hint) means the depth limit hid deeper nodes and is separate from truncated (breadth/node caps).")]
+     Description("Traverses the UIA subtree rooted at the given window and returns de-duplicated visible text (TextPattern/ValuePattern/Name). Never activates/focuses/clicks/types. Strictly read-only. Legacy depthLimited: true (with maxDepth, nodesBeyondDepth, hint) is separate from legacy truncated; bounded traversal includes depth in its truncation metadata. The existing 5000-node, 200-child and 2000-character text caps remain active." + InspectionBudgetNotes)]
     public Task<ToolInvocationResult> ReadVisibleText(
         [Description("Window handle to read from.")] string hwnd,
         [Description("Maximum traversal depth (default 8). Electron/Chromium content is often deeper than the default (for example 16-30); see depthLimited in the result.")] int? maxDepth = null,
-        CancellationToken cancellationToken = default)
-        => RunAsync(BuildArgs("read-visible-text", ("--hwnd", hwnd), ("--maxDepth", maxDepth?.ToString())), null, cancellationToken);
+        CancellationToken cancellationToken = default,
+        [Description("Optional visited-node budget, 1..100000; the existing 5000-node text safety cap also applies.")] int? maxNodes = null,
+        [Description("Optional cooperative traversal budget in milliseconds, 1..120000; cannot interrupt a provider call. MCP process budget adds 10000ms headroom.")] int? maxDurationMs = null)
+        => RunInspection("read-visible-text", hwnd, maxDepth, maxNodes, maxDurationMs, cancellationToken);
 
     [McpServerTool(Name = "ui_screenshot", ReadOnly = false, Destructive = false, OpenWorld = false),
      Description("Captures the given window (PrintWindow with a CopyFromScreen fallback) as a PNG, optionally cropped to region and downsized by scale. Returns screenshotPath plus windowRect (left, top, right, bottom in physical screen pixels), saved imageWidth/imageHeight, and dpiScale (GetDpiForWindow / 96). With region or scale, also returns region (x, y, width, height in the original window image) and scale (default 1); output dimensions are ceil(region dimension * scale). Map saved pixels with screenX = windowRect.left + region.x + imagePixelX / scale, likewise for y. Without options, region origin is zero and scale is one; do not multiply by dpiScale. Bounds include invisible resize borders, including when maximized. A nonexistent hwnd returns window-gone; re-run list-windows --processName <name> for a new hwnd and pid. Does not activate/focus the window, but writes a file to disk.")]

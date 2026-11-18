@@ -963,25 +963,7 @@ internal static class UiaHelper
     /// </summary>
     private static void ProbeBeyondDepth(AutomationElement el, DepthLimitStats stats)
     {
-        if (stats.Capped)
-        {
-            return;
-        }
-
-        if (++stats.Probes > DepthLimitStats.MaxProbes)
-        {
-            stats.Capped = true;
-            return;
-        }
-
-        if (HasChildren(el))
-        {
-            stats.NodesBeyondDepth++;
-            if (stats.NodesBeyondDepth >= DepthLimitStats.MaxPositives)
-            {
-                stats.Capped = true;
-            }
-        }
+        stats.Probe(() => HasChildren(el));
     }
 
     /// <summary>
@@ -1012,7 +994,7 @@ internal static class UiaHelper
         return info;
     }
 
-    private static int PruneElementInfo(ElementInfo info, string? nameContains, ControlType? controlType,
+    internal static int PruneElementInfo(ElementInfo info, string? nameContains, ControlType? controlType,
         bool retainSubtree = false)
     {
         var matches = (nameContains is null || info.Name.Contains(nameContains, StringComparison.OrdinalIgnoreCase))
@@ -1035,21 +1017,7 @@ internal static class UiaHelper
     public static ElementInfo ToElementInfo(AutomationElement el, bool includeChildren, int maxDepth, int depth = 0,
         DepthLimitStats? depthStats = null, bool includeState = false)
     {
-        var r = el.Current.BoundingRectangle;
-        var info = new ElementInfo
-        {
-            Name = el.Current.Name ?? string.Empty,
-            ControlType = el.Current.ControlType?.ProgrammaticName ?? string.Empty,
-            ClassName = el.Current.ClassName ?? string.Empty,
-            AutomationId = el.Current.AutomationId ?? string.Empty,
-            IsEnabled = el.Current.IsEnabled,
-            IsOffscreen = el.Current.IsOffscreen,
-            BoundingRect = SafeRect(r),
-            SupportedPatterns = el.GetSupportedPatterns()
-                .Select(p => p.ProgrammaticName)
-                .ToList(),
-            State = includeState ? ReadState(el) : null
-        };
+        var info = ReadElementInfo(el, includeState);
 
         if (includeChildren && depth < maxDepth)
         {
@@ -1075,6 +1043,77 @@ internal static class UiaHelper
 
         return info;
     }
+
+    private static ElementInfo ReadElementInfo(AutomationElement el, bool includeState, InspectionTraversal? traversal = null)
+    {
+        T Read<T>(Func<T> read) => traversal is null ? read() : traversal.Call(read);
+        var r = Read(() => el.Current.BoundingRectangle);
+        var info = new ElementInfo
+        {
+            Name = Read(() => el.Current.Name) ?? string.Empty,
+            ControlType = Read(() => el.Current.ControlType)?.ProgrammaticName ?? string.Empty,
+            ClassName = Read(() => el.Current.ClassName) ?? string.Empty,
+            AutomationId = Read(() => el.Current.AutomationId) ?? string.Empty,
+            IsEnabled = Read(() => el.Current.IsEnabled),
+            IsOffscreen = Read(() => el.Current.IsOffscreen),
+            BoundingRect = SafeRect(r),
+            SupportedPatterns = Read(el.GetSupportedPatterns).Select(p => p.ProgrammaticName).ToList(),
+            State = includeState ? ReadState(el, traversal is null ? null : traversal.CheckTime) : null
+        };
+        if (traversal is not null && info.State?.Errors is { } errors)
+            foreach (var error in errors) traversal.NoteError("State." + error.Pattern, error.Error, error.Message);
+        return info;
+    }
+
+    internal static ElementInfo? InspectBounded(AutomationElement root, int maxDepth, InspectionTraversal traversal,
+        DepthLimitStats depthStats, string? nameContains, ControlType? controlType, out int matchCount)
+    {
+        var walker = TreeWalker.RawViewWalker;
+        var tree = traversal.Walk(root, maxDepth, depthStats,
+            node => ReadElementInfo(node, includeState: true, traversal),
+            (node, parent) => parent?.Children.Add(node), walker.GetFirstChild, walker.GetNextSibling);
+        matchCount = tree is not null && (nameContains is not null || controlType is not null)
+            ? PruneElementInfo(tree, nameContains, controlType) : 0;
+        return tree;
+    }
+
+    internal static List<string> CollectBoundedText(AutomationElement root, int maxDepth, InspectionTraversal traversal, DepthLimitStats depthStats)
+    {
+        var walker = TreeWalker.RawViewWalker;
+        return CollectBoundedText(root, maxDepth, traversal, depthStats,
+            node => ExtractBoundedText(node, traversal), walker.GetFirstChild, walker.GetNextSibling);
+    }
+
+    internal static List<string> CollectBoundedText<TNode>(TNode root, int maxDepth, InspectionTraversal traversal,
+        DepthLimitStats depthStats, Func<TNode, List<string>> readNode, Func<TNode, TNode?> firstChild, Func<TNode, TNode?> nextSibling)
+        where TNode : class
+    {
+        var seen = new HashSet<string>();
+        var lines = new List<string>();
+        traversal.Walk(root, maxDepth, depthStats, readNode,
+            (values, _) =>
+            {
+                foreach (var value in values) if (seen.Add(value)) lines.Add(value);
+            }, firstChild, nextSibling, MaxChildrenPerElement, MaxVisitedNodes);
+        return lines;
+    }
+
+    private static List<string> ExtractBoundedText(AutomationElement el, InspectionTraversal traversal) => traversal.ReadTextValues(
+        ("Name", () => traversal.Call(() => el.Current.Name)),
+        ("TextPattern", () =>
+        {
+            var pattern = traversal.Call(() => el.TryGetCurrentPattern(TextPattern.Pattern, out var value) ? value : null);
+            if (pattern is null) return null;
+            var range = traversal.Call(() => ((TextPattern)pattern).DocumentRange);
+            if (range is not null) return traversal.Call(() => range.GetText(MaxTextValueLength + 1));
+            traversal.NoteError("TextPattern", "inspection-provider-error", "Supported TextPattern returned no document range.");
+            return null;
+        }),
+        ("ValuePattern", () =>
+        {
+            var pattern = traversal.Call(() => el.TryGetCurrentPattern(ValuePattern.Pattern, out var value) ? value : null);
+            return pattern is null ? null : traversal.Call(() => ((ValuePattern)pattern).Current.Value);
+        }));
 
     /// <summary>
     /// Attempts InvokePattern/TogglePattern first; returns the method actually used.
@@ -1451,14 +1490,18 @@ internal static class UiaHelper
         }
     }
 
-    public static ElementStateInfo ReadState(AutomationElement element) => ReadState(
-        () => element.Current.IsEnabled,
-        () => element.TryGetCurrentPattern(TogglePattern.Pattern, out var pattern)
-            ? () => ToggleStateName(((TogglePattern)pattern).Current.ToggleState)
-            : null,
-        () => element.TryGetCurrentPattern(SelectionItemPattern.Pattern, out var pattern)
-            ? () => ((SelectionItemPattern)pattern).Current.IsSelected
-            : null);
+    public static ElementStateInfo ReadState(AutomationElement element) => ReadState(element, null);
+
+    internal static ElementStateInfo ReadState(AutomationElement element, Action? beforeRead)
+    {
+        T Read<T>(Func<T> read) { beforeRead?.Invoke(); return read(); }
+        return ReadState(
+            () => Read(() => element.Current.IsEnabled),
+            () => Read(() => element.TryGetCurrentPattern(TogglePattern.Pattern, out var pattern) ? pattern : null) is { } toggle
+                ? () => Read(() => ToggleStateName(((TogglePattern)toggle).Current.ToggleState)) : null,
+            () => Read(() => element.TryGetCurrentPattern(SelectionItemPattern.Pattern, out var pattern) ? pattern : null) is { } selection
+                ? () => Read(() => ((SelectionItemPattern)selection).Current.IsSelected) : null);
+    }
 
     internal static ElementStateInfo ReadState(Func<bool> readEnabled,
         Func<Func<string>?> getToggleReader, Func<Func<bool>?>? getSelectionReader)
@@ -1764,6 +1807,15 @@ public sealed class DepthLimitStats
     public bool Capped { get; set; }
 
     public bool IsLimited => NodesBeyondDepth > 0;
+
+    internal bool? Probe(Func<bool> hasChildren)
+    {
+        if (Capped) return null;
+        if (++Probes > MaxProbes) { Capped = true; return null; }
+        var found = hasChildren();
+        if (found && ++NodesBeyondDepth >= MaxPositives) Capped = true;
+        return found;
+    }
 
     /// <summary>A depth to suggest that is deeper than the one already used.</summary>
     public static int SuggestedDepth(int maxDepth) => Math.Max(30, maxDepth * 2);

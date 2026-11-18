@@ -29,6 +29,12 @@ embeds Git source identity, configuration, RID and distribution intent at build 
 The publisher creates and verifies `package-manifest.json` before moving a staged package.
 `src/Shared/DebuggerWaitOptions.cs` is linked into VS and MCP only: shared explicit-unit
 validation, bounded MCP process headroom and an injectable-clock polling loop.
+`src/Shared/InspectionLimits.cs` is linked into UI and MCP only: opt-in node/cooperative-time
+validation and inspection process headroom, without changing omitted-limit behavior.
+`src/Shared/PageReadOptions.cs` shares strict structured-page argument validation and finite
+default budgets across UI and MCP.
+`src/Shared/SelectionOptions.cs` shares strict replacement-only selection and explicit
+logical/exposed row-coordinate validation, reusing page budgets across UI and MCP.
 
 ### AgentDebugToolkit.Core
 
@@ -44,6 +50,12 @@ validation, bounded MCP process headroom and an injectable-clock polling loop.
 |---|---|---|
 | `Program` / `Verbs` (top-level) | `Program.cs` | Parses args and dispatches UI Automation verbs; shared target/scope checks distinguish gone and hung HWNDs, and action-target resolution rejects ambiguous matches |
 | `UiaHelper` | `UiaHelper.cs` | Enumerates windows through Win32; resolves selectors, virtualized grid cells/editors, and scroll targets; shares vertical scroll-search and ScrollPattern access; builds and filters `ElementInfo` trees while preserving ancestors; performs pattern-based or synthetic interaction |
+| `InspectionTraversal` | `InspectionTraversal.cs` | Incremental iterative read-only bounded inspection/text walking; guarded provider calls, actual node/time accounting, explicit completeness, limits and bounded error details |
+| `PagedUiaReader` / `PageSource` | `PagedUiaReader.cs` | Bounded direct-grid/exposed-row/exposed-tree streaming pages; explicit identity/state, known-only totals, partial cell placeholders and next/retry guidance |
+| `UiaPageSource` | `UiaPageSource.cs` | Strictly read-only UIA pattern/property/navigation adapter with bounded snapshot fields; never uses the scrolling/mutating grid helper |
+| `VerifiedSelection` / `SelectionSource` | `VerifiedSelection.cs` | Fresh identity/state preconditions, full-container replacement/no-op proof, at most one Select, verified postconditions and explicit partial-mutation uncertainty |
+| `SelectionRowResolver` | `SelectionRowResolver.cs` | Reuses exposed paging enumeration or proves logical coordinate ownership/proper row ancestry; never treats a selected cell as a selected row |
+| `UiaSelectionSource` | `UiaSelectionSource.cs` | Reuses read-only page/state snapshots, bounds full selected-set verification, and binds only the requested SelectionItemPattern.Select mutation |
 | `SessionContext` | `SessionContext.cs` | Persists the "current" pid to a temp JSON file so subsequent CLI invocations (separate processes) can omit `--pid` after `attach` |
 | `CursorSession` / `SystemCursorOperations` | `CursorSession.cs` | Share a cursor-indicator session with the script via a temp flag; reload, mark, and restore the arrow, hand, and I-beam through Win32 |
 | `ScreenshotHelper` | `ScreenshotHelper.cs` | Saves element/window PNGs to local app data; optional window-image cropping/downscaling preserves physical window bounds and reports source region, scale, saved dimensions, and per-window DPI |

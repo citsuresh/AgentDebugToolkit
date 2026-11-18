@@ -18,6 +18,14 @@ Program.Verbs.ResolveElement -> UiaHelper.ResolveSelectorAll -> Program.Verbs.To
 
 Program.Verbs.Inspect -> UiaHelper.ToElementInfo -> UiaHelper.PruneElementInfo -> JsonOutput.WriteSuccess (filtered tree and matchCount)
 
+UiAutomationTools.Inspect/ReadVisibleText -> InspectionArgs/InspectionLimits.TryParse -> CliRunner.RunAsync (optional duration plus headroom) -> matching UI verb
+
+Verbs.Inspect/ReadVisibleText (budgets supplied) -> InspectionLimits.TryParse -> UiaHelper.InspectBounded/CollectBoundedText -> InspectionTraversal.Walk/Call -> RawViewWalker first-child/next-sibling -> optional pruning -> JsonOutput.WriteSuccess / Verbs.WriteIncompleteInspection
+
+UiAutomationTools.ReadRows/ReadTreeItems -> PageArgs/PageReadOptions.TryParse -> CliRunner.RunAsync -> Verbs.ReadPage -> existing HWND/selector validation -> PagedUiaReader.Read -> UiaPageSource readonly GridPattern coordinates / incremental raw UIA enumeration -> Verbs.WritePage
+
+UiAutomationTools.SelectItem/SelectRow -> SelectionArgs/SelectionOptions.TryParse -> CliRunner.RunAsync -> Verbs.Select/ResolveStructuredTarget -> UiaSelectionSource/SelectionRowResolver -> VerifiedSelection fresh before/preAction observations -> zero or one SelectionItemPattern.Select -> fresh identity/full SelectionPattern set verification -> Verbs.WriteSelection
+
 Program.Verbs.SetGridCell -> UiaHelper.ResolveGridCell -> UiaHelper.ResolveGridEditor -> UiaHelper.Type -> UiaHelper.Click (optional Apply)
 
 ConsoleVerbs.Launch -> StartBroker -> BrokerProgram.Run -> ConPtySession -> named-pipe broker session

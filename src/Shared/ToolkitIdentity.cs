@@ -91,7 +91,9 @@ internal static class ToolkitIdentity
         var capabilities = new List<string> { "toolkit.info.v1", "toolkit.package-verification.sha256.v1" };
         capabilities.AddRange(tool switch
         {
-            "ui" => new[] { "ui.get-state.v1", "ui.set-toggle-state.v1", "ui.activate.restore.v1", "ui.lookup-diagnostics.v1", "ui.click.coordinates.v1", "ui.send-keys.window.v1" },
+            "ui" => new[] { "ui.get-state.v1", "ui.set-toggle-state.v1", "ui.activate.restore.v1", "ui.lookup-diagnostics.v1", "ui.click.coordinates.v1", "ui.send-keys.window.v1",
+                "ui.inspect.bounded.v1", "ui.read-visible-text.bounded.v1", "ui.read-rows.uia-paged.v1", "ui.read-tree-items.uia-paged.v1",
+                "ui.select-item.verified.v1", "ui.select-row.verified.v1" },
             "vs" => new[] { "vs.get-callstack.v1", "vs.get-exception-info.v1", "vs.evaluate.side-effect-opt-in.v1",
                 "vs.help.json.v1", "vs.wait-for-break.long.v1", "vs.instance-targeting.v1", "vs.break-context.v1" },
             "console" => new[] { "console.sessions.v1" },
