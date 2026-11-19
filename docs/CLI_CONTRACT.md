@@ -73,6 +73,32 @@ not an atomic lock, code signature or trust mechanism: anyone able to replace bo
 unsigned manifest can forge integrity evidence. Missing manifests do not reclassify portable
 builds as managed builds; no installed toolkit or installer is updated by `info`.
 
+### Managed install executable discovery
+
+The existing managed build script writes `.built-version` at the checkout root only after
+all four builds, required `info` identity/path/hash checks, and enabled legacy smoke checks
+succeed. The legacy `toolkit`, numeric `version`, `commit`, and `builtUtc` fields remain.
+Additive `schemaVersion:1` and `tools` provide exact absolute paths without layout guessing:
+
+```json
+{"tools":{"ui":{"executablePath":"C:\\checkout\\src\\AgentDebugToolkit.UiAutomation.Cli\\bin\\Debug\\net8.0-windows\\agentdebug-ui.exe"},"vs":{"executablePath":"C:\\checkout\\src\\AgentDebugToolkit.Debugger.VisualStudio\\bin\\Debug\\net8.0-windows\\agentdebug-vs.exe"},"console":{"executablePath":"C:\\checkout\\src\\AgentDebugToolkit.ConsoleAutomation.Cli\\bin\\Debug\\net8.0-windows\\agentdebug-console.exe"},"server":{"executablePath":"C:\\checkout\\src\\AgentDebugToolkit.Mcp\\bin\\Debug\\net8.0-windows\\agentdebug-mcp.exe"}}}
+```
+
+An old marker is invalidated before prerequisite checks. `-SkipSmokeCheck` skips only the
+legacy no-verb ui/vs smoke checks, never the required four-tool `info` checks. Publication uses
+a temporary file followed by a rename, with no marker on a failed prerequisite/build/check.
+Dot-sourcing the script exposes its testable functions without running a build.
+When the checkout commit is unavailable, the legacy `commit` remains empty; all four
+binaries must still agree on their reported source commit, including consistently unknown
+values. When the checkout commit is known, every binary must match it. Unknown provenance
+is supported, not represented as a verified checkout commit.
+Legacy markers without `tools` do not provide exact discovery: report that limitation rather
+than invent a path. A marker is a successful-build snapshot, not runtime identity or an
+integrity guarantee after files change; consumers must check the selected executable's `info`.
+For portable packages, reuse `package-manifest.json` paths relative to that package's root and
+require `info --verifyPackage` to report `matched`. MCP override precedence is unchanged;
+neither mechanism searches for another installation or infers general interaction reliability.
+
 ## Option parsing
 
 Boolean-style options that may be bare (bare means
@@ -243,6 +269,19 @@ dispatched key units; if focus changes mid-sequence, it stops before the next un
 `foreground-activation-failed`. The original target can therefore receive a partial sequence, but
 the remaining input is not sent to the newly foreground application. Read-only verbs do not change
 activation.
+
+Foreground failures add `foregroundDiagnostics`: a read-only sequential snapshot of
+`targetRootHwnd`, `isMinimized`, `foregroundHwnd`, this process's `processSessionId`,
+`sessionProtocolType` (0 console, 2 RDP), nullable `isRemoteSession`,
+`sessionConnectionState`/`sessionConnectionStateValue`, and per-field `errors`.
+Unavailable nullable observations are explicitly null; unknown connection states are `unknown`.
+`remoteClientWindowState` is always `unknown`: a local RDP client does not establish that the
+toolkit process runs remotely, and session observations cannot establish whether the remote
+client is minimized or why foreground activation failed. RDP restoration is a workaround,
+not a proven fix. Diagnostics never activate, restore, reconnect, send input or retry activation.
+Existing failure codes/messages remain, including legacy `activate`'s `stale-context`,
+restore-attempt facts, and chat's existing `resolve-input` step on a false foreground result.
+Success output is unchanged. These observations do not prove improved interaction reliability.
 
 For coordinate-form `click`, `right-click`, and `double-click`, unless `--allowOutsideWindow` is
 true, a non-minimized target's current `GetWindowRect` is checked before any activation or restore.

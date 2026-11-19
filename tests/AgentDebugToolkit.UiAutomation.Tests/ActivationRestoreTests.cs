@@ -309,7 +309,7 @@ public sealed class ActivationRestoreTests(ITestOutputHelper output)
         try
         {
             Console.SetOut(output);
-            exitCode = Verbs.WriteActivationRestoreResult(new IntPtr(0x123), result);
+            exitCode = Verbs.WriteActivationRestoreResult(new IntPtr(0x123), result, new ForegroundDiagnosticsTests.Source());
         }
         finally { Console.SetOut(original); }
         using var json = JsonDocument.Parse(output.ToString());

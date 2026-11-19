@@ -5,7 +5,23 @@ Test cases for the helper scripts that are not covered by `dotnet test`:
 changing it and update them after. Results are recorded with the date; a case marked *Not run* has
 not been run, whatever the script's design suggests.
 
+The managed build-marker cases below are also automated through the existing xUnit project.
+
 Run all commands from the repo root in Windows PowerShell 5.1.
+
+## Build-Toolkit.ps1 managed marker
+
+Automated in `ManagedBuildMarkerTests` through injected command/application boundaries and
+temporary stub files. The tests never build an installed checkout or execute toolkit binaries.
+
+| ID | Case | Expected | Result |
+|----|------|----------|--------|
+| B-01 | Successful build, including a root with spaces and quotes | Legacy marker fields/types remain; exact absolute paths for ui/vs/console/server derive from the existing tool table; every info check precedes marker publication. | 2026-11-19: injected workflow passed, smoke enabled and skipped. |
+| B-02 | Missing/malformed version, project, SDK, failed build, missing output or failed legacy smoke | An old success marker is removed before prerequisites and is not replaced; an explicit error remains. | 2026-11-19: injected failure scenarios passed. |
+| B-03 | Failed/unsupported/malformed info, wrong identity/paths/build/commit/contract/capability or hash | Required checks fail closed, including console and server; no success marker or temporary marker remains. | 2026-11-19: injected identity/path/hash rejection scenarios passed. |
+| B-04 | SkipSmokeCheck | Only the legacy ui/vs smoke calls are skipped; all four info checks remain mandatory, including a failing server info case. | 2026-11-19: injected success and server failure scenarios passed. |
+| B-05 | Real managed install build | All four actual binaries pass info checks before exact paths are published. | Not run: install/build invocation is not authorized by this task. |
+| B-06 | Git missing, failing or empty | Legacy empty checkout commit remains supported; all four binary commits must agree, including consistently unknown commits; mixed commits fail. Native stderr preserves its exit status. | 2026-11-19: nine injected provenance scenarios and native stderr/exit handling passed. |
 
 ## Publish-AgentDebugToolkit.ps1 provenance
 

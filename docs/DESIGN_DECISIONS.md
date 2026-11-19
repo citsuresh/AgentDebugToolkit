@@ -444,3 +444,34 @@ status, known observations and uncertainty rather than imply failure means no mu
 snapshots conservatively reject clipping/unreadable properties. Provider calls may allocate or
 overrun internally and may focus/activate; neither hard deadlines nor focus preservation can
 be promised. Pure source/clock tests validate this contract without live input or hardware.
+
+## 2026-11-19 -- Foreground diagnostics observe the toolkit process's session only
+
+**Decision:** Add read-only failure snapshots through an injectable observation source,
+including nullable window facts and WTS protocol/connection state for the current process's
+session ID. Keep activation limits, input guards, existing error codes and success output.
+Expected observation failures remain explicit field errors; unknown remote-client window
+state is never inferred from connection state or the presence of a local RDP client.
+
+**Rationale:** These snapshots can describe conditions at failure, but cannot prove causality
+or general interaction reliability. RDP restoration is a workaround, not a proven fix.
+Automatic session recovery, policy changes and repeated activation are deliberately excluded.
+
+## 2026-11-19 -- Managed executable paths extend the existing successful-build marker
+
+**Decision:** Reuse Build-Toolkit's existing tool table and `.built-version`, preserving its
+four legacy fields and adding exact paths. Require every executable's info identity, paths,
+embedded managed Debug build facts, known source commit and hashes before atomic publication.
+Invalidate an old marker before prerequisites; SkipSmokeCheck cannot bypass required info.
+Keep portable relative-path manifests, runtime identity and MCP override precedence unchanged.
+
+**Rationale:** A second resolver or inferred output layout can select a stale installation.
+The marker is only a build-time snapshot; consumers still need the selected binary's info.
+Injected command/application boundaries allow workflow tests without building an installation
+or launching MCP. No claim of live RDP or general interaction reliability follows from identity.
+
+**Approved audit refinements:** Preserve legacy unknown-checkout-commit support, but require
+all four binary commits to agree even when Git is missing, fails, or returns no commit. Keep
+matching against the checkout when known. Native command stderr is captured with its exit
+code rather than terminating optional Git observation. Existing fake restore/chat tests also
+inject diagnostic sources; production continues to use the read-only system source by default.

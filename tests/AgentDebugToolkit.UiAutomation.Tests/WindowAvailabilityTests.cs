@@ -32,7 +32,7 @@ public sealed class WindowAvailabilityTests
                 }
 
                 return false;
-            });
+            }, source: new ForegroundDiagnosticsTests.Source());
         }
         finally
         {
@@ -60,7 +60,7 @@ public sealed class WindowAvailabilityTests
         Console.SetOut(output);
         try
         {
-            Assert.True(Verbs.TryEnsureChatInputForeground(() => true));
+            Assert.True(Verbs.TryEnsureChatInputForeground(() => true, source: new ForegroundDiagnosticsTests.Source()));
         }
         finally
         {
@@ -75,7 +75,7 @@ public sealed class WindowAvailabilityTests
     {
         var exception = new InvalidOperationException("foreground test failure");
         Assert.Same(exception, Assert.Throws<InvalidOperationException>(() =>
-            Verbs.TryEnsureChatInputForeground(() => throw exception)));
+            Verbs.TryEnsureChatInputForeground(() => throw exception, source: new ForegroundDiagnosticsTests.Source())));
     }
 
     public static IEnumerable<object[]> HwndCommands()

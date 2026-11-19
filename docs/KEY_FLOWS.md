@@ -4,6 +4,8 @@ Executable Program -> ToolkitIdentity.TryHandle -> ToolkitIdentity.Read -> Packa
 
 ToolkitInfoTools.Info -> enabled-group gate -> CliRunner.RunAsync(info) / ToolkitIdentity.CreateResult(server) -> ToolInvocationResult
 
+Foreground failure -> Verbs.WriteForegroundFailure / activation error writer -> ForegroundDiagnostics.Attach/Capture -> SystemForegroundDiagnosticSource current-process session observations -> JsonOutput.WriteError
+
 Program.Verbs.Attach -> SessionContext.Save -> UiaHelper.ListTopLevelWindows -> JsonOutput.WriteSuccess
 
 Program.Verbs.ListWindows/Attach -> UiaHelper.ListTopLevelWindows -> NativeMethods.EnumerateVisibleTopLevelWindows -> JsonOutput.WriteSuccess

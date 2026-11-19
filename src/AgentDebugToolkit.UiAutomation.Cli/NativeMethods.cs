@@ -5,9 +5,12 @@ namespace AgentDebugToolkit.UiAutomation.Cli;
 
 internal sealed class ForegroundActivationException : Exception
 {
-    public ForegroundActivationException(string message = "The target window is no longer foreground.")
+    public IntPtr TargetHwnd { get; }
+
+    public ForegroundActivationException(string message = "The target window is no longer foreground.", IntPtr targetHwnd = default)
         : base(message)
     {
+        TargetHwnd = targetHwnd;
     }
 }
 
@@ -401,7 +404,7 @@ internal static class NativeMethods
         if (expectedForegroundWindow != IntPtr.Zero
             && GetForegroundWindow() != expectedForegroundWindow)
         {
-            throw new ForegroundActivationException();
+            throw new ForegroundActivationException(targetHwnd: expectedForegroundWindow);
         }
     }
 

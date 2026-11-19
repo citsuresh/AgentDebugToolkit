@@ -158,7 +158,7 @@ catch (WindowGoneException ex)
 }
 catch (ForegroundActivationException ex)
 {
-    JsonOutput.WriteError("foreground-activation-failed", ex.Message);
+    Verbs.WriteForegroundFailure(ex.TargetHwnd, ex.Message);
     return 1;
 }
 catch (InputInjectionException ex)
@@ -820,7 +820,7 @@ internal static class Verbs
 
             if (!EnsureTargetWindowForeground(windowHwnd, restoreIfMinimized: true))
             {
-                JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
+                WriteForegroundFailure(windowHwnd);
                 return 1;
             }
 
@@ -843,9 +843,9 @@ internal static class Verbs
             return 1;
         }
 
-        if (!EnsureElementForeground(element, windowHwnd))
+        if (!EnsureElementForeground(element, windowHwnd, out var activationHwnd))
         {
-            JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
+            WriteForegroundFailure(activationHwnd);
             return 1;
         }
 
@@ -893,7 +893,7 @@ internal static class Verbs
 
             if (!EnsureTargetWindowForeground(windowHwnd, restoreIfMinimized: true))
             {
-                JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
+                WriteForegroundFailure(windowHwnd);
                 return 1;
             }
 
@@ -915,9 +915,9 @@ internal static class Verbs
             return 1;
         }
 
-        if (!EnsureElementForeground(element, windowHwnd))
+        if (!EnsureElementForeground(element, windowHwnd, out var activationHwnd))
         {
-            JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
+            WriteForegroundFailure(activationHwnd);
             return 1;
         }
 
@@ -961,7 +961,7 @@ internal static class Verbs
 
             if (!EnsureTargetWindowForeground(windowHwnd, restoreIfMinimized: true))
             {
-                JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
+                WriteForegroundFailure(windowHwnd);
                 return 1;
             }
 
@@ -983,9 +983,9 @@ internal static class Verbs
             return 1;
         }
 
-        if (!EnsureElementForeground(element, windowHwnd))
+        if (!EnsureElementForeground(element, windowHwnd, out var activationHwnd))
         {
-            JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
+            WriteForegroundFailure(activationHwnd);
             return 1;
         }
 
@@ -1080,9 +1080,9 @@ internal static class Verbs
             }
         }
 
-        if (!EnsureElementForeground(element, windowHwnd))
+        if (!EnsureElementForeground(element, windowHwnd, out var activationHwnd))
         {
-            JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
+            WriteForegroundFailure(activationHwnd);
             return 1;
         }
 
@@ -1155,9 +1155,9 @@ internal static class Verbs
                 return 1;
             }
 
-            if (!EnsureElementForeground(element, windowHwnd))
+            if (!EnsureElementForeground(element, windowHwnd, out var activationHwnd))
             {
-                JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
+                WriteForegroundFailure(activationHwnd);
                 return 1;
             }
 
@@ -1227,9 +1227,9 @@ internal static class Verbs
             return 1;
         }
 
-        if (!EnsureElementForeground(element, windowHwnd))
+        if (!EnsureElementForeground(element, windowHwnd, out var activationHwnd))
         {
-            JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
+            WriteForegroundFailure(activationHwnd);
             return 1;
         }
 
@@ -1449,9 +1449,9 @@ internal static class Verbs
             return 1;
         }
 
-        if (!EnsureElementForeground(resolution.Cell, windowHwnd))
+        if (!EnsureElementForeground(resolution.Cell, windowHwnd, out var cellActivationHwnd))
         {
-            JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
+            WriteForegroundFailure(cellActivationHwnd);
             return 1;
         }
 
@@ -1465,9 +1465,9 @@ internal static class Verbs
             return 1;
         }
 
-        if (!EnsureElementForeground(editor, windowHwnd))
+        if (!EnsureElementForeground(editor, windowHwnd, out var editorActivationHwnd))
         {
-            JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
+            WriteForegroundFailure(editorActivationHwnd);
             return 1;
         }
 
@@ -1666,7 +1666,7 @@ internal static class Verbs
 
             if (!EnsureTargetWindowForeground(windowHwnd, restoreIfMinimized: true))
             {
-                JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
+                WriteForegroundFailure(windowHwnd);
                 return 1;
             }
 
@@ -1690,9 +1690,9 @@ internal static class Verbs
             return 1;
         }
 
-        if (!EnsureElementForeground(element, windowHwnd))
+        if (!EnsureElementForeground(element, windowHwnd, out var activationHwnd))
         {
-            JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
+            WriteForegroundFailure(activationHwnd);
             return 1;
         }
 
@@ -1751,7 +1751,7 @@ internal static class Verbs
 
         if (!EnsureTargetWindowForeground(windowHwnd, restoreIfMinimized: true))
         {
-            JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
+            WriteForegroundFailure(windowHwnd);
             return 1;
         }
 
@@ -1847,7 +1847,7 @@ internal static class Verbs
 
         if (!EnsureTargetWindowForeground(windowHwnd, restoreIfMinimized: true))
         {
-            JsonOutput.WriteError("foreground-activation-failed", "Could not bring the target window to the foreground.");
+            WriteForegroundFailure(windowHwnd);
             return 1;
         }
 
@@ -2497,7 +2497,8 @@ internal static class Verbs
                 "stale-context",
                 $"Could not bring hwnd '0x{windowHwnd.ToInt64():X}' to the foreground. The window " +
                 "may have closed, or Windows denied the foreground switch (focus-stealing " +
-                "prevention) — this is not necessarily fatal; retry or activate manually.");
+                "prevention) — this is not necessarily fatal; retry or activate manually.",
+                ForegroundDiagnostics.Attach(windowHwnd));
             return 1;
         }
 
@@ -2549,14 +2550,16 @@ internal static class Verbs
     internal sealed record ActivationRestoreResult(bool? IsMinimizedBefore, bool? IsMinimizedAfter,
         bool RestoreAttempted, bool Activated, string? Error = null, string? Message = null);
 
-    internal static int WriteActivationRestoreResult(IntPtr root, ActivationRestoreResult result)
+    internal static int WriteActivationRestoreResult(IntPtr root, ActivationRestoreResult result,
+        IForegroundDiagnosticSource? source = null)
     {
         var payload = new { rootHwnd = $"0x{root.ToInt64():X}", restoreRequested = true,
             restoreAttempted = result.RestoreAttempted, isMinimizedBefore = result.IsMinimizedBefore,
             isMinimizedAfter = result.IsMinimizedAfter, activated = result.Activated };
         if (result.Error is not null)
         {
-            JsonOutput.WriteError(result.Error, result.Message!, payload);
+            JsonOutput.WriteError(result.Error, result.Message!, result.Error == "stale-context"
+                ? ForegroundDiagnostics.Attach(root, payload, source) : payload);
             return 1;
         }
 
@@ -2686,7 +2689,9 @@ internal static class Verbs
             return 1;
         }
 
-        if (!TryEnsureChatInputForeground(() => EnsureElementForeground(inputElement, windowHwnd)))
+        var activationHwnd = windowHwnd;
+        if (!TryEnsureChatInputForeground(() => EnsureElementForeground(inputElement, windowHwnd, out activationHwnd),
+            windowHwnd, readEffectiveTarget: () => activationHwnd))
         {
             return 1;
         }
@@ -2823,7 +2828,15 @@ internal static class Verbs
         return 0;
     }
 
-    internal static bool TryEnsureChatInputForeground(Func<bool> ensureForeground)
+    internal static void WriteForegroundFailure(IntPtr targetHwnd,
+        string message = "Could not bring the target window to the foreground.", object? extra = null,
+        IForegroundDiagnosticSource? source = null)
+    {
+        JsonOutput.WriteError("foreground-activation-failed", message, ForegroundDiagnostics.Attach(targetHwnd, extra, source));
+    }
+
+    internal static bool TryEnsureChatInputForeground(Func<bool> ensureForeground, IntPtr targetHwnd = default,
+        IForegroundDiagnosticSource? source = null, Func<IntPtr>? readEffectiveTarget = null)
     {
         bool foreground;
         try
@@ -2838,9 +2851,7 @@ internal static class Verbs
 
         if (!foreground)
         {
-            JsonOutput.WriteError(
-                "foreground-activation-failed", "Could not bring the target window to the foreground.",
-                new { step = "resolve-input" });
+            WriteForegroundFailure(readEffectiveTarget?.Invoke() ?? targetHwnd, extra: new { step = "resolve-input" }, source: source);
         }
 
         return foreground;
@@ -4093,7 +4104,7 @@ internal static class Verbs
             {
                 throw new ForegroundActivationException(
                     "The target window did not finish restoring within 1000 ms " +
-                    "(it must be non-minimized with the same rectangle on two consecutive reads). Coordinate input was not sent.");
+                    "(it must be non-minimized with the same rectangle on two consecutive reads). Coordinate input was not sent.", targetRoot);
             }
         }
 
@@ -4130,10 +4141,11 @@ internal static class Verbs
         return isForeground;
     }
 
-    private static bool EnsureElementForeground(AutomationElement element, IntPtr fallbackHwnd)
+    private static bool EnsureElementForeground(AutomationElement element, IntPtr fallbackHwnd, out IntPtr activationHwnd)
     {
         var elementHwnd = new IntPtr(element.Current.NativeWindowHandle);
-        return EnsureTargetWindowForeground(elementHwnd != IntPtr.Zero ? elementHwnd : fallbackHwnd);
+        activationHwnd = elementHwnd != IntPtr.Zero ? elementHwnd : fallbackHwnd;
+        return EnsureTargetWindowForeground(activationHwnd);
     }
 
     private static (IntPtr windowHwnd, string? errorCode, string? error) ResolveWindowHwnd(

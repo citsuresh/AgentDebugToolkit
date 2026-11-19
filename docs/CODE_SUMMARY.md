@@ -60,6 +60,7 @@ logical/exposed row-coordinate validation, reusing page budgets across UI and MC
 | `CursorSession` / `SystemCursorOperations` | `CursorSession.cs` | Share a cursor-indicator session with the script via a temp flag; reload, mark, and restore the arrow, hand, and I-beam through Win32 |
 | `ScreenshotHelper` | `ScreenshotHelper.cs` | Saves element/window PNGs to local app data; optional window-image cropping/downscaling preserves physical window bounds and reports source region, scale, saved dimensions, and per-window DPI |
 | `NativeMethods` | `NativeMethods.cs` | P/Invoke user32 helpers for Win32 window enumeration/metadata, synthetic mouse/keyboard input, and window queries; primary interaction mechanism since target apps often support no UIA patterns |
+| `ForegroundDiagnostics` / `SystemForegroundDiagnosticSource` | `ForegroundDiagnostics.cs` | Injectable read-only foreground/window and current-process WTS session observations on failures; never activation/recovery or remote-client-state inference |
 
 ### AgentDebugToolkit.Debugger.VisualStudio
 
