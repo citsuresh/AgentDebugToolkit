@@ -4,10 +4,28 @@
 
 ## Current Focus
 
-2026-11-08: Items 1, 4 and 5, the region/scale, pre-activation bounds and resolve-input work, and
+2026-11-19: User approved publishing the feedback changes and separately authorized the five
+pre-existing project-memory/graph/audit files. Keep those five in their own commit. Feedback
+work adds failure-only effective-target foreground/session observations and verified exact
+executable paths in the existing build marker; it does not fix RDP foreground restrictions.
+The independent audit passed 252 tests. Fresh supervisor publication rebuild/non-interactive
+validation passed 72/72. An earlier broader supervisor run passed 113 and failed two
+desktop-sensitive placement cases with `stale-context`; cause is unproven, not RDP reproduction.
+The unfiltered suite was not run. Skills are installed separately; managed toolkit installation
+and MCP restart require separate approval and have not occurred for this batch.
+
+The graphs below remain the dated `67f28aa` snapshot, not an update for this feedback batch.
+The newly included `artifacts-phase1a-audit-test-output.log` is historical evidence of a prior
+253-case run (245 passed, eight failed), not the current audit or a claim of a green full suite.
+
+2026-11-18: Project memory synced to skill v27; the solution graph was fully rebuilt at
+`67f28aa` (957 nodes, 5,118 edges), and the solution build succeeded. Read-aloud remains off.
+
+2026-11-08 implementation summary: Items 1, 4 and 5, the region/scale, pre-activation bounds and resolve-input work, and
 item 2 (window-level `send-keys`, `paste-text`) are committed (`3e63f7d`, `57c821f`, `07fe1d2`,
 `66b4441`). Item 3, the mouse-wheel `scroll` verb and `ui_scroll` tool, is implemented with a
-Copilot read-only review applied and is pending commit. All Phase 1 items are now done. The MCP
+Copilot read-only review applied and is committed (`9f609c7`). Depth-limit detection and its
+probe-budget follow-up are committed (`5b5923a`, `7ea546b`). All Phase 1 items are now done. The MCP
 needs one rebuild (with the Claude sessions closed) before the new `ui_*` parameters,
 `ui_paste_text` and `ui_scroll` are visible.
 
@@ -81,7 +99,8 @@ needs one rebuild (with the Claude sessions closed) before the new `ui_*` parame
 
 ## Open Tasks / Known Issues
 
-- Remaining Phase 1 items: selector-free input and wheel scrolling; neither was started.
+- Phase 1 implementation is complete; installed MCP rebuild and fresh-chat schema validation
+  remain unverified in this session.
 - `set-grid-cell` parity remains inconsistent; investigate internal termination and provider/layout
   timing without inferring root cause from snapshots alone.
 - Cursor-session concurrent-start ownership race remains a documented limitation; cross-process
